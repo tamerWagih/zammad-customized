@@ -38,3 +38,6 @@ class Ticket::Share < ApplicationRecord
     end
   end
 end
+
+
+

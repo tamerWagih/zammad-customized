@@ -24,3 +24,6 @@ class Ticket::Approval < ApplicationRecord
     status == 'rejected'
   end
 end
+
+
+

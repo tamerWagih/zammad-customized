@@ -12,3 +12,6 @@ class CreateTicketApprovals < ActiveRecord::Migration[7.0]
     add_index :ticket_approvals, :status
   end
 end
+
+
+
