@@ -1,25 +1,32 @@
 <!-- Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/ -->
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useTicketQuery } from '#desktop/pages/ticket/composables/useTicketQuery.ts'
+import { ref, computed } from 'vue'
+import { useTicketView } from '#shared/entities/ticket/composables/useTicketView.ts'
+import { useTicketInformation } from '#desktop/pages/ticket/composables/useTicketInformation.ts'
+import { type TicketSidebarContentProps } from '#desktop/pages/ticket/types/sidebar.ts'
+import TicketSidebarContent from '../TicketSidebarContent.vue'
 import TicketApprovalList from '#shared/components/TicketApproval/TicketApprovalList.vue'
 import TicketShareList from '#shared/components/TicketShare/TicketShareList.vue'
 
-interface Props {
-  context: any
-  sidebarPlugin: any
-}
+const props = defineProps<TicketSidebarContentProps>()
 
-defineProps<Props>()
+const { ticket } = useTicketInformation()
+const { isTicketAgent, isTicketEditable } = useTicketView(ticket)
 
-const { ticketQuery } = useTicketQuery()
 const activeTab = ref<'approvals' | 'shares'>('approvals')
+
+// Role-based permissions
+const canManageApprovals = computed(() => isTicketAgent.value)
+const canManageShares = computed(() => isTicketAgent.value)
 </script>
 
 <template>
-  <div class="ticket-approval-share-panel">
-    <div v-if="ticketQuery?.ticket?.id" class="panel-content">
+  <TicketSidebarContent
+    :title="sidebarPlugin.title"
+    :icon="sidebarPlugin.icon"
+  >
+    <div v-if="ticket?.id" class="ticket-approval-share-panel">
       <div class="tabs">
         <button 
           :class="{ active: activeTab === 'approvals' }"
@@ -40,20 +47,20 @@ const activeTab = ref<'approvals' | 'shares'>('approvals')
       <div class="tab-content">
         <TicketApprovalList 
           v-if="activeTab === 'approvals'" 
-          :ticket-id="ticketQuery?.ticket?.id"
-          :can-manage="ticketQuery?.ticket?.isTicketEditable"
+          :ticket-id="ticket.id"
+          :can-manage="canManageApprovals"
         />
         <TicketShareList 
           v-if="activeTab === 'shares'" 
-          :ticket-id="ticketQuery?.ticket?.id"
-          :can-manage="ticketQuery?.ticket?.isTicketEditable"
+          :ticket-id="ticket.id"
+          :can-manage="canManageShares"
         />
       </div>
     </div>
     <div v-else class="no-ticket">
       {{ $t('No ticket selected') }}
     </div>
-  </div>
+  </TicketSidebarContent>
 </template>
 
 <style scoped>
