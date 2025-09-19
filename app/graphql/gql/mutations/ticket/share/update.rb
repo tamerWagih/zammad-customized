@@ -1,3 +1,5 @@
+# Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
+
 module Gql
   module Mutations
     module Ticket
@@ -6,30 +8,47 @@ module Gql
           description 'Update a ticket share'
 
           argument :input, Gql::Types::Ticket::ShareActionInputType, required: true
-          argument :permissions, [String], required: true
-          argument :message, String, required: false
 
           field :share, Gql::Types::Ticket::ShareType, null: true
           field :errors, [String], null: false
 
-          def resolve(input:, permissions:, message: nil)
-            share = Ticket::Share.find_by(id: input[:share_id])
-
-            if share.nil?
+          def resolve(input:)
+            share = Ticket::Share.find(input[:id])
+            ticket = share.ticket
+            
+            # Check permissions - only agents and admins can update shares
+            unless ticket.agent_access?(context[:current_user])
               return {
                 share: nil,
-                errors: ['Share not found']
+                errors: ['You need agent permissions to update shares for this ticket']
               }
             end
 
+            # Validate permissions if provided
+            if input[:permissions]
+              valid_permissions = %w[read comment edit]
+              invalid_permissions = input[:permissions] - valid_permissions
+              if invalid_permissions.any?
+                return {
+                  share: nil,
+                  errors: ["Invalid permissions: #{invalid_permissions.join(', ')}"]
+                }
+              end
+            end
+
             share.update!(
-              permissions: permissions,
-              message: message
+              permissions: input[:permissions] || share.permissions,
+              message: input[:message] || share.message
             )
 
             {
               share: share,
               errors: []
+            }
+          rescue ActiveRecord::RecordNotFound
+            {
+              share: nil,
+              errors: ['Share not found']
             }
           rescue StandardError => e
             {

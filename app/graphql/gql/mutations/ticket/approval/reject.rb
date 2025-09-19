@@ -1,3 +1,5 @@
+# Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
+
 module Gql
   module Mutations
     module Ticket
@@ -11,12 +13,13 @@ module Gql
           field :errors, [String], null: false
 
           def resolve(input:)
-            approval = Ticket::Approval.find_by(id: input[:approval_id])
+            approval = Ticket::Approval.find(input[:id])
 
-            if approval.nil?
+            # Check permissions - only the assigned approver can reject
+            unless approval.approver_id == context[:current_user].id
               return {
                 approval: nil,
-                errors: ['Approval request not found']
+                errors: ['You are not authorized to reject this request']
               }
             end
 
@@ -27,11 +30,16 @@ module Gql
               }
             end
 
-            approval.update!(status: 'rejected')
+            approval.reject!
 
             {
               approval: approval,
               errors: []
+            }
+          rescue ActiveRecord::RecordNotFound
+            {
+              approval: nil,
+              errors: ['Approval request not found']
             }
           rescue StandardError => e
             {

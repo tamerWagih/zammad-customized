@@ -1,3 +1,5 @@
+# Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
+
 module Gql
   module Mutations
     module Ticket
@@ -11,12 +13,14 @@ module Gql
           field :errors, [String], null: false
 
           def resolve(input:)
-            share = Ticket::Share.find_by(id: input[:share_id])
-
-            if share.nil?
+            share = Ticket::Share.find(input[:id])
+            ticket = share.ticket
+            
+            # Check permissions - only agents and admins can revoke shares
+            unless ticket.agent_access?(context[:current_user])
               return {
                 success: false,
-                errors: ['Share not found']
+                errors: ['You need agent permissions to revoke shares for this ticket']
               }
             end
 
@@ -25,6 +29,11 @@ module Gql
             {
               success: true,
               errors: []
+            }
+          rescue ActiveRecord::RecordNotFound
+            {
+              success: false,
+              errors: ['Share not found']
             }
           rescue StandardError => e
             {

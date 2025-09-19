@@ -1,15 +1,23 @@
-class Ticket::Share < ApplicationModel
-  self.table_name = 'ticket_shares'
+# Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
-  belongs_to :ticket, class_name: 'Ticket'
+class Ticket::Share < ApplicationModel
+  include HasActivityStreamLog
+  include HasSearchIndexBackend
+  include ChecksClientNotification
+  include HasTags
+
+  belongs_to :ticket
   belongs_to :shared_with, class_name: 'User'
 
   validates :ticket_id, presence: true
   validates :shared_with_id, presence: true
+  validates :shared_with_id, uniqueness: { scope: :ticket_id }
   validates :permissions, presence: true
   validate :valid_permissions
 
-  scope :with_permission, ->(permission) { where("permissions @> ?", [permission].to_json) }
+  scope :with_permission, ->(permission) { where("permissions ? '#{permission}'") }
+  scope :readable, -> { with_permission('read') }
+  scope :editable, -> { with_permission('edit') }
 
   def has_permission?(permission)
     permissions.include?(permission)
@@ -36,8 +44,18 @@ class Ticket::Share < ApplicationModel
     if invalid_perms.any?
       errors.add(:permissions, "contains invalid permissions: #{invalid_perms.join(', ')}")
     end
+    
+    if permissions.empty?
+      errors.add(:permissions, 'must contain at least one permission')
+    end
+  end
+
+  def search_index_attribute_lookup(record)
+    {
+      ticket_id: record.ticket_id,
+      shared_with: record.shared_with.fullname,
+      permissions: record.permissions.join(', '),
+      message: record.message,
+    }
   end
 end
-
-
-

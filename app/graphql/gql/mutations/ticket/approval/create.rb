@@ -1,3 +1,5 @@
+# Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
+
 module Gql
   module Mutations
     module Ticket
@@ -11,6 +13,25 @@ module Gql
           field :errors, [String], null: false
 
           def resolve(input:)
+            ticket = Ticket.find(input[:ticket_id])
+            
+            # Check permissions - only agents and admins can create approval requests
+            unless ticket.agent_access?(context[:current_user])
+              return {
+                approval: nil,
+                errors: ['You need agent permissions to create approval requests for this ticket']
+              }
+            end
+
+            # Validate approver exists and is an agent
+            approver = User.find(input[:approver_id])
+            unless approver.agent?
+              return {
+                approval: nil,
+                errors: ['Approver must be an agent or admin']
+              }
+            end
+
             # Check if approval already exists
             existing_approval = Ticket::Approval.find_by(
               ticket_id: input[:ticket_id],
@@ -34,6 +55,11 @@ module Gql
             {
               approval: approval,
               errors: []
+            }
+          rescue ActiveRecord::RecordNotFound => e
+            {
+              approval: nil,
+              errors: [e.message]
             }
           rescue StandardError => e
             {
