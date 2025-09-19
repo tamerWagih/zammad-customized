@@ -3,7 +3,7 @@ class CreateTicketShares < ActiveRecord::Migration[7.0]
     create_table :ticket_shares do |t|
       t.references :ticket, null: false, foreign_key: true
       t.references :shared_with, null: false, foreign_key: { to_table: :users }
-      t.json :permissions, null: false, default: []
+      t.jsonb :permissions, null: false, default: []
       t.text :message
       t.timestamps
     end
