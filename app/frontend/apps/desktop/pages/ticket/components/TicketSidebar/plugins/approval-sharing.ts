@@ -1,18 +1,18 @@
-import type { TicketSidebarContext } from '#desktop/pages/ticket/types/sidebar.ts'
-import TicketApprovalAndSharePanel from '#shared/components/TicketApprovalAndShare/TicketApprovalAndSharePanel.vue'
+// Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
-export default {
-  title: 'Approval & Sharing',
-  order: 50,
-  component: TicketApprovalAndSharePanel,
+import { TicketSidebarScreenType } from '#desktop/pages/ticket/types/sidebar.ts'
+
+import TicketSidebarApprovalSharing from '../TicketSidebarApprovalSharing/TicketSidebarApprovalSharing.vue'
+
+import type { TicketSidebarPlugin } from './types.ts'
+
+export default <TicketSidebarPlugin>{
+  title: __('Approval & Sharing'),
+  component: TicketSidebarApprovalSharing,
   permissions: ['ticket.agent'],
-  screens: ['desktop'],
+  screens: [TicketSidebarScreenType.TicketDetailView],
   icon: 'check-circle',
-  available: (context: TicketSidebarContext) => !!context.ticket?.id,
-  props: (context: TicketSidebarContext) => ({
-    ticketId: context.ticket?.id,
-    canManage: context.isTicketEditable,
-  }),
+  order: 50,
 }
 
 
