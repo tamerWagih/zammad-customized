@@ -1,4 +1,4 @@
-class Ticket::Share < ApplicationRecord
+class Ticket::Share < ApplicationModel
   self.table_name = 'ticket_shares'
 
   belongs_to :ticket, class_name: 'Ticket'

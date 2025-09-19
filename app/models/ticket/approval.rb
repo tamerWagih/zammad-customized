@@ -1,4 +1,4 @@
-class Ticket::Approval < ApplicationRecord
+class Ticket::Approval < ApplicationModel
   self.table_name = 'ticket_approvals'
 
   belongs_to :ticket, class_name: 'Ticket'
