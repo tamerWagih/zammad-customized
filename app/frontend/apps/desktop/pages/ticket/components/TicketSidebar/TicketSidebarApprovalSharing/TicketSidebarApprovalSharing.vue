@@ -1,6 +1,8 @@
 <!-- Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/ -->
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
+
 import { usePersistentStates } from '#desktop/pages/ticket/composables/usePersistentStates.ts'
 import {
   type TicketSidebarProps,
@@ -11,13 +13,15 @@ import TicketSidebarWrapper from '../TicketSidebarWrapper.vue'
 
 import TicketSidebarApprovalSharingContent from './TicketSidebarApprovalSharingContent.vue'
 
-const props = defineProps<TicketSidebarProps>()
+defineProps<TicketSidebarProps>()
 
 const { persistentStates } = usePersistentStates()
 
 const emit = defineEmits<TicketSidebarEmits>()
 
-emit('show')
+onMounted(() => {
+  emit('show')
+})
 </script>
 
 <template>
