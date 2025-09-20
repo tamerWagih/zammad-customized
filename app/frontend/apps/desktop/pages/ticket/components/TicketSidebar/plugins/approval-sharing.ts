@@ -8,7 +8,7 @@ import type { TicketSidebarPlugin } from './types.ts'
 export default <TicketSidebarPlugin>{
   title: __('Approval & Sharing'),
   component: TicketSidebarApprovalSharing,
-  permissions: ['ticket.agent'],
+  permissions: ['ticket.agent', 'admin.*'],
   screens: [TicketSidebarScreenType.TicketDetailView, TicketSidebarScreenType.TicketCreate],
   icon: 'check-circle',
   order: 50,

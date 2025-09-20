@@ -11,7 +11,7 @@ export default <TicketInformationPlugin>{
     component: TicketInformationApprovalSharing,
     meta: {
       requiresAuth: true,
-      requiredPermission: ['ticket.agent'],
+      requiredPermission: ['ticket.agent', 'admin.*'],
     },
   },
   order: 300,
