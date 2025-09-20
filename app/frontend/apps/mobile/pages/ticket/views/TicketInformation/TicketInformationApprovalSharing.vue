@@ -9,11 +9,7 @@ import { useSessionStore } from '#shared/stores/session.ts'
 import TicketApprovalList from '#shared/components/TicketApproval/TicketApprovalList.vue'
 import TicketShareList from '#shared/components/TicketShare/TicketShareList.vue'
 
-interface Props {
-  internalId: number
-}
-
-const props = defineProps<Props>()
+// No props needed - ticket information is available via composable
 
 const { ticket } = useTicketInformation()
 const { hasPermission } = useSessionStore()
