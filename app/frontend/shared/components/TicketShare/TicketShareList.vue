@@ -1,50 +1,62 @@
 <template>
-  <div class="ticket-share-list">
-    <div class="header">
-      <h3>{{ $t('Shared Tickets') }}</h3>
-      <button 
-        v-if="canManage"
-        @click="showCreateForm = true"
-        class="btn btn-primary btn-sm"
-      >
-        {{ $t('Share Ticket') }}
-      </button>
+  <div class="flex flex-col gap-2">
+    <div v-if="loading" class="flex justify-center py-4">
+      <CommonLoader />
     </div>
     
-    <div v-if="loading" class="loading">
-      {{ $t('Loading...') }}
-    </div>
-    
-    <div v-else-if="error" class="error">
+    <div v-else-if="error" class="text-red-600 text-center py-4">
       {{ $t('Error loading shares') }}
     </div>
     
-    <div v-else-if="shares.length === 0" class="empty">
+    <div v-else-if="shares.length === 0" class="text-center py-4 text-gray-500">
       {{ $t('No shares found') }}
     </div>
     
-    <div v-else class="shares">
+    <div v-else class="flex flex-col gap-2">
       <div 
         v-for="share in shares" 
         :key="share.id"
-        class="share-item"
+        class="flex w-full flex-col rounded-lg bg-blue-200 px-2.5 dark:bg-gray-700"
       >
-        <div class="share-info">
-          <div class="shared-with">{{ share.sharedWith?.fullname }}</div>
-          <div class="permissions">{{ formatPermissions(share.permissions) }}</div>
-          <div class="created">{{ formatDate(share.createdAt) }}</div>
+        <div class="flex items-center justify-between py-2">
+          <div class="flex flex-col">
+            <CommonLabel size="small" class="font-medium">
+              {{ share.sharedWith?.fullname }}
+            </CommonLabel>
+            <CommonLabel size="small" class="text-stone-200! dark:text-neutral-500!">
+              <CommonDateTime :date-time="share.createdAt" />
+            </CommonLabel>
+          </div>
+          <CommonLabel size="small" class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            {{ formatPermissions(share.permissions) }}
+          </CommonLabel>
         </div>
-        <div class="share-actions">
-          <button 
-            v-if="canManage"
+        
+        <div v-if="share.message" class="text-sm text-gray-600 dark:text-gray-300 mb-2">
+          {{ share.message }}
+        </div>
+        
+        <div v-if="canManage" class="flex gap-2">
+          <CommonButton
+            size="small"
+            variant="remove"
             @click="revokeShare(share.id)"
-            class="btn btn-danger btn-sm"
           >
             {{ $t('Revoke') }}
-          </button>
+          </CommonButton>
         </div>
       </div>
     </div>
+    
+    <CommonButton
+      v-if="canManage"
+      size="medium"
+      class="self-end"
+      icon="plus-square-fill"
+      @click="showCreateForm = true"
+    >
+      {{ $t('Share Ticket') }}
+    </CommonButton>
     
     <TicketShareCreate 
       v-if="showCreateForm"
@@ -57,7 +69,13 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+
+import CommonButton from '#desktop/components/CommonButton/CommonButton.vue'
+import CommonDateTime from '#shared/components/CommonDateTime/CommonDateTime.vue'
+import CommonLabel from '#shared/components/CommonLabel/CommonLabel.vue'
+import CommonLoader from '#desktop/components/CommonLoader/CommonLoader.vue'
 import { useTicketShares } from '#shared/entities/ticket-share/composables/useTicketShares'
+
 import TicketShareCreate from './TicketShareCreate.vue'
 
 interface Props {
@@ -98,99 +116,6 @@ const handleShareCreated = () => {
 }
 </script>
 
-<style scoped>
-.ticket-share-list {
-  padding: 16px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.loading, .error, .empty {
-  padding: 32px;
-  text-align: center;
-  color: #6b7280;
-}
-
-.error {
-  color: #dc2626;
-}
-
-.shares {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.share-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background-color: #f9fafb;
-}
-
-.share-info {
-  flex: 1;
-}
-
-.shared-with {
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.permissions {
-  font-size: 12px;
-  color: #6b7280;
-  margin-bottom: 4px;
-}
-
-.created {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.share-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.btn {
-  padding: 4px 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.btn-primary {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.btn-danger {
-  background-color: #ef4444;
-  color: white;
-}
-
-.btn-sm {
-  padding: 2px 8px;
-  font-size: 11px;
-}
-</style>
 
 
 

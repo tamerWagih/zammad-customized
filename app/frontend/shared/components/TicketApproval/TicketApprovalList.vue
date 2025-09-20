@@ -1,59 +1,76 @@
 <template>
-  <div class="ticket-approval-list">
-    <div class="header">
-      <h3>{{ $t('Approval Requests') }}</h3>
-      <button 
-        v-if="canManage"
-        @click="showCreateForm = true"
-        class="btn btn-primary btn-sm"
-      >
-        {{ $t('Request Approval') }}
-      </button>
+  <div class="flex flex-col gap-2">
+    <div v-if="loading" class="flex justify-center py-4">
+      <CommonLoader />
     </div>
     
-    <div v-if="loading" class="loading">
-      {{ $t('Loading...') }}
-    </div>
-    
-    <div v-else-if="error" class="error">
+    <div v-else-if="error" class="text-red-600 text-center py-4">
       {{ $t('Error loading approvals') }}
     </div>
     
-    <div v-else-if="approvals.length === 0" class="empty">
+    <div v-else-if="approvals.length === 0" class="text-center py-4 text-gray-500">
       {{ $t('No approval requests found') }}
     </div>
     
-    <div v-else class="approvals">
+    <div v-else class="flex flex-col gap-2">
       <div 
         v-for="approval in approvals" 
         :key="approval.id"
-        class="approval-item"
+        class="flex w-full flex-col rounded-lg bg-blue-200 px-2.5 dark:bg-gray-700"
       >
-        <div class="approval-info">
-          <div class="approver">{{ approval.approver?.fullname }}</div>
-          <div class="status" :class="approval.status">
-            {{ $t(approval.status) }}
+        <div class="flex items-center justify-between py-2">
+          <div class="flex flex-col">
+            <CommonLabel size="small" class="font-medium">
+              {{ approval.approver?.fullname }}
+            </CommonLabel>
+            <CommonLabel size="small" class="text-stone-200! dark:text-neutral-500!">
+              <CommonDateTime :date-time="approval.createdAt" />
+            </CommonLabel>
           </div>
-          <div class="created">{{ formatDate(approval.createdAt) }}</div>
+          <CommonLabel 
+            size="small" 
+            :class="{
+              'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200': approval.status === 'pending',
+              'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': approval.status === 'approved',
+              'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200': approval.status === 'rejected'
+            }"
+          >
+            {{ $t(approval.status) }}
+          </CommonLabel>
         </div>
-        <div class="approval-actions">
-          <button 
-            v-if="canManage && approval.status === 'pending'"
+        
+        <div v-if="approval.message" class="text-sm text-gray-600 dark:text-gray-300 mb-2">
+          {{ approval.message }}
+        </div>
+        
+        <div v-if="canManage && approval.status === 'pending'" class="flex gap-2">
+          <CommonButton
+            size="small"
+            variant="submit"
             @click="approveApproval(approval.id)"
-            class="btn btn-success btn-sm"
           >
             {{ $t('Approve') }}
-          </button>
-          <button 
-            v-if="canManage && approval.status === 'pending'"
+          </CommonButton>
+          <CommonButton
+            size="small"
+            variant="remove"
             @click="rejectApproval(approval.id)"
-            class="btn btn-danger btn-sm"
           >
             {{ $t('Reject') }}
-          </button>
+          </CommonButton>
         </div>
       </div>
     </div>
+    
+    <CommonButton
+      v-if="canManage"
+      size="medium"
+      class="self-end"
+      icon="plus-square-fill"
+      @click="showCreateForm = true"
+    >
+      {{ $t('Request Approval') }}
+    </CommonButton>
     
     <TicketApprovalCreate 
       v-if="showCreateForm"
@@ -66,7 +83,13 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+
+import CommonButton from '#desktop/components/CommonButton/CommonButton.vue'
+import CommonDateTime from '#shared/components/CommonDateTime/CommonDateTime.vue'
+import CommonLabel from '#shared/components/CommonLabel/CommonLabel.vue'
+import CommonLoader from '#desktop/components/CommonLoader/CommonLoader.vue'
 import { useTicketApprovals } from '#shared/entities/ticket-approval/composables/useTicketApprovals'
+
 import TicketApprovalCreate from './TicketApprovalCreate.vue'
 
 interface Props {
@@ -109,122 +132,6 @@ const handleApprovalCreated = () => {
 }
 </script>
 
-<style scoped>
-.ticket-approval-list {
-  padding: 16px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.loading, .error, .empty {
-  padding: 32px;
-  text-align: center;
-  color: #6b7280;
-}
-
-.error {
-  color: #dc2626;
-}
-
-.approvals {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.approval-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background-color: #f9fafb;
-}
-
-.approval-info {
-  flex: 1;
-}
-
-.approver {
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.status {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 12px;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-
-.status.pending {
-  background-color: #fef3c7;
-  color: #92400e;
-}
-
-.status.approved {
-  background-color: #d1fae5;
-  color: #065f46;
-}
-
-.status.rejected {
-  background-color: #fee2e2;
-  color: #991b1b;
-}
-
-.created {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 4px;
-}
-
-.approval-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.btn {
-  padding: 4px 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.btn-primary {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.btn-success {
-  background-color: #10b981;
-  color: white;
-}
-
-.btn-danger {
-  background-color: #ef4444;
-  color: white;
-}
-
-.btn-sm {
-  padding: 2px 8px;
-  font-size: 11px;
-}
-</style>
 
 
 
