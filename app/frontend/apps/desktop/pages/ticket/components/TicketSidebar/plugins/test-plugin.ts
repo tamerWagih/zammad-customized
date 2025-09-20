@@ -9,7 +9,7 @@ import type { TicketSidebarPlugin } from './types.ts'
 export default <TicketSidebarPlugin>{
   title: __('Debug Plugin'),
   component: TicketSidebarInformation,
-  permissions: ['ticket.agent', 'admin.*'],
+  permissions: ['ticket.agent'],
   screens: [TicketSidebarScreenType.TicketDetailView],
   icon: 'bug',
   order: 5,
