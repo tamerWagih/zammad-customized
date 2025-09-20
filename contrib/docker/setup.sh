@@ -30,7 +30,8 @@ if [ "$1" = 'builder' ]; then
   touch db/schema.rb
   # Build without safe mode to ensure proper frontend plugin compilation
   # ZAMMAD_SAFE_MODE=1 DATABASE_URL=postgresql://zammad:/zammad bundle exec rake assets:precompile # Don't require Redis or Postgres.
-  bundle exec rake assets:precompile # Build with full database and Redis access
+  # Provide minimal database config for asset precompilation (no actual connection needed)
+  DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy RAILS_ENV=production bundle exec rake assets:precompile
 
   script/build/cleanup.sh
 fi
