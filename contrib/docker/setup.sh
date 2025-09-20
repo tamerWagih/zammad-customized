@@ -28,7 +28,9 @@ if [ "$1" = 'builder' ]; then
   bundle install
 
   touch db/schema.rb
-  ZAMMAD_SAFE_MODE=1 DATABASE_URL=postgresql://zammad:/zammad bundle exec rake assets:precompile # Don't require Redis or Postgres.
+  # Build without safe mode to ensure proper frontend plugin compilation
+  # ZAMMAD_SAFE_MODE=1 DATABASE_URL=postgresql://zammad:/zammad bundle exec rake assets:precompile # Don't require Redis or Postgres.
+  bundle exec rake assets:precompile # Build with full database and Redis access
 
   script/build/cleanup.sh
 fi
