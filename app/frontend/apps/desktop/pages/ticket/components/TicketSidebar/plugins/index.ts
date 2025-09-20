@@ -24,7 +24,7 @@ export const pluginFiles = Object.entries(pluginModules)
 // Debug: print loaded sidebar plugins (temporary)
 try {
   // eslint-disable-next-line no-console
-  console.debug('[Sidebar] Loaded plugins:', Object.keys(Object.fromEntries(pluginFiles)))
+  console.log('[Sidebar] Loaded plugins:', Object.keys(Object.fromEntries(pluginFiles)))
 } catch {}
 
 export const useTicketSidebarPlugins = (screen: TicketSidebarScreenType) => {
