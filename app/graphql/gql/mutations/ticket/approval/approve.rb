@@ -15,8 +15,8 @@ module Gql
           def resolve(input:)
             approval = Ticket::Approval.find(input[:id])
 
-            # Check permissions - only the assigned approver can approve
-            unless approval.approver_id == context[:current_user].id
+            # Check permissions - only the assigned approver or admin can approve
+            unless approval.approver_id == context[:current_user].id || context[:current_user].role?('Admin')
               return {
                 approval: nil,
                 errors: ['You are not authorized to approve this request']

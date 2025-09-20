@@ -16,10 +16,10 @@ module Gql
             ticket = Ticket.find(input[:ticket_id])
             
             # Check permissions - only agents and admins can create shares
-            unless ticket.agent_access?(context[:current_user])
+            unless ticket.agent_access?(context[:current_user]) || context[:current_user].role?('Admin')
               return {
                 share: nil,
-                errors: ['You need agent permissions to create shares for this ticket']
+                errors: ['You need agent or admin permissions to create shares for this ticket']
               }
             end
 

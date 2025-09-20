@@ -16,10 +16,10 @@ module Gql
             ticket = Ticket.find(input[:ticket_id])
             
             # Check permissions - only agents and admins can create approval requests
-            unless ticket.agent_access?(context[:current_user])
+            unless ticket.agent_access?(context[:current_user]) || context[:current_user].role?('Admin')
               return {
                 approval: nil,
-                errors: ['You need agent permissions to create approval requests for this ticket']
+                errors: ['You need agent or admin permissions to create approval requests for this ticket']
               }
             end
 

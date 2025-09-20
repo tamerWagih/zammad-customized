@@ -12,10 +12,10 @@ module Gql
       def resolve(ticket_id:)
         ticket = Ticket.find(ticket_id)
         
-        # Check permissions - only agents and admins can view approvals
-        unless ticket.agent_access?(context[:current_user])
-          raise Exceptions::NotAuthorized, 'You need agent permissions to view ticket approvals'
-        end
+            # Check permissions - only agents and admins can view approvals
+            unless ticket.agent_access?(context[:current_user]) || context[:current_user].role?('Admin')
+              raise Exceptions::NotAuthorized, 'You need agent or admin permissions to view ticket approvals'
+            end
 
         ticket.approvals.includes(:approver).order(created_at: :desc)
       rescue ActiveRecord::RecordNotFound

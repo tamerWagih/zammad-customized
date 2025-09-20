@@ -7,10 +7,10 @@ import TicketSidebarInformation from '../TicketSidebarInformation/TicketSidebarI
 import type { TicketSidebarPlugin } from './types.ts'
 
 export default <TicketSidebarPlugin>{
-  title: __('Test Plugin'),
+  title: __('Debug Plugin'),
   component: TicketSidebarInformation,
-  permissions: ['ticket.agent'],
+  permissions: ['ticket.agent', 'admin'],
   screens: [TicketSidebarScreenType.TicketDetailView],
-  icon: 'test-tube',
-  order: 10,
+  icon: 'bug',
+  order: 5,
 }

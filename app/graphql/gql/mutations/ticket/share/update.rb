@@ -17,10 +17,10 @@ module Gql
             ticket = share.ticket
             
             # Check permissions - only agents and admins can update shares
-            unless ticket.agent_access?(context[:current_user])
+            unless ticket.agent_access?(context[:current_user]) || context[:current_user].role?('Admin')
               return {
                 share: nil,
-                errors: ['You need agent permissions to update shares for this ticket']
+                errors: ['You need agent or admin permissions to update shares for this ticket']
               }
             end
 
