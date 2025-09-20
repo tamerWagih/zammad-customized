@@ -4,6 +4,7 @@
 import { ref, computed } from 'vue'
 import { useTicketView } from '#shared/entities/ticket/composables/useTicketView.ts'
 import { useTicketInformation } from '#desktop/pages/ticket/composables/useTicketInformation.ts'
+import { useSessionStore } from '#shared/stores/session.ts'
 import { type TicketSidebarContentProps } from '#desktop/pages/ticket/types/sidebar.ts'
 import TicketSidebarContent from '../TicketSidebarContent.vue'
 import TicketApprovalList from '#shared/components/TicketApproval/TicketApprovalList.vue'
@@ -13,12 +14,13 @@ const props = defineProps<TicketSidebarContentProps>()
 
 const { ticket } = useTicketInformation()
 const { isTicketAgent, isTicketEditable } = useTicketView(ticket)
+const { hasPermission } = useSessionStore()
 
 const activeTab = ref<'approvals' | 'shares'>('approvals')
 
-// Role-based permissions
-const canManageApprovals = computed(() => isTicketAgent.value)
-const canManageShares = computed(() => isTicketAgent.value)
+// Role-based permissions - allow both agents and admins
+const canManageApprovals = computed(() => isTicketAgent.value || hasPermission(['admin.*']))
+const canManageShares = computed(() => isTicketAgent.value || hasPermission(['admin.*']))
 </script>
 
 <template>
