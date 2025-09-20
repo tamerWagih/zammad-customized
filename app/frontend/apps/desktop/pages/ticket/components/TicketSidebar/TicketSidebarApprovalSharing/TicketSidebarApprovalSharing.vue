@@ -46,7 +46,6 @@ watch(
   (visible) => {
     emit(visible ? 'show' : 'hide')
   },
-  { immediate: true },
 )
 </script>
 
