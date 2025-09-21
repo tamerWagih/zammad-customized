@@ -99,6 +99,8 @@ class Ticket < ApplicationModel
   has_many      :articles, -> { reorder(:created_at, :id) }, class_name: 'Ticket::Article', after_add: :cache_update, after_remove: :cache_update, dependent: :destroy, inverse_of: :ticket
   has_many      :ticket_time_accounting, class_name: 'Ticket::TimeAccounting', dependent: :destroy, inverse_of: :ticket
   has_many      :mentions,               as: :mentionable, dependent: :destroy
+  has_many      :approvals,              class_name: 'Ticket::Approval', dependent: :destroy
+  has_many      :shares,                 class_name: 'Ticket::Share', dependent: :destroy
   has_one       :shared_draft,           class_name: 'Ticket::SharedDraftZoom', inverse_of: :ticket, dependent: :destroy
   belongs_to    :state,                  class_name: 'Ticket::State', optional: true
   belongs_to    :priority,               class_name: 'Ticket::Priority', optional: true
