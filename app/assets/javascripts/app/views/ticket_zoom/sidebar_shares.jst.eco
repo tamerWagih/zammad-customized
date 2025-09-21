@@ -3,23 +3,10 @@
     <h3><%- @T('Shares') %></h3>
   </div>
   <div class="sidebar-content js-shares">
-    <% if @shares && @shares.length > 0 %>
-      <% for share in @shares %>
-        <div class="share-item">
-          <div class="share-user"><%- share.shared_with %></div>
-          <div class="share-permissions">
-            <% for permission in share.permissions %>
-              <span class="permission-badge"><%- permission %></span>
-            <% end %>
-          </div>
-        </div>
-      <% end %>
-    <% else %>
-      <div class="text-muted"><%- @T('No shares yet') %></div>
-      <div class="share-help">
-        <small><%- @T('Click "Share Ticket" to share this ticket with other users') %></small>
-      </div>
-    <% end %>
+    <div class="text-muted"><%- @T('No shares yet') %></div>
+    <div class="share-help">
+      <small><%- @T('Click "Share Ticket" to share this ticket with other users') %></small>
+    </div>
   </div>
 </div>
 

@@ -3,19 +3,10 @@
     <h3><%- @T('Approvals') %></h3>
   </div>
   <div class="sidebar-content js-approvals">
-    <% if @approvals && @approvals.length > 0 %>
-      <% for approval in @approvals %>
-        <div class="approval-item">
-          <div class="approval-user"><%- approval.approver %></div>
-          <div class="approval-status status-<%- approval.status %>"><%- approval.status %></div>
-        </div>
-      <% end %>
-    <% else %>
-      <div class="text-muted"><%- @T('No approval requests yet') %></div>
-      <div class="approval-help">
-        <small><%- @T('Click "Request Approval" to send approval requests to users') %></small>
-      </div>
-    <% end %>
+    <div class="text-muted"><%- @T('No approval requests yet') %></div>
+    <div class="approval-help">
+      <small><%- @T('Click "Request Approval" to send approval requests to users') %></small>
+    </div>
   </div>
 </div>
 
