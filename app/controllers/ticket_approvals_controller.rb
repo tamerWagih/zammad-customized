@@ -79,6 +79,7 @@ class TicketApprovalsController < ApplicationController
   end
 
   def check_permissions
-    authorize!(@ticket)
+    # Check if user can access the ticket (same as show action)
+    authorize!(@ticket, :show)
   end
 end
