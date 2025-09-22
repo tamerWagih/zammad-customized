@@ -24,7 +24,7 @@ class SidebarApprovals extends App.Controller
     console.log('SidebarApprovals showPanel called', el, @ticket)
     new App.WidgetApprovals(
       el:       @elSidebar
-      ticket:   @ticket
+      ticket_id: @ticket.id
       callback: @refreshApprovals
     )
 

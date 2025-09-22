@@ -7,7 +7,7 @@ class App.WidgetShares extends App.Controller
 
   constructor: ->
     super
-    console.log('WidgetShares constructor called', @el, @ticket)
+    console.log('WidgetShares constructor called', @el, @ticket_id)
     @render()
 
   render: (data) =>
@@ -43,7 +43,7 @@ class App.WidgetShares extends App.Controller
     # Then try the template
     # @html App.view('widget/shares')(
     #   shares: shares
-    #   ticket: @ticket
+    #   ticket_id: @ticket_id
     # )
     
     console.log('Shares widget rendered, element content:', @el.html())

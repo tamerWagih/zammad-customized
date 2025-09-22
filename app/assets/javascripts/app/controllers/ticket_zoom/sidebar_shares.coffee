@@ -21,9 +21,10 @@ class SidebarShares extends App.Controller
 
   showPanel: (el) =>
     @elSidebar = el
+    console.log('SidebarShares showPanel called', el, @ticket)
     new App.WidgetShares(
       el:       @elSidebar
-      ticket:   @ticket
+      ticket_id: @ticket.id
       callback: @refreshShares
     )
 

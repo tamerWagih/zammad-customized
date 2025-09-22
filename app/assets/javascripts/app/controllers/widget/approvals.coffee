@@ -7,7 +7,7 @@ class App.WidgetApprovals extends App.Controller
 
   constructor: ->
     super
-    console.log('WidgetApprovals constructor called', @el, @ticket)
+    console.log('WidgetApprovals constructor called', @el, @ticket_id)
     @render()
 
   render: (data) =>
@@ -41,7 +41,7 @@ class App.WidgetApprovals extends App.Controller
     # Then try the template
     # @html App.view('widget/approvals')(
     #   approvals: approvals
-    #   ticket: @ticket
+    #   ticket_id: @ticket_id
     # )
     
     console.log('Approvals widget rendered, element content:', @el.html())
@@ -56,7 +56,7 @@ class App.WidgetApprovals extends App.Controller
         @ajax(
           id:          'approve_approval'
           type:        'POST'
-          url:         "#{@apiPath}/tickets/#{@ticket.id}/approvals/#{approval_id}/approve"
+          url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/approve"
           processData: true
           success:     @approvalSuccess
           error:       @approvalError
@@ -73,7 +73,7 @@ class App.WidgetApprovals extends App.Controller
         @ajax(
           id:          'reject_approval'
           type:        'POST'
-          url:         "#{@apiPath}/tickets/#{@ticket.id}/approvals/#{approval_id}/reject"
+          url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/reject"
           processData: true
           success:     @approvalSuccess
           error:       @approvalError
