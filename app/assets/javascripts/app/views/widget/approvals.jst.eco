@@ -17,7 +17,7 @@
           <%- @T(approval.priority.charAt(0).toUpperCase() + approval.priority.slice(1)) %> Priority
         </span>
         <span class="approval-date">
-          <%- new Date(approval.created_at).toLocaleDateString() %>
+          <%- @T('Requested') %> <%- new Date(approval.created_at).toLocaleDateString() %>
         </span>
       </div>
       

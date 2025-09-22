@@ -2,7 +2,16 @@
 
 /* Approvals Widget */
 .approvals-widget {
-  padding: 10px 0;
+  padding: 0;
+}
+
+/* Sidebar Block Integration */
+.sidebar-block.approval-item {
+  border: 1px solid #e1e5e9;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  padding: 12px;
+  background: #fff;
 }
 
 .approval-item {
@@ -87,7 +96,16 @@
 
 /* Shares Widget */
 .shares-widget {
-  padding: 10px 0;
+  padding: 0;
+}
+
+/* Sidebar Block Integration */
+.sidebar-block.share-item {
+  border: 1px solid #e1e5e9;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  padding: 12px;
+  background: #fff;
 }
 
 .share-item {

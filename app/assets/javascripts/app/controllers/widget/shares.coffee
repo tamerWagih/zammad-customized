@@ -102,6 +102,8 @@ class App.WidgetShares extends App.Controller
       type: 'success'
       msg:  __('Share updated successfully')
     )
+    # Simulate real share update by re-rendering
+    @render()
     @refresh() if @callback
 
   shareError: (xhr, status, error) =>

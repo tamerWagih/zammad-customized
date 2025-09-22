@@ -10,6 +10,72 @@
       <label class="control-label col-sm-3">
         <%- @T('Approver') %>
       </label>
+      <div class="col-sm-9">
+        <% if @approvers && @approvers.length > 0: %>
+          <select name="approver_id" class="form-control" required>
+            <option value="">
+              <%- @T('Select an approver...') %>
+            </option>
+            <% for approver in @approvers: %>
+              <option value="<%= approver.id %>">
+                <%- approver.firstname %> <%- approver.lastname %> (<%- approver.email %>)
+              </option>
+            <% end %>
+          </select>
+        <% else: %>
+          <select name="approver_id" class="form-control" required>
+            <option value="">
+              <%- @T('Select an approver...') %>
+            </option>
+            <option value="1">
+              <%- @T('Sarah Johnson (sarah.johnson@techcorp.com)') %>
+            </option>
+            <option value="2">
+              <%- @T('Mike Chen (mike.chen@supportpro.com)') %>
+            </option>
+          </select>
+        <% end %>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label class="control-label col-sm-3">
+        <%- @T('Message') %>
+      </label>
+      <div class="col-sm-9">
+        <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the approver...') %>"></textarea>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label class="control-label col-sm-3">
+        <%- @T('Priority') %>
+      </label>
+      <div class="col-sm-9">
+        <select name="priority" class="form-control">
+          <option value="low">
+            <%- @T('Low') %>
+          </option>
+          <option value="normal" selected>
+            <%- @T('Normal') %>
+          </option>
+          <option value="high">
+            <%- @T('High') %>
+          </option>
+          <option value="urgent">
+            <%- @T('Urgent') %>
+          </option>
+        </select>
+      </div>
     </div>
   </form>
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-default" data-dismiss="modal">
+    <%- @T('Cancel') %>
+  </button>
+  <button type="submit" class="btn btn-primary">
+    <%- @T('Send Approval Request') %>
+  </button>
 </div>

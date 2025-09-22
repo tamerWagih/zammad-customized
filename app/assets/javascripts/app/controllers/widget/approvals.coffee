@@ -39,26 +39,34 @@ class App.WidgetApprovals extends App.Controller
     e.preventDefault()
     approval_id = $(e.currentTarget).data('approval-id')
     
-    @ajax(
-      id:          'approve_approval'
-      type:        'POST'
-      url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/approve"
-      processData: true
-      success:     @approvalSuccess
-      error:       @approvalError
+    @confirm(
+      message: __('Are you sure you want to approve this request?')
+      callback: =>
+        @ajax(
+          id:          'approve_approval'
+          type:        'POST'
+          url:         "#{@apiPath}/tickets/#{@ticket.id}/approvals/#{approval_id}/approve"
+          processData: true
+          success:     @approvalSuccess
+          error:       @approvalError
+        )
     )
 
   reject: (e) =>
     e.preventDefault()
     approval_id = $(e.currentTarget).data('approval-id')
     
-    @ajax(
-      id:          'reject_approval'
-      type:        'POST'
-      url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/reject"
-      processData: true
-      success:     @approvalSuccess
-      error:       @approvalError
+    @confirm(
+      message: __('Are you sure you want to reject this request?')
+      callback: =>
+        @ajax(
+          id:          'reject_approval'
+          type:        'POST'
+          url:         "#{@apiPath}/tickets/#{@ticket.id}/approvals/#{approval_id}/reject"
+          processData: true
+          success:     @approvalSuccess
+          error:       @approvalError
+        )
     )
 
   editApproval: (e) =>
@@ -96,6 +104,8 @@ class App.WidgetApprovals extends App.Controller
       type: 'success'
       msg:  __('Approval updated successfully')
     )
+    # Simulate real approval update by re-rendering
+    @render()
     @refresh() if @callback
 
   approvalError: (xhr, status, error) =>
