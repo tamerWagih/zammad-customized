@@ -1,54 +1,60 @@
 <% if @approvals && @approvals.length > 0: %>
   <% for approval in @approvals: %>
-    <div class="sidebar-block approval-item">
+    <div class="sidebar-block">
       <div class="approval-header">
-        <h4><%- approval.approver %></h4>
-        <span class="approval-status status-<%= approval.status %>">
-          <%- @T(approval.status.charAt(0).toUpperCase() + approval.status.slice(1)) %>
-        </span>
+        <div class="approval-user">
+          <strong><%- approval.approver.toUpperCase() %></strong>
+        </div>
+        <div class="approval-status">
+          <span class="label label-<%= approval.status is 'pending' and 'warning' or approval.status is 'approved' and 'success' or 'danger' %>">
+            <%- @T(approval.status.charAt(0).toUpperCase() + approval.status.slice(1)) %>
+          </span>
+        </div>
       </div>
       
-      <div class="approval-message">
-        <%- approval.message %>
-      </div>
-      
-      <div class="approval-meta">
-        <span class="approval-priority priority-<%= approval.priority %>">
-          <%- @T(approval.priority.charAt(0).toUpperCase() + approval.priority.slice(1)) %> Priority
-        </span>
-        <span class="approval-date">
-          <%- @T('Requested') %> <%- new Date(approval.created_at).toLocaleDateString() %>
-        </span>
-      </div>
-      
-      <% if approval.status is 'pending': %>
-        <div class="approval-actions">
-          <button class="btn btn-sm btn-success js-approve" data-approval-id="<%= approval.id %>">
-            <%- @T('Approve') %>
+      <div class="approval-content">
+        <div class="approval-message">
+          <%- approval.message %>
+        </div>
+        
+        <div class="approval-meta">
+          <div class="approval-priority">
+            <span class="label label-<%= approval.priority is 'high' and 'danger' or approval.priority is 'urgent' and 'danger' or approval.priority is 'low' and 'info' or 'success' %>">
+              <%- @T(approval.priority.charAt(0).toUpperCase() + approval.priority.slice(1)) %> Priority
+            </span>
+          </div>
+          <div class="approval-date">
+            <%- @T('Requested') %> <%- new Date(approval.created_at).toLocaleDateString() %>
+          </div>
+        </div>
+        
+        <% if approval.status is 'pending': %>
+          <div class="approval-actions">
+            <button class="btn btn-success btn-sm js-approve" data-approval-id="<%= approval.id %>">
+              <%- @T('Approve') %>
+            </button>
+            <button class="btn btn-danger btn-sm js-reject" data-approval-id="<%= approval.id %>">
+              <%- @T('Reject') %>
+            </button>
+          </div>
+        <% end %>
+        
+        <div class="approval-actions-secondary">
+          <button class="btn btn-link btn-sm js-edit-approval" data-approval-id="<%= approval.id %>">
+            <%- @T('Edit') %>
           </button>
-          <button class="btn btn-sm btn-danger js-reject" data-approval-id="<%= approval.id %>">
-            <%- @T('Reject') %>
+          <button class="btn btn-link btn-sm js-delete-approval" data-approval-id="<%= approval.id %>">
+            <%- @T('Delete') %>
           </button>
         </div>
-      <% end %>
-      
-      <div class="approval-actions-secondary">
-        <button class="btn btn-sm btn-link js-edit-approval" data-approval-id="<%= approval.id %>">
-          <%- @T('Edit') %>
-        </button>
-        <button class="btn btn-sm btn-link js-delete-approval" data-approval-id="<%= approval.id %>">
-          <%- @T('Delete') %>
-        </button>
       </div>
     </div>
   <% end %>
 <% else: %>
   <div class="sidebar-block">
-    <div class="text-muted">
-      <%- @T('No approval requests found') %>
-    </div>
-    <div class="approval-help">
-      <small><%- @T('Click "Request Approval" to send approval requests to users') %></small>
+    <div class="approvals-empty">
+      <p><%- @T('No approval requests for this ticket yet.') %></p>
+      <small class="text-muted"><%- @T('Click "Request Approval" to send approval requests to users.') %></small>
     </div>
   </div>
 <% end %>

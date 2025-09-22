@@ -19,10 +19,17 @@ class App.TicketShareCreate extends App.ControllerModal
 
   renderWithUsers: (data, status, xhr) =>
     users = data?.users || []
-    
+    # Filter to exclude current user
+    current_user_id = App.User.current()?.id
+    available_users = users.filter (user) ->
+      # Exclude current user
+      return false if user.id is current_user_id
+      # Include all active users
+      return user.active isnt false
+
     @html $(App.view('ticket_share_create')({
       ticket_id: @ticket_id
-      users: users
+      users: available_users
     }))
 
   renderError: (xhr, status, error) =>

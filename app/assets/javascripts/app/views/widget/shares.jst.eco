@@ -1,59 +1,63 @@
 <% if @shares && @shares.length > 0: %>
   <% for share in @shares: %>
-    <div class="sidebar-block share-item">
+    <div class="sidebar-block">
       <div class="share-header">
-        <h4><%- share.user %></h4>
-        <span class="share-status status-<%= share.status %>">
-          <%- @T(share.status.charAt(0).toUpperCase() + share.status.slice(1)) %>
-        </span>
-      </div>
-      
-      <div class="share-permissions">
-        <% for permission in share.permissions: %>
-          <span class="permission-badge badge-<%= permission %>">
-            <%- @T(permission.charAt(0).toUpperCase() + permission.slice(1)) %>
+        <div class="share-user">
+          <strong><%- share.user.toUpperCase() %></strong>
+        </div>
+        <div class="share-status">
+          <span class="label label-<%= share.status is 'active' and 'info' or 'default' %>">
+            <%- @T(share.status.charAt(0).toUpperCase() + share.status.slice(1)) %>
           </span>
-        <% end %>
+        </div>
       </div>
       
-      <div class="share-message">
-        <%- share.message %>
-      </div>
-      
-      <div class="share-meta">
-        <span class="share-date">
-          <%- @T('Shared') %> <%- new Date(share.created_at).toLocaleDateString() %>
-        </span>
-        <% if share.expires_at: %>
-          <span class="share-expires">
-            <%- @T('Expires') %> <%- new Date(share.expires_at).toLocaleDateString() %>
-          </span>
-        <% end %>
-      </div>
-      
-      <div class="share-actions">
-        <button class="btn btn-sm btn-link js-edit-share" data-share-id="<%= share.id %>">
-          <%- @T('Edit') %>
-        </button>
-        <button class="btn btn-sm btn-link js-update-permissions" data-share-id="<%= share.id %>">
-          <%- @T('Permissions') %>
-        </button>
-        <button class="btn btn-sm btn-link js-revoke-share" data-share-id="<%= share.id %>">
-          <%- @T('Revoke') %>
-        </button>
-        <button class="btn btn-sm btn-link js-delete-share" data-share-id="<%= share.id %>">
-          <%- @T('Delete') %>
-        </button>
+      <div class="share-content">
+        <div class="share-permissions">
+          <% for permission in share.permissions: %>
+            <span class="label label-primary">
+              <%- @T(permission.charAt(0).toUpperCase() + permission.slice(1)) %>
+            </span>
+          <% end %>
+        </div>
+        
+        <div class="share-message">
+          <%- share.message %>
+        </div>
+        
+        <div class="share-meta">
+          <div class="share-date">
+            <%- @T('Shared') %> <%- new Date(share.created_at).toLocaleDateString() %>
+            <% if share.expires_at: %>
+              (<%- @T('Expires') %> <%- new Date(share.expires_at).toLocaleDateString() %>)
+            <% end %>
+          </div>
+        </div>
+        
+        <div class="share-actions">
+          <button class="btn btn-link btn-sm js-edit-share" data-share-id="<%= share.id %>">
+            <%- @T('Edit') %>
+          </button>
+          <button class="btn btn-link btn-sm js-update-permissions" data-share-id="<%= share.id %>">
+            <%- @T('Permissions') %>
+          </button>
+          <% if share.status is 'active': %>
+            <button class="btn btn-link btn-sm js-revoke-share" data-share-id="<%= share.id %>">
+              <%- @T('Revoke') %>
+            </button>
+          <% end %>
+          <button class="btn btn-link btn-sm js-delete-share" data-share-id="<%= share.id %>">
+            <%- @T('Delete') %>
+          </button>
+        </div>
       </div>
     </div>
   <% end %>
 <% else: %>
   <div class="sidebar-block">
-    <div class="text-muted">
-      <%- @T('No shares found') %>
-    </div>
-    <div class="share-help">
-      <small><%- @T('Click "Share Ticket" to share this ticket with other users') %></small>
+    <div class="shares-empty">
+      <p><%- @T('No shares for this ticket yet.') %></p>
+      <small class="text-muted"><%- @T('Click "Share Ticket" to share this ticket with other users.') %></small>
     </div>
   </div>
 <% end %>

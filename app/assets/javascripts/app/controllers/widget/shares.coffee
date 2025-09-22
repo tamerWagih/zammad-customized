@@ -37,14 +37,11 @@ class App.WidgetShares extends App.Controller
 
     console.log('About to render shares widget with data:', shares)
     
-    # Try simple HTML first to test if rendering works
-    @html '<div class="sidebar-block"><h3>Test Shares Widget</h3><p>This is a test to see if rendering works</p></div>'
-    
-    # Then try the template
-    # @html App.view('widget/shares')(
-    #   shares: shares
-    #   ticket_id: @ticket_id
-    # )
+    # Render the full template with sample data
+    @html App.view('widget/shares')(
+      shares: shares
+      ticket_id: @ticket_id
+    )
     
     console.log('Shares widget rendered, element content:', @el.html())
 

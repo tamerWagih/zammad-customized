@@ -35,14 +35,11 @@ class App.WidgetApprovals extends App.Controller
 
     console.log('About to render approvals widget with data:', approvals)
     
-    # Try simple HTML first to test if rendering works
-    @html '<div class="sidebar-block"><h3>Test Approvals Widget</h3><p>This is a test to see if rendering works</p></div>'
-    
-    # Then try the template
-    # @html App.view('widget/approvals')(
-    #   approvals: approvals
-    #   ticket_id: @ticket_id
-    # )
+    # Render the full template with sample data
+    @html App.view('widget/approvals')(
+      approvals: approvals
+      ticket_id: @ticket_id
+    )
     
     console.log('Approvals widget rendered, element content:', @el.html())
 

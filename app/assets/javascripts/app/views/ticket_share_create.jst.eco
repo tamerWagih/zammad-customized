@@ -5,39 +5,31 @@
 </div>
 
 <div class="modal-body">
+  <% if @error: %>
+    <div class="alert alert-warning">
+      <%- @T('Unable to load users. Please try again.') %>
+    </div>
+  <% end %>
+  
   <form class="form-horizontal">
     <div class="form-group">
       <label class="control-label col-sm-3">
         <%- @T('Share with') %>
       </label>
       <div class="col-sm-9">
-        <% if @users && @users.length > 0: %>
-          <select name="shared_with_id" class="form-control" required>
-            <option value="">
-              <%- @T('Select a user...') %>
+        <select name="shared_with_id" class="form-control" required>
+          <option value="">
+            <%- @T('Select a user...') %>
+          </option>
+          <% for user in @users: %>
+            <option value="<%= user.id %>">
+              <%- user.firstname %> <%- user.lastname %> (<%- user.email %>)
             </option>
-            <% for user in @users: %>
-              <option value="<%= user.id %>">
-                <%- user.firstname %> <%- user.lastname %> (<%- user.email %>)
-              </option>
-            <% end %>
-          </select>
-        <% else: %>
-          <select name="shared_with_id" class="form-control" required>
-            <option value="">
-              <%- @T('Select a user...') %>
-            </option>
-            <option value="3">
-              <%- @T('Alice Williams (alice.williams@techcorp.com)') %>
-            </option>
-            <option value="4">
-              <%- @T('Bob Rodriguez (bob.rodriguez@supportpro.com)') %>
-            </option>
-          </select>
-        <% end %>
+          <% end %>
+        </select>
       </div>
     </div>
-    
+
     <div class="form-group">
       <label class="control-label col-sm-3">
         <%- @T('Permissions') %>
@@ -69,7 +61,7 @@
         </div>
       </div>
     </div>
-    
+
     <div class="form-group">
       <label class="control-label col-sm-3">
         <%- @T('Message') %>
@@ -78,7 +70,7 @@
         <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the shared user...') %>"></textarea>
       </div>
     </div>
-    
+
     <div class="form-group">
       <label class="control-label col-sm-3">
         <%- @T('Expires') %>

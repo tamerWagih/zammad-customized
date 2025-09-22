@@ -19,12 +19,16 @@ class App.TicketApprovalRequest extends App.ControllerModal
 
   renderWithUsers: (data, status, xhr) =>
     users = data?.users || []
-    # Filter to only show agents/managers
+    # Filter to only show agents/admins and exclude current user
+    current_user_id = App.User.current()?.id
     approvers = users.filter (user) ->
+      # Exclude current user
+      return false if user.id is current_user_id
+      # Only show agents and admins
       user.role_ids && user.role_ids.some (role_id) ->
         role = App.Role.find(role_id)
         role && (role.name == 'Agent' || role.name == 'Admin')
-    
+
     @html $(App.view('ticket_approval_request')({
       ticket_id: @ticket_id
       approvers: approvers
