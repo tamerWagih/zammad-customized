@@ -7,9 +7,12 @@ class App.WidgetShares extends App.Controller
 
   constructor: ->
     super
+    console.log('WidgetShares constructor called', @el, @ticket)
     @render()
 
-  render: =>
+  render: (data) =>
+    console.log('WidgetShares render called', @el, data)
+    
     # Generate sample shares data for demonstration
     shares = [
       {
@@ -32,10 +35,18 @@ class App.WidgetShares extends App.Controller
       }
     ]
 
-    @html App.view('widget/shares')(
-      shares: shares
-      ticket: @ticket
-    )
+    console.log('About to render shares widget with data:', shares)
+    
+    # Try simple HTML first to test if rendering works
+    @html '<div class="sidebar-block"><h3>Test Shares Widget</h3><p>This is a test to see if rendering works</p></div>'
+    
+    # Then try the template
+    # @html App.view('widget/shares')(
+    #   shares: shares
+    #   ticket: @ticket
+    # )
+    
+    console.log('Shares widget rendered, element content:', @el.html())
 
   editShare: (e) =>
     e.preventDefault()
