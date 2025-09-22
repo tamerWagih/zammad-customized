@@ -54,64 +54,49 @@ class App.WidgetApprovals extends App.Controller
     e.preventDefault()
     approval_id = $(e.currentTarget).data('approval-id')
     
-    @confirm(
-      message: __('Are you sure you want to approve this request?')
-      callback: =>
-        @ajax(
-          id:          'approve_approval'
-          type:        'POST'
-          url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/approve"
-          processData: true
-          success:     @approvalSuccess
-          error:       @approvalError
-        )
+    @ajax(
+      id:          'approve_approval'
+      type:        'POST'
+      url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/approve"
+      processData: true
+      success:     @approvalSuccess
+      error:       @approvalError
     )
 
   reject: (e) =>
     e.preventDefault()
     approval_id = $(e.currentTarget).data('approval-id')
     
-    @confirm(
-      message: __('Are you sure you want to reject this request?')
-      callback: =>
-        @ajax(
-          id:          'reject_approval'
-          type:        'POST'
-          url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/reject"
-          processData: true
-          success:     @approvalSuccess
-          error:       @approvalError
-        )
+    @ajax(
+      id:          'reject_approval'
+      type:        'POST'
+      url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/reject"
+      processData: true
+      success:     @approvalSuccess
+      error:       @approvalError
     )
 
   editApproval: (e) =>
     e.preventDefault()
     approval_id = $(e.currentTarget).data('approval-id')
     
-    # Open edit modal
-    new App.TicketApprovalEdit(
-      approval_id: approval_id
-      ticket_id:   @ticket_id
-      container:   @el.closest('.content')
-      callback:    @refresh
+    # TODO: Implement edit modal
+    @notify(
+      type: 'notice'
+      msg:  __('Edit functionality not yet implemented')
     )
 
   deleteApproval: (e) =>
     e.preventDefault()
     approval_id = $(e.currentTarget).data('approval-id')
     
-    # Confirm deletion
-    @confirm(
-      message: __('Are you sure you want to delete this approval request?')
-      callback: =>
-        @ajax(
-          id:          'delete_approval'
-          type:        'DELETE'
-          url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
-          processData: true
-          success:     @approvalSuccess
-          error:       @approvalError
-        )
+    @ajax(
+      id:          'delete_approval'
+      type:        'DELETE'
+      url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
+      processData: true
+      success:     @approvalSuccess
+      error:       @approvalError
     )
 
   approvalSuccess: (data, status, xhr) =>
