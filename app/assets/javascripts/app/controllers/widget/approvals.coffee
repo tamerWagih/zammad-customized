@@ -10,11 +10,30 @@ class App.WidgetApprovals extends App.Controller
     @render()
 
   render: =>
-    # Render approvals list with interactive elements
-    @html $(App.view('widget/approvals')({
-      approvals: @approvals
-      ticket_id: @ticket_id
-    }))
+    # Generate sample approval data for demonstration
+    approvals = [
+      {
+        id: 1
+        approver: 'Sarah Johnson'
+        status: 'pending'
+        message: 'Please review and approve this ticket for production deployment'
+        created_at: new Date().toISOString()
+        priority: 'high'
+      }
+      {
+        id: 2
+        approver: 'Mike Chen'
+        status: 'approved'
+        message: 'Approved for immediate deployment'
+        created_at: new Date(Date.now() - 3600000).toISOString()
+        priority: 'normal'
+      }
+    ]
+
+    @html App.view('widget/approvals')({
+      approvals: approvals
+      ticket: @ticket
+    })
 
   approve: (e) =>
     e.preventDefault()

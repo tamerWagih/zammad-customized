@@ -1,8 +1,1 @@
-<div class="sidebar-section">
-  <div class="sidebar-section-header">
-    <h3><%- @T('Approvals') %></h3>
-  </div>
-  <div class="sidebar-content js-approvals">
-    <div class="text-muted"><%- @T('Loading approvals...') %></div>
-  </div>
-</div>
+<div class="text-muted"><%- @T('Loading approvals...') %></div>

@@ -21,39 +21,15 @@ class SidebarApprovals extends App.Controller
 
   showPanel: (el) =>
     @elSidebar = el
-    @loadApprovals()
-
-  loadApprovals: =>
-    # Load approval data from backend
-    @ajax(
-      id:          'ticket_approvals'
-      type:        'GET'
-      url:         "#{@apiPath}/tickets/#{@ticket.id}/approvals"
-      processData: true
-      success:     @loadApprovalsSuccess
-      error:       @loadApprovalsError
-    )
-
-  loadApprovalsSuccess: (data, status, xhr) =>
-    approvals = data?.approvals || []
-    
-    # Create interactive approval widget
     new App.WidgetApprovals(
-      el:        @elSidebar
-      ticket_id: @ticket.id
-      approvals: approvals
-      callback:  @refreshApprovals
+      el:       @elSidebar
+      ticket:   @ticket
+      callback: @refreshApprovals
     )
-
-  loadApprovalsError: (xhr, status, error) =>
-    # Fallback to placeholder content if API not available
-    @html $(App.view('ticket_zoom/sidebar_approvals')({
-      approvals: []
-      error: true
-    }))
 
   refreshApprovals: =>
-    @loadApprovals()
+    if @elSidebar
+      @showPanel(@elSidebar)
 
   requestApproval: =>
     # Create approval request modal

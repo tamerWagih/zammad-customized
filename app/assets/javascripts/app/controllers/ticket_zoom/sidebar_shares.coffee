@@ -21,39 +21,15 @@ class SidebarShares extends App.Controller
 
   showPanel: (el) =>
     @elSidebar = el
-    @loadShares()
-
-  loadShares: =>
-    # Load share data from backend
-    @ajax(
-      id:          'ticket_shares'
-      type:        'GET'
-      url:         "#{@apiPath}/tickets/#{@ticket.id}/shares"
-      processData: true
-      success:     @loadSharesSuccess
-      error:       @loadSharesError
-    )
-
-  loadSharesSuccess: (data, status, xhr) =>
-    shares = data?.shares || []
-    
-    # Create interactive shares widget
     new App.WidgetShares(
-      el:        @elSidebar
-      ticket_id: @ticket.id
-      shares:    shares
-      callback:  @refreshShares
+      el:       @elSidebar
+      ticket:   @ticket
+      callback: @refreshShares
     )
-
-  loadSharesError: (xhr, status, error) =>
-    # Fallback to placeholder content if API not available
-    @html $(App.view('ticket_zoom/sidebar_shares')({
-      shares: []
-      error: true
-    }))
 
   refreshShares: =>
-    @loadShares()
+    if @elSidebar
+      @showPanel(@elSidebar)
 
   createShare: =>
     # Create share modal

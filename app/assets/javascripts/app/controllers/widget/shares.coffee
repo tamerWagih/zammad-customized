@@ -10,11 +10,32 @@ class App.WidgetShares extends App.Controller
     @render()
 
   render: =>
-    # Render shares list with interactive elements
-    @html $(App.view('widget/shares')({
-      shares: @shares
-      ticket_id: @ticket_id
-    }))
+    # Generate sample shares data for demonstration
+    shares = [
+      {
+        id: 1
+        user: 'Alice Williams'
+        permissions: ['read', 'comment']
+        message: 'Shared for review and feedback'
+        created_at: new Date().toISOString()
+        expires_at: new Date(Date.now() + 7 * 24 * 3600000).toISOString()
+        status: 'active'
+      }
+      {
+        id: 2
+        user: 'Bob Rodriguez'
+        permissions: ['read']
+        message: 'Read-only access for documentation'
+        created_at: new Date(Date.now() - 7200000).toISOString()
+        expires_at: null
+        status: 'active'
+      }
+    ]
+
+    @html App.view('widget/shares')({
+      shares: shares
+      ticket: @ticket
+    })
 
   editShare: (e) =>
     e.preventDefault()

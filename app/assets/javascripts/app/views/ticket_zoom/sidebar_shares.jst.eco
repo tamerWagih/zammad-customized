@@ -1,8 +1,1 @@
-<div class="sidebar-section">
-  <div class="sidebar-section-header">
-    <h3><%- @T('Shares') %></h3>
-  </div>
-  <div class="sidebar-content js-shares">
-    <div class="text-muted"><%- @T('Loading shares...') %></div>
-  </div>
-</div>
+<div class="text-muted"><%- @T('Loading shares...') %></div>
