@@ -5,37 +5,6 @@
         <div class="approval-user">
           <%- @T('Sample Approver') %>
         </div>
-        <div class="approval-status status-pending">
-          <%- @T('Pending') %>
-        </div>
-      </div>
-      
-      <div class="approval-message">
-        <%- @T('Sample approval message') %>
-      </div>
-      
-      <div class="approval-meta">
-        <span class="approval-date">
-          <%- @T('Just now') %>
-        </span>
-      </div>
-      
-      <div class="approval-actions">
-        <button class="btn btn-sm btn-success js-approve">
-          <%- @T('Approve') %>
-        </button>
-        <button class="btn btn-sm btn-danger js-reject">
-          <%- @T('Reject') %>
-        </button>
-      </div>
-      
-      <div class="approval-actions-secondary">
-        <button class="btn btn-sm btn-link js-edit-approval">
-          <%- @T('Edit') %>
-        </button>
-        <button class="btn btn-sm btn-link js-delete-approval">
-          <%- @T('Delete') %>
-        </button>
       </div>
     </div>
   </div>
