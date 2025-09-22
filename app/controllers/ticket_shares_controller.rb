@@ -69,8 +69,6 @@ class TicketSharesController < ApplicationController
   end
 
   def check_permissions
-    unless @ticket.agent_access?(current_user) || current_user.role?('Admin')
-      render json: { error: 'Insufficient permissions' }, status: :forbidden
-    end
+    authorize!(@ticket)
   end
 end
