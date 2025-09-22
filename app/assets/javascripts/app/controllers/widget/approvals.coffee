@@ -13,25 +13,8 @@ class App.WidgetApprovals extends App.Controller
   render: (data) =>
     console.log('WidgetApprovals render called', @el, data)
     
-    # Generate sample approval data for demonstration
-    approvals = [
-      {
-        id: 1
-        approver: 'Sarah Johnson'
-        status: 'pending'
-        message: 'Please review and approve this ticket for production deployment'
-        created_at: new Date().toISOString()
-        priority: 'high'
-      }
-      {
-        id: 2
-        approver: 'Mike Chen'
-        status: 'approved'
-        message: 'Approved for immediate deployment'
-        created_at: new Date(Date.now() - 3600000).toISOString()
-        priority: 'normal'
-      }
-    ]
+    # Start with empty approvals - real data will come from backend
+    approvals = []
 
     console.log('About to render approvals widget with data:', approvals)
     

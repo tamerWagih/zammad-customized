@@ -13,27 +13,8 @@ class App.WidgetShares extends App.Controller
   render: (data) =>
     console.log('WidgetShares render called', @el, data)
     
-    # Generate sample shares data for demonstration
-    shares = [
-      {
-        id: 1
-        user: 'Alice Williams'
-        permissions: ['read', 'comment']
-        message: 'Shared for review and feedback'
-        created_at: new Date().toISOString()
-        expires_at: new Date(Date.now() + 7 * 24 * 3600000).toISOString()
-        status: 'active'
-      }
-      {
-        id: 2
-        user: 'Bob Rodriguez'
-        permissions: ['read']
-        message: 'Read-only access for documentation'
-        created_at: new Date(Date.now() - 7200000).toISOString()
-        expires_at: null
-        status: 'active'
-      }
-    ]
+    # Start with empty shares - real data will come from backend
+    shares = []
 
     console.log('About to render shares widget with data:', shares)
     
