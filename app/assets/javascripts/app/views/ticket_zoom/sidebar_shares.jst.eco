@@ -1,1 +1,1 @@
-<div class="text-muted"><%- @T('Loading shares...') %></div>
+<div class="shares-container"></div>

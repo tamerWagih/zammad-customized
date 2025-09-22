@@ -21,8 +21,9 @@ class SidebarApprovals extends App.Controller
 
   showPanel: (el) =>
     @elSidebar = el
+    @html $(App.view('ticket_zoom/sidebar_approvals')())
     new App.WidgetApprovals(
-      el:       @elSidebar
+      el:       @elSidebar.find('.approvals-container')
       ticket:   @ticket
       callback: @refreshApprovals
     )
