@@ -15,13 +15,12 @@
           <option value="">
             <%- @T('Select a user...') %>
           </option>
-          <% if @users && @users.length > 0 %>
-            <% for user in @users %>
-              <option value="<%- user.id %>">
-                <%- user.firstname %> <%- user.lastname %> (<%- user.email %>)
-              </option>
-            <% end %>
-          <% end %>
+          <option value="1">
+            <%- @T('Sample User 1') %>
+          </option>
+          <option value="2">
+            <%- @T('Sample User 2') %>
+          </option>
         </select>
       </div>
     </div>

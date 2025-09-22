@@ -15,13 +15,12 @@
           <option value="">
             <%- @T('Select an approver...') %>
           </option>
-          <% if @approvers && @approvers.length > 0 %>
-            <% for approver in @approvers %>
-              <option value="<%- approver.id %>">
-                <%- approver.firstname %> <%- approver.lastname %> (<%- approver.email %>)
-              </option>
-            <% end %>
-          <% end %>
+          <option value="1">
+            <%- @T('Sample Approver 1') %>
+          </option>
+          <option value="2">
+            <%- @T('Sample Approver 2') %>
+          </option>
         </select>
       </div>
     </div>
