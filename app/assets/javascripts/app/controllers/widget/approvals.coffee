@@ -30,10 +30,10 @@ class App.WidgetApprovals extends App.Controller
       }
     ]
 
-    @html App.view('widget/approvals')({
+    @html App.view('widget/approvals')(
       approvals: approvals
       ticket: @ticket
-    })
+    )
 
   approve: (e) =>
     e.preventDefault()

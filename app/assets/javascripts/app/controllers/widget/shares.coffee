@@ -32,10 +32,10 @@ class App.WidgetShares extends App.Controller
       }
     ]
 
-    @html App.view('widget/shares')({
+    @html App.view('widget/shares')(
       shares: shares
       ticket: @ticket
-    })
+    )
 
   editShare: (e) =>
     e.preventDefault()

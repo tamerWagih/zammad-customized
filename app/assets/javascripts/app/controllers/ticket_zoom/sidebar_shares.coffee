@@ -21,9 +21,8 @@ class SidebarShares extends App.Controller
 
   showPanel: (el) =>
     @elSidebar = el
-    @html $(App.view('ticket_zoom/sidebar_shares')())
     new App.WidgetShares(
-      el:       @elSidebar.find('.shares-container')
+      el:       @elSidebar
       ticket:   @ticket
       callback: @refreshShares
     )
