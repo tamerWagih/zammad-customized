@@ -19,11 +19,17 @@ class App.TicketApprovalRequest extends App.ControllerModal
 
   renderWithUsers: (data, status, xhr) =>
     users = data?.users || []
-    # Filter to only show agents/admins and exclude current user
+    # Get ticket's organization ID
+    ticket = App.Ticket.find(@ticket_id)
+    ticket_org_id = ticket?.organization_id
+    
+    # Filter to only show agents/admins from the same organization
     current_user_id = App.User.current()?.id
     approvers = users.filter (user) ->
       # Exclude current user
       return false if user.id is current_user_id
+      # Only show users from the same organization as the ticket
+      return false unless ticket_org_id && user.organization_id == ticket_org_id
       # Only show agents and admins
       user.role_ids && user.role_ids.some (role_id) ->
         role = App.Role.find(role_id)
