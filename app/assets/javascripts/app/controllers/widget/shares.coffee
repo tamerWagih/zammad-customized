@@ -37,11 +37,17 @@ class App.WidgetShares extends App.Controller
 
     console.log('About to render shares widget with data:', shares)
     
-    # Render the full template with sample data
-    @html App.view('widget/shares')(
-      shares: shares
-      ticket_id: @ticket_id
-    )
+    # Test if template is working
+    try
+      # Render the full template with sample data
+      @html App.view('widget/shares')(
+        shares: shares
+        ticket_id: @ticket_id
+      )
+    catch error
+      console.error('Template rendering error:', error)
+      # Fallback to simple HTML if template fails
+      @html '<div class="sidebar-block"><h3>Template Error</h3><p>Template failed to render: ' + error.message + '</p></div>'
     
     console.log('Shares widget rendered, element content:', @el.html())
 
