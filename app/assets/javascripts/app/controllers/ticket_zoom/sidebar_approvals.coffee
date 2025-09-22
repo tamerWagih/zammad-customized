@@ -21,6 +21,7 @@ class SidebarApprovals extends App.Controller
 
   showPanel: (el) =>
     @elSidebar = el
+    console.log('SidebarApprovals showPanel called', el, @ticket)
     new App.WidgetApprovals(
       el:       @elSidebar
       ticket:   @ticket

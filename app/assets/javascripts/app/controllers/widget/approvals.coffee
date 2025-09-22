@@ -7,9 +7,12 @@ class App.WidgetApprovals extends App.Controller
 
   constructor: ->
     super
+    console.log('WidgetApprovals constructor called', @el, @ticket)
     @render()
 
   render: =>
+    console.log('WidgetApprovals render called', @el)
+    
     # Generate sample approval data for demonstration
     approvals = [
       {
@@ -30,10 +33,12 @@ class App.WidgetApprovals extends App.Controller
       }
     ]
 
+    console.log('About to render approvals widget with data:', approvals)
     @html App.view('widget/approvals')(
       approvals: approvals
       ticket: @ticket
     )
+    console.log('Approvals widget rendered, element content:', @el.html())
 
   approve: (e) =>
     e.preventDefault()
