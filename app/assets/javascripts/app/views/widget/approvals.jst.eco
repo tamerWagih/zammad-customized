@@ -1,0 +1,61 @@
+<div class="approvals-widget">
+  <% if @approvals && @approvals.length > 0 %>
+    <div class="approvals-list">
+      <% for approval in @approvals %>
+        <div class="approval-item" data-approval-id="<%- approval.id %>">
+          <div class="approval-header">
+            <div class="approval-user">
+              <%- approval.approver_name || approval.approver_email %>
+            </div>
+            <div class="approval-status status-<%- approval.status %>">
+              <%- approval.status %>
+            </div>
+          </div>
+          
+          <% if approval.message %>
+            <div class="approval-message">
+              <%- approval.message %>
+            </div>
+          <% end %>
+          
+          <div class="approval-meta">
+            <span class="approval-date">
+              <%- approval.created_at %>
+            </span>
+          </div>
+          
+          <% if approval.status == 'pending' %>
+            <div class="approval-actions">
+              <button class="btn btn-sm btn-success js-approve" data-approval-id="<%- approval.id %>">
+                <%- @T('Approve') %>
+              </button>
+              <button class="btn btn-sm btn-danger js-reject" data-approval-id="<%- approval.id %>">
+                <%- @T('Reject') %>
+              </button>
+            </div>
+          <% end %>
+          
+          <div class="approval-actions-secondary">
+            <button class="btn btn-sm btn-link js-edit-approval" data-approval-id="<%- approval.id %>">
+              <%- @T('Edit') %>
+            </button>
+            <button class="btn btn-sm btn-link js-delete-approval" data-approval-id="<%- approval.id %>">
+              <%- @T('Delete') %>
+            </button>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="approvals-empty">
+      <div class="text-muted">
+        <%- @T('No approval requests yet') %>
+      </div>
+      <div class="approval-help">
+        <small>
+          <%- @T('Click "Request Approval" to send approval requests to users') %>
+        </small>
+      </div>
+    </div>
+  <% end %>
+</div>

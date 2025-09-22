@@ -3,7 +3,12 @@
     <h3><%- @T('Approvals') %></h3>
   </div>
   <div class="sidebar-content js-approvals">
-    <div class="text-muted"><%- @T('No approval requests yet') %></div>
+    <% if @error %>
+      <div class="alert alert-warning">
+        <%- @T('Unable to load approvals. Please try again.') %>
+      </div>
+    <% end %>
+    <div class="text-muted"><%- @T('Loading approvals...') %></div>
     <div class="approval-help">
       <small><%- @T('Click "Request Approval" to send approval requests to users') %></small>
     </div>

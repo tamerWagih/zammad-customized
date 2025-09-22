@@ -1,0 +1,70 @@
+<div class="shares-widget">
+  <% if @shares && @shares.length > 0 %>
+    <div class="shares-list">
+      <% for share in @shares %>
+        <div class="share-item" data-share-id="<%- share.id %>">
+          <div class="share-header">
+            <div class="share-user">
+              <%- share.shared_with_name || share.shared_with_email %>
+            </div>
+            <div class="share-status status-<%- share.status || 'active' %>">
+              <%- share.status || 'active' %>
+            </div>
+          </div>
+          
+          <div class="share-permissions">
+            <% if share.permissions && share.permissions.length > 0 %>
+              <% for permission in share.permissions %>
+                <span class="permission-badge badge-<%- permission %>">
+                  <%- permission %>
+                </span>
+              <% end %>
+            <% else %>
+              <span class="permission-badge badge-read">
+                <%- @T('Read') %>
+              </span>
+            <% end %>
+          </div>
+          
+          <% if share.message %>
+            <div class="share-message">
+              <%- share.message %>
+            </div>
+          <% end %>
+          
+          <div class="share-meta">
+            <span class="share-date">
+              <%- share.created_at %>
+            </span>
+          </div>
+          
+          <div class="share-actions">
+            <button class="btn btn-sm btn-link js-edit-share" data-share-id="<%- share.id %>">
+              <%- @T('Edit') %>
+            </button>
+            <button class="btn btn-sm btn-link js-update-permissions" data-share-id="<%- share.id %>">
+              <%- @T('Permissions') %>
+            </button>
+            <button class="btn btn-sm btn-link js-revoke-share" data-share-id="<%- share.id %>">
+              <%- @T('Revoke') %>
+            </button>
+            <button class="btn btn-sm btn-link js-delete-share" data-share-id="<%- share.id %>">
+              <%- @T('Delete') %>
+            </button>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="shares-empty">
+      <div class="text-muted">
+        <%- @T('No shares yet') %>
+      </div>
+      <div class="share-help">
+        <small>
+          <%- @T('Click "Share Ticket" to share this ticket with other users') %>
+        </small>
+      </div>
+    </div>
+  <% end %>
+</div>
