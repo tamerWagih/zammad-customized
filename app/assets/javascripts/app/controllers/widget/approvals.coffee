@@ -8,19 +8,37 @@ class App.WidgetApprovals extends App.Controller
   constructor: ->
     super
     console.log('WidgetApprovals constructor called', @el, @ticket_id)
-    @render()
+    @loadApprovals()
 
-  render: (data) =>
-    console.log('WidgetApprovals render called', @el, data)
+  loadApprovals: =>
+    console.log('Loading approvals for ticket:', @ticket_id)
     
-    # Start with empty approvals - real data will come from backend
-    approvals = []
+    @ajax(
+      id:          'load_approvals'
+      type:        'GET'
+      url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals"
+      processData: true
+      success:     @renderApprovals
+      error:       @renderError
+    )
 
+  renderApprovals: (data, status, xhr) =>
+    console.log('Approvals loaded:', data)
+    approvals = data?.approvals || []
+    @render(approvals)
+
+  renderError: (xhr, status, error) =>
+    console.error('Error loading approvals:', error)
+    @html '<div class="sidebar-block"><div class="alert alert-danger">Unable to load approvals</div></div>'
+
+  render: (approvals) =>
+    console.log('WidgetApprovals render called with data:', approvals)
+    
     console.log('About to render approvals widget with data:', approvals)
     
     # Test if template is working
     try
-      # Render the full template with sample data
+      # Render the full template with real data
       @html App.view('widget/approvals')(
         approvals: approvals
         ticket_id: @ticket_id
@@ -101,9 +119,9 @@ class App.WidgetApprovals extends App.Controller
       type: 'success'
       msg:  __('Approval updated successfully')
     )
-    # Simulate real approval update by re-rendering
-    @render()
-    @refresh() if @callback
+    # Reload approvals from backend
+    @loadApprovals()
+    @callback() if @callback
 
   approvalError: (xhr, status, error) =>
     @notify(
