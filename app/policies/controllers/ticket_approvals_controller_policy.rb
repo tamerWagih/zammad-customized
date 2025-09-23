@@ -3,3 +3,4 @@
 class Controllers::TicketApprovalsControllerPolicy < Controllers::ApplicationControllerPolicy
   permit! %i[index create approve reject destroy], to: 'ticket.agent'
 end
+

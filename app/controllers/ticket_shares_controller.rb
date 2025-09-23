@@ -70,6 +70,6 @@ class TicketSharesController < ApplicationController
 
   def check_permissions
     # Check if user can access the ticket (same as show action)
-    authorize!(@ticket, :show)
+    authorize!(@ticket, :show?)
   end
 end
