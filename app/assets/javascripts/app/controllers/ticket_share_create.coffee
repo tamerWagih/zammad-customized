@@ -1,9 +1,19 @@
 class App.TicketShareCreate extends App.ControllerModal
+  buttonClose: true
+  buttonCancel: true
+  buttonSubmit: __('Share Ticket')
+  buttonClass: 'btn--primary'
+  head: __('Share Ticket')
+  shown: true
+  
   events:
     'submit form': 'submit'
 
   constructor: ->
     super
+
+  content: =>
+    # Return the modal content
     @render()
 
   render: =>

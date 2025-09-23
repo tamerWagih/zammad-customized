@@ -1,9 +1,19 @@
 class App.TicketApprovalRequest extends App.ControllerModal
+  buttonClose: true
+  buttonCancel: true
+  buttonSubmit: __('Send Approval Request')
+  buttonClass: 'btn--primary'
+  head: __('Request Approval')
+  shown: true
+  
   events:
     'submit form': 'submit'
 
   constructor: ->
     super
+
+  content: =>
+    # Return the modal content
     @render()
 
   render: =>
