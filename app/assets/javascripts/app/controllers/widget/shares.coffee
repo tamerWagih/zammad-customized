@@ -4,6 +4,7 @@ class App.WidgetShares extends App.Controller
     'click .js-delete-share': 'deleteShare'
     'click .js-revoke-share': 'revokeShare'
     'click .js-update-permissions': 'updatePermissions'
+    'click .js-share-ticket': 'createShare'
 
   constructor: ->
     super
@@ -110,6 +111,18 @@ class App.WidgetShares extends App.Controller
       type: 'error'
       msg:  __('Failed to update share')
     )
+
+  createShare: (e) =>
+    e.preventDefault()
+    console.log('Create share clicked for ticket:', @ticket_id)
+    
+    # Open the share create modal
+    modal = new App.TicketShareCreate(
+      ticket_id: @ticket_id
+      container: @el
+      callback: @loadShares
+    )
+    modal.show()
 
   refresh: =>
     if @callback

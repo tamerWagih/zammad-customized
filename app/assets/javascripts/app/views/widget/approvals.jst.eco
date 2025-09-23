@@ -55,6 +55,11 @@
     <div class="approvals-empty">
       <p><%- @T('No approval requests for this ticket yet.') %></p>
       <small class="text-muted"><%- @T('Click "Request Approval" to send approval requests to users.') %></small>
+      <div class="approval-actions">
+        <button class="btn btn-primary btn-sm js-request-approval">
+          <%- @T('Request Approval') %>
+        </button>
+      </div>
     </div>
   </div>
 <% end %>

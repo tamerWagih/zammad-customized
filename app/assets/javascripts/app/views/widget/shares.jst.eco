@@ -58,6 +58,11 @@
     <div class="shares-empty">
       <p><%- @T('No shares for this ticket yet.') %></p>
       <small class="text-muted"><%- @T('Click "Share Ticket" to share this ticket with other users.') %></small>
+      <div class="share-actions">
+        <button class="btn btn-primary btn-sm js-share-ticket">
+          <%- @T('Share Ticket') %>
+        </button>
+      </div>
     </div>
   </div>
 <% end %>
