@@ -68,6 +68,20 @@ class TicketApprovalsController < ApplicationController
     end
 
     approval.approve!
+
+    # Notify requester about decision
+    begin
+      OnlineNotification.add(
+        type:          'Approval approved',
+        object:        'Ticket',
+        o_id:          @ticket.id,
+        seen:          false,
+        user_id:       approval.requester_id,
+        created_by_id: current_user.id,
+      ) if approval.requester_id.present?
+    rescue StandardError
+    end
+
     render json: { approval: {
       id: approval.id,
       status: approval.status,
@@ -87,6 +101,20 @@ class TicketApprovalsController < ApplicationController
     end
 
     approval.reject!
+
+    # Notify requester about decision
+    begin
+      OnlineNotification.add(
+        type:          'Approval rejected',
+        object:        'Ticket',
+        o_id:          @ticket.id,
+        seen:          false,
+        user_id:       approval.requester_id,
+        created_by_id: current_user.id,
+      ) if approval.requester_id.present?
+    rescue StandardError
+    end
+
     render json: { approval: {
       id: approval.id,
       status: approval.status,

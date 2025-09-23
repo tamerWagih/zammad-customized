@@ -72,6 +72,20 @@ class TicketSharesController < ApplicationController
     end
 
     share.revoke!
+
+    # Optionally notify the shared user about revocation
+    begin
+      OnlineNotification.add(
+        type:          'Share revoked',
+        object:        'Ticket',
+        o_id:          @ticket.id,
+        seen:          false,
+        user_id:       share.shared_with_id,
+        created_by_id: current_user.id,
+      )
+    rescue StandardError
+    end
+
     render json: { share: {
       id: share.id,
       user: share.shared_with&.fullname,
