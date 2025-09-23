@@ -26,6 +26,7 @@ class SidebarShares extends App.Controller
 
     console.log('SidebarShares item created:', @item)
     console.log('SidebarActions count:', @item.sidebarActions.length)
+    console.log('SidebarActions details:', @item.sidebarActions)
     @item
 
   showPanel: (el) =>

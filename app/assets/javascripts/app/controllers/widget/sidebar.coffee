@@ -63,13 +63,19 @@ class App.Sidebar extends App.Controller
     @html(localEl)
 
   sidebarActionsRender: (name, sidebarActions, el = undefined) =>
+    console.log('sidebarActionsRender called for:', name, 'with actions:', sidebarActions, 'el:', el)
+    
     if !el
       el = @el.find('.sidebar[data-tab="' + name + '"] .js-actions')
+      console.log('Found el by selector:', el)
 
     @actionsRows ||= {}
     @actionsRows[name]?.releaseController()
+    
+    console.log('Actions empty check:', _.isEmpty(sidebarActions))
     return if _.isEmpty(sidebarActions)
 
+    console.log('Creating SidebarActionRow for:', name, 'with el:', el)
     @actionsRows[name] = new SidebarActionRow(
       el:    el
       items: sidebarActions
