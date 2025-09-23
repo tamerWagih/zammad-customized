@@ -54,10 +54,14 @@ class App.Sidebar extends App.Controller
         @badgeRender(el, item)
 
     # init sidebar content
+    console.log('Processing sidebar items:', itemsLocal)
     for item in itemsLocal
+      console.log('Processing item:', item.name, 'has callback:', !!item.sidebarCallback, 'has actions:', item.sidebarActions?.length || 0)
       if item.sidebarCallback
         el = localEl.filter('.sidebar[data-tab="' + item.name + '"]')
+        console.log('Found element for', item.name, ':', el.length, 'elements')
         item.sidebarCallback(el.find('.sidebar-content'))
+        console.log('About to call sidebarActionsRender for', item.name)
         @sidebarActionsRender(item.name, item.sidebarActions, el.find('.js-actions'))
 
     @html(localEl)
