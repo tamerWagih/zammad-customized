@@ -4,7 +4,6 @@ class App.WidgetApprovals extends App.Controller
     'click .js-reject': 'reject'
     'click .js-edit-approval': 'editApproval'
     'click .js-delete-approval': 'deleteApproval'
-    'click .js-request-approval': 'openRequestApproval'
 
   constructor: ->
     super
@@ -53,13 +52,6 @@ class App.WidgetApprovals extends App.Controller
     console.log('Approvals widget rendered, element content:', @el.html())
     console.log('Button present:', @el.find('.js-request-approval').length > 0)
 
-  openRequestApproval: (e) =>
-    e?.preventDefault()
-    new App.TicketApprovalRequest(
-      ticket_id: @ticket_id
-      container: @el.closest('.content')
-      callback:  => @loadApprovals()
-    )
 
   approve: (e) =>
     e.preventDefault()

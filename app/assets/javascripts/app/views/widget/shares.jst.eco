@@ -1,11 +1,3 @@
-<div class="sidebar-block">
-  <div class="sidebar-actions-inline">
-    <button class="btn btn-primary btn-sm js-create-share">
-      <%- @T('Share Ticket') %>
-    </button>
-  </div>
-</div>
-
 <% if @shares && @shares.length > 0: %>
   <% for share in @shares: %>
     <div class="sidebar-block">

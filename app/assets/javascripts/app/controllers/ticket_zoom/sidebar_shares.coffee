@@ -39,16 +39,7 @@ class SidebarShares extends App.Controller
       callback: @refreshShares
     )
     # Ensure actions row is rendered explicitly (mirrors checklist pattern)
-    try
-      @parentSidebar?.sidebarActionsRender('shares', [
-        {
-          title: __('Share Ticket')
-          name:  'share-create'
-          callback: => @createShare()
-        }
-      ])
-    catch error
-      console.error('Failed to render shares actions row:', error)
+    # Rendering of actions is handled by App.Sidebar
 
   refreshShares: =>
     if @elSidebar
