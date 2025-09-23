@@ -1,3 +1,11 @@
+<div class="sidebar-block">
+  <div class="sidebar-actions-inline">
+    <button class="btn btn-primary btn-sm js-request-approval">
+      <%- @T('Request Approval') %>
+    </button>
+  </div>
+</div>
+
 <% if @approvals && @approvals.length > 0: %>
   <% for approval in @approvals: %>
     <div class="sidebar-block">
@@ -54,7 +62,7 @@
   <div class="sidebar-block">
     <div class="approvals-empty">
       <p><%- @T('No approval requests for this ticket yet.') %></p>
-      <small class="text-muted"><%- @T('Use the "Request Approval" button above to send approval requests to users.') %></small>
+      <small class="text-muted"><%- @T('Use the "Request Approval" button to send approval requests to users.') %></small>
     </div>
   </div>
 <% end %>
