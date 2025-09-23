@@ -69,9 +69,16 @@ class App.TicketZoomSidebar extends App.ControllerObserver
     for item in @sidebarItems
       console.log('Sidebar item:', item.constructor.name, 'has sidebarItem method:', typeof item.sidebarItem)
     
-    @sidebar = new App.Sidebar(
-      el:           @$('.tabsSidebar')
-      sidebarState: @sidebarState
-      items:        @sidebarItems
-    )
-    console.log('App.Sidebar created successfully')
+    tabsSidebarEl = @$('.tabsSidebar')
+    console.log('Found .tabsSidebar element:', tabsSidebarEl.length, 'elements')
+    
+    try
+      @sidebar = new App.Sidebar(
+        el:           tabsSidebarEl
+        sidebarState: @sidebarState
+        items:        @sidebarItems
+      )
+      console.log('App.Sidebar created successfully')
+    catch error
+      console.error('Error creating App.Sidebar:', error)
+      console.error('Error stack:', error.stack)
