@@ -13,6 +13,7 @@ class SidebarShares extends App.Controller
     @item = {
       name: 'shares'
       badgeIcon: 'team'
+      badgeCallback: @badgeRender
       sidebarHead: __('Shares')
       sidebarCallback: @showPanel
       sidebarActions: []
@@ -49,6 +50,18 @@ class SidebarShares extends App.Controller
       container: @elSidebar.closest('.content')
       callback:  @refreshShares
     )
+
+  badgeRender: (el) =>
+    @badgeEl = el
+    @badgeRenderLocal()
+
+  badgeRenderLocal: =>
+    @badgeEl.html(App.view('generic/sidebar_tabs_item')(
+      name: 'shares'
+      icon: 'team'
+      counter: ''
+      counterPossible: false
+    ))
 
 App.Config.set('451-Shares', SidebarShares, 'TicketZoomSidebar')
 

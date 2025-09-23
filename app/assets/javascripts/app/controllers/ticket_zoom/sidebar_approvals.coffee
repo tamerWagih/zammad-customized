@@ -13,6 +13,7 @@ class SidebarApprovals extends App.Controller
     @item = {
       name: 'approvals'
       badgeIcon: 'checkmark'
+      badgeCallback: @badgeRender
       sidebarHead: __('Approvals')
       sidebarCallback: @showPanel
       sidebarActions: []
@@ -49,6 +50,18 @@ class SidebarApprovals extends App.Controller
       container: @elSidebar.closest('.content')
       callback:  @refreshApprovals
     )
+
+  badgeRender: (el) =>
+    @badgeEl = el
+    @badgeRenderLocal()
+
+  badgeRenderLocal: =>
+    @badgeEl.html(App.view('generic/sidebar_tabs_item')(
+      name: 'approvals'
+      icon: 'checkmark'
+      counter: ''
+      counterPossible: false
+    ))
 
 App.Config.set('450-Approvals', SidebarApprovals, 'TicketZoomSidebar')
 
