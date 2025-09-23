@@ -1224,6 +1224,12 @@ pre code {
   button[disabled] ~ .dropdown-menu-accessories button {
     opacity: 0.33;
   }
+
+  // Hide dropdown arrow for single-action headers in Approvals/Shares
+  .sidebar[data-tab="approvals"] .dropdown-menu-accessories,
+  .sidebar[data-tab="shares"] .dropdown-menu-accessories {
+    display: none;
+  }
 }
 
 .dropdown-menu-right {

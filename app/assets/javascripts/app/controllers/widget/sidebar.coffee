@@ -175,15 +175,10 @@ class SidebarActionRow extends App.Controller
     @render()
 
   render: ->
-    if @items?.length is 1
-      # Render a single visible primary button in the header for better UX
-      single = @items[0]
-      @html '<button class="btn btn--primary" data-type="' + single.name + '">' + (single.title || '') + '</button>'
-    else
-      @html App.view('generic/actions')(
-        items: @items
-        type:  @type
-      )
+    @html App.view('generic/actions')(
+      items: @items
+      type:  @type
+    )
 
     try
       console.log('SidebarActionRow rendered for items:', (@items || []).map((i) -> i.name))
@@ -203,3 +198,13 @@ class SidebarActionRow extends App.Controller
           console.log('Bound click handler for sidebar action:', item.name)
         catch error
           console.error('Error binding click handler for', item.name, error)
+
+    # When there is exactly one action, also bind the primary split button to the same callback
+    if @items?.length is 1
+      mainItem = @items[0]
+      @$('.btn--split--first, .btn.btn--primary').first().off('click').on(
+        'click'
+        (e) =>
+          e.preventDefault()
+          mainItem.callback()
+      )
