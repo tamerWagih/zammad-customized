@@ -29,12 +29,17 @@ class App.TicketZoomSidebar extends App.ControllerObserver
         backend.postParams(args)
 
   render: (ticket) =>
+    console.log('App.TicketZoomSidebar.render called with ticket:', ticket?.id)
     @sidebarBackends ||= {}
     @sidebarItems = []
     sidebarBackends = App.Config.get('TicketZoomSidebar')
+    console.log('Found sidebar backends:', Object.keys(sidebarBackends))
     keys = _.keys(sidebarBackends).sort()
+    console.log('Processing sidebar keys:', keys)
     for key in keys
+      console.log('Processing sidebar backend:', key, 'class:', sidebarBackends[key].name)
       if !@sidebarBackends[key] || !@sidebarBackends[key].reload
+        console.log('Creating new instance of:', sidebarBackends[key].name)
         @sidebarBackends[key] = new sidebarBackends[key](
           ticket:           ticket
           query:            @query

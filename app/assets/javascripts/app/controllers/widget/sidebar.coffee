@@ -10,11 +10,14 @@ class App.Sidebar extends App.Controller
 
   constructor: ->
     super
+    console.log('App.Sidebar constructor called with items:', @items?.length || 0)
 
     for item in @items
       item.parentSidebar = @
 
+    console.log('About to call App.Sidebar render')
     @render()
+    console.log('App.Sidebar render completed')
 
     # get active tab by name
     if @name
@@ -32,11 +35,15 @@ class App.Sidebar extends App.Controller
     @toggleTabAction(name)
 
   render: =>
+    console.log('App.Sidebar.render called with items:', @items?.length || 0)
     itemsLocal = []
     for item in @items
-      itemLocal = item.sidebarItem()
-      if itemLocal
-        itemsLocal.push itemLocal
+      try
+        itemLocal = item.sidebarItem()
+        if itemLocal
+          itemsLocal.push itemLocal
+      catch error
+        console.error('Error calling sidebarItem on', item.constructor.name, ':', error)
 
     # container
     localEl = $(App.view('generic/sidebar_tabs')(

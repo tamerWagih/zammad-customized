@@ -577,6 +577,7 @@ class App.TicketZoom extends App.Controller
         el:        elLocal.find('.ticketZoom-header')
       )
 
+      console.log('Creating App.TicketZoomSidebar with ticket_id:', @ticket_id)
       @sidebarWidget = new App.TicketZoomSidebar(
         el:               elLocal
         sidebarState:     @sidebarState
