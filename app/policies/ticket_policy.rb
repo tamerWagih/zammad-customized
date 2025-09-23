@@ -82,6 +82,7 @@ class TicketPolicy < ApplicationPolicy
 
   def access?(access)
     return true if agent_access?(access)
+    return true if share_access?(access)
 
     customer_access?
   end
@@ -90,6 +91,29 @@ class TicketPolicy < ApplicationPolicy
     return false if !user.permissions?('ticket.agent')
 
     user.group_access?(record.group.id, access)
+  end
+
+  # Allow access via Ticket::Share for the current user.
+  # Maps Zammad policy accesses to share permissions:
+  # - 'read'  -> read/comment/edit
+  # - 'change'-> edit
+  # - 'create'-> comment (e.g., add notes)
+  def share_access?(access)
+    return false if !user
+
+    share = Ticket::Share.find_by(ticket_id: record.id, shared_with_id: user.id, status: 'active')
+    return false if !share
+
+    case access.to_s
+    when 'read'
+      share.can_read? || share.can_comment? || share.can_edit?
+    when 'change'
+      share.can_edit?
+    when 'create'
+      share.can_comment?
+    else
+      false
+    end
   end
 
   def customer_access?

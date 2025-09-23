@@ -37,6 +37,16 @@ class TicketSharesController < ApplicationController
       status: 'active'
     )
 
+    # Notify the shared user with a link to the ticket
+    OnlineNotification.add(
+      type:          'Ticket shared with you',
+      object:        'Ticket',
+      o_id:          @ticket.id,
+      seen:          false,
+      user_id:       shared_with.id,
+      created_by_id: current_user.id,
+    ) rescue nil
+
     render json: { share: {
       id: share.id,
       user: share.shared_with&.fullname,

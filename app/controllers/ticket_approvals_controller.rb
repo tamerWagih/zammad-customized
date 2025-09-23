@@ -35,6 +35,16 @@ class TicketApprovalsController < ApplicationController
       status: 'pending'
     )
 
+    # Notify approver with a link to the ticket
+    OnlineNotification.add(
+      type:          'Approval request',
+      object:        'Ticket',
+      o_id:          @ticket.id,
+      seen:          false,
+      user_id:       approver.id,
+      created_by_id: current_user.id,
+    ) rescue nil
+
     render json: { approval: {
       id: approval.id,
       status: approval.status,
