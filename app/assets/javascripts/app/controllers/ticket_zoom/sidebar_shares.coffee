@@ -4,6 +4,8 @@ class SidebarShares extends App.Controller
     console.log('Current view:', @ticket.currentView())
     console.log('Has ticket.agent permission:', @permissionCheck('ticket.agent'))
     console.log('Has admin permission:', @permissionCheck('admin.*'))
+    console.log('Ticket editable:', @ticket.editable())
+    console.log('User current:', App.User.current())
     
     return if @ticket.currentView() isnt 'agent'
     return unless @permissionCheck('ticket.agent') or @permissionCheck('admin.*')
@@ -23,6 +25,7 @@ class SidebarShares extends App.Controller
       callback: @createShare
 
     console.log('SidebarShares item created:', @item)
+    console.log('SidebarActions count:', @item.sidebarActions.length)
     @item
 
   showPanel: (el) =>
