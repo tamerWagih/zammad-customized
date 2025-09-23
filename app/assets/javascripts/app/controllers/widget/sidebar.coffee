@@ -175,10 +175,15 @@ class SidebarActionRow extends App.Controller
     @render()
 
   render: ->
-    @html App.view('generic/actions')(
-      items: @items
-      type:  @type
-    )
+    if @items?.length is 1
+      # Render a single visible primary button in the header for better UX
+      single = @items[0]
+      @html '<button class="btn btn--primary" data-type="' + single.name + '">' + (single.title || '') + '</button>'
+    else
+      @html App.view('generic/actions')(
+        items: @items
+        type:  @type
+      )
 
     try
       console.log('SidebarActionRow rendered for items:', (@items || []).map((i) -> i.name))
