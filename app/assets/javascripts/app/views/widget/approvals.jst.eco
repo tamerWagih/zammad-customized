@@ -1,3 +1,8 @@
+<div class="sidebar-block">
+  <button class="btn btn--primary js-request-approval"><%- @T('Request Approval') %></button>
+  <hr />
+</div>
+
 <% if @approvals && @approvals.length > 0: %>
   <% for approval in @approvals: %>
     <div class="sidebar-block">

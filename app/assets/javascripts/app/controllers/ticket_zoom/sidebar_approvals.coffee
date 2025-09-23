@@ -39,7 +39,7 @@ class SidebarApprovals extends App.Controller
       callback: @refreshApprovals
     )
     # Ensure actions row is rendered (like checklist does explicitly)
-    # Rendering of actions is handled by App.Sidebar
+    # No header actions for Approvals; widget provides in-content button
 
   refreshApprovals: =>
     if @elSidebar

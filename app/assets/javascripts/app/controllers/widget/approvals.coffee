@@ -50,7 +50,14 @@ class App.WidgetApprovals extends App.Controller
       @html '<div class="sidebar-block"><h3>Template Error</h3><p>Template failed to render: ' + error.message + '</p></div>'
     
     console.log('Approvals widget rendered, element content:', @el.html())
-    console.log('Button present:', @el.find('.js-request-approval').length > 0)
+    # Bind sidebar in-content button
+    @$('.js-request-approval').off('click').on 'click', (e) =>
+      e.preventDefault()
+      new App.TicketApprovalRequest(
+        ticket_id: @ticket_id
+        container: @el.closest('.content')
+        callback:  => @loadApprovals()
+      )
 
 
   approve: (e) =>

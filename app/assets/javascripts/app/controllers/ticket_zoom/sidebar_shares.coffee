@@ -39,7 +39,7 @@ class SidebarShares extends App.Controller
       callback: @refreshShares
     )
     # Ensure actions row is rendered explicitly (mirrors checklist pattern)
-    # Rendering of actions is handled by App.Sidebar
+    # No header actions for Shares; widget provides in-content button
 
   refreshShares: =>
     if @elSidebar

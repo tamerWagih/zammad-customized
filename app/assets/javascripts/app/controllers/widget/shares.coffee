@@ -49,6 +49,14 @@ class App.WidgetShares extends App.Controller
       @html '<div class="sidebar-block"><h3>Template Error</h3><p>Template failed to render: ' + error.message + '</p></div>'
     
     console.log('Shares widget rendered, element content:', @el.html())
+    # Bind sidebar in-content button
+    @$('.js-create-share').off('click').on 'click', (e) =>
+      e.preventDefault()
+      new App.TicketShareCreate(
+        ticket_id: @ticket_id
+        container: @el.closest('.content')
+        callback:  => @loadShares()
+      )
 
 
   editShare: (e) =>
