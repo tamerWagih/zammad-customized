@@ -4,7 +4,6 @@ class App.WidgetApprovals extends App.Controller
     'click .js-reject': 'reject'
     'click .js-edit-approval': 'editApproval'
     'click .js-delete-approval': 'deleteApproval'
-    'click .js-request-approval': 'requestApproval'
 
   constructor: ->
     super
@@ -36,6 +35,7 @@ class App.WidgetApprovals extends App.Controller
     console.log('WidgetApprovals render called with data:', approvals)
     
     console.log('About to render approvals widget with data:', approvals)
+    console.log('Template available:', !!App.view('widget/approvals'))
     
     # Test if template is working
     try
@@ -50,6 +50,7 @@ class App.WidgetApprovals extends App.Controller
       @html '<div class="sidebar-block"><h3>Template Error</h3><p>Template failed to render: ' + error.message + '</p></div>'
     
     console.log('Approvals widget rendered, element content:', @el.html())
+    console.log('Button present:', @el.find('.js-request-approval').length > 0)
 
   approve: (e) =>
     e.preventDefault()
@@ -115,17 +116,6 @@ class App.WidgetApprovals extends App.Controller
       msg:  __('Failed to update approval')
     )
 
-  requestApproval: (e) =>
-    e.preventDefault()
-    console.log('Request approval clicked for ticket:', @ticket_id)
-    
-    # Open the approval request modal
-    modal = new App.TicketApprovalRequest(
-      ticket_id: @ticket_id
-      container: @el
-      callback: @loadApprovals
-    )
-    modal.show()
 
   refresh: =>
     if @callback
