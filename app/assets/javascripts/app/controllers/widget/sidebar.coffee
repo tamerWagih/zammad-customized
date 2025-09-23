@@ -180,6 +180,12 @@ class SidebarActionRow extends App.Controller
       type:  @type
     )
 
+    try
+      console.log('SidebarActionRow rendered for items:', (@items || []).map((i) -> i.name))
+      console.log('SidebarActionRow HTML:', @el?.html())
+    catch error
+      console.error('Error rendering SidebarActionRow:', error)
+
     for item in @items
       do (item) =>
         @$('[data-type="' + item.name + '"]').off('click').on(
@@ -188,3 +194,7 @@ class SidebarActionRow extends App.Controller
             e.preventDefault()
             item.callback()
         )
+        try
+          console.log('Bound click handler for sidebar action:', item.name)
+        catch error
+          console.error('Error binding click handler for', item.name, error)
