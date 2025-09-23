@@ -8,11 +8,13 @@ class Ticket::Approval < ApplicationModel
 
   belongs_to :ticket
   belongs_to :approver, class_name: 'User'
+  belongs_to :requester, class_name: 'User'
 
   validates :status, inclusion: { in: %w[pending approved rejected] }
   validates :ticket_id, presence: true
   validates :approver_id, presence: true
   validates :approver_id, uniqueness: { scope: :ticket_id }
+  validates :priority, inclusion: { in: %w[low normal high urgent] }
 
   scope :pending, -> { where(status: 'pending') }
   scope :approved, -> { where(status: 'approved') }
@@ -49,5 +51,13 @@ class Ticket::Approval < ApplicationModel
       status: record.status,
       message: record.message,
     }
+  end
+
+  def as_json(options = {})
+    super(only: %i[id status message created_at priority], methods: %i[approver_name])
+  end
+
+  def approver_name
+    approver&.fullname
   end
 end

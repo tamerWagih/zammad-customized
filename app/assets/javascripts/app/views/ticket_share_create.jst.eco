@@ -56,12 +56,6 @@
             <%- @T('Edit') %>
           </label>
         </div>
-        <div class="checkbox">
-          <label>
-            <input type="checkbox" name="permissions[]" value="approve">
-            <%- @T('Approve') %>
-          </label>
-        </div>
       </div>
     </div>
 

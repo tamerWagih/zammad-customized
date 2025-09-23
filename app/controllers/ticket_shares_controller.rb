@@ -7,7 +7,15 @@ class TicketSharesController < ApplicationController
 
   def index
     @shares = @ticket.shares.includes(:shared_with, :shared_by).order(created_at: :desc)
-    render json: { shares: @shares.map(&:as_json) }
+    render json: { shares: @shares.map { |s| {
+      id: s.id,
+      user: s.shared_with&.fullname,
+      permissions: s.permissions,
+      message: s.message,
+      status: s.status,
+      created_at: s.created_at,
+      expires_at: s.expires_at,
+    } } }
   end
 
   def create
@@ -23,13 +31,21 @@ class TicketSharesController < ApplicationController
     share = @ticket.shares.create!(
       shared_with: shared_with,
       shared_by: current_user,
-      permissions: params[:permissions] || ['read'],
+      permissions: (params[:permissions] || ['read']).map(&:to_s),
       message: params[:message],
       expires_at: params[:expires_at],
       status: 'active'
     )
 
-    render json: { share: share.as_json }, status: :created
+    render json: { share: {
+      id: share.id,
+      user: share.shared_with&.fullname,
+      permissions: share.permissions,
+      message: share.message,
+      status: share.status,
+      created_at: share.created_at,
+      expires_at: share.expires_at,
+    } }, status: :created
   rescue ActiveRecord::RecordNotFound
     render json: { error: 'User not found' }, status: :not_found
   rescue StandardError => e
@@ -46,7 +62,15 @@ class TicketSharesController < ApplicationController
     end
 
     share.revoke!
-    render json: { share: share.as_json }
+    render json: { share: {
+      id: share.id,
+      user: share.shared_with&.fullname,
+      permissions: share.permissions,
+      message: share.message,
+      status: share.status,
+      created_at: share.created_at,
+      expires_at: share.expires_at,
+    } }
   end
 
   def destroy

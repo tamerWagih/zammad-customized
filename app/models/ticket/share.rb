@@ -8,6 +8,7 @@ class Ticket::Share < ApplicationModel
 
   belongs_to :ticket
   belongs_to :shared_with, class_name: 'User'
+  belongs_to :shared_by, class_name: 'User'
 
   validates :ticket_id, presence: true
   validates :shared_with_id, presence: true
@@ -35,6 +36,10 @@ class Ticket::Share < ApplicationModel
     has_permission?('edit')
   end
 
+  def revoke!
+    update!(status: 'revoked')
+  end
+
   private
 
   def valid_permissions
@@ -57,5 +62,13 @@ class Ticket::Share < ApplicationModel
       permissions: record.permissions.join(', '),
       message: record.message,
     }
+  end
+
+  def as_json(options = {})
+    super(only: %i[id message created_at expires_at status permissions], methods: %i[shared_with_name])
+  end
+
+  def shared_with_name
+    shared_with&.fullname
   end
 end

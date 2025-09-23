@@ -7,7 +7,14 @@ class TicketApprovalsController < ApplicationController
 
   def index
     @approvals = @ticket.approvals.includes(:approver, :requester).order(created_at: :desc)
-    render json: { approvals: @approvals.map(&:as_json) }
+    render json: { approvals: @approvals.map { |a| {
+      id: a.id,
+      status: a.status,
+      message: a.message,
+      priority: a.priority,
+      approver: a.approver&.fullname,
+      created_at: a.created_at,
+    } } }
   end
 
   def create
@@ -24,11 +31,18 @@ class TicketApprovalsController < ApplicationController
       approver: approver,
       requester: current_user,
       message: params[:message],
-      priority: params[:priority] || 'normal',
+      priority: params[:priority].presence || 'normal',
       status: 'pending'
     )
 
-    render json: { approval: approval.as_json }, status: :created
+    render json: { approval: {
+      id: approval.id,
+      status: approval.status,
+      message: approval.message,
+      priority: approval.priority,
+      approver: approval.approver&.fullname,
+      created_at: approval.created_at,
+    } }, status: :created
   rescue ActiveRecord::RecordNotFound
     render json: { error: 'Approver not found' }, status: :not_found
   rescue StandardError => e
@@ -44,7 +58,14 @@ class TicketApprovalsController < ApplicationController
     end
 
     approval.approve!
-    render json: { approval: approval.as_json }
+    render json: { approval: {
+      id: approval.id,
+      status: approval.status,
+      message: approval.message,
+      priority: approval.priority,
+      approver: approval.approver&.fullname,
+      created_at: approval.created_at,
+    } }
   end
 
   def reject
@@ -56,7 +77,14 @@ class TicketApprovalsController < ApplicationController
     end
 
     approval.reject!
-    render json: { approval: approval.as_json }
+    render json: { approval: {
+      id: approval.id,
+      status: approval.status,
+      message: approval.message,
+      priority: approval.priority,
+      approver: approval.approver&.fullname,
+      created_at: approval.created_at,
+    } }
   end
 
   def destroy

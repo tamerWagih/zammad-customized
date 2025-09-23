@@ -28,7 +28,7 @@ class App.TicketShareCreate extends App.ControllerModal
     )
 
   renderWithUsers: (data, status, xhr) =>
-    users = data?.users || []
+    users = if Array.isArray(data) then data else (data?.users || [])
     # Get ticket's organization ID
     ticket = App.Ticket.find(@ticket_id)
     ticket_org_id = ticket?.organization_id
