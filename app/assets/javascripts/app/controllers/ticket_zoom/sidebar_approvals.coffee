@@ -23,7 +23,7 @@ class SidebarApprovals extends App.Controller
     @item.sidebarActions.push
       title: __('Request Approval')
       name: 'approval-request'
-      callback: @requestApproval
+      callback: => @requestApproval()
 
     console.log('SidebarApprovals item created:', @item)
     console.log('SidebarActions count:', @item.sidebarActions.length)
@@ -44,7 +44,7 @@ class SidebarApprovals extends App.Controller
         {
           title: __('Request Approval')
           name:  'approval-request'
-          callback: @requestApproval
+          callback: => @requestApproval()
         }
       ])
     catch error
