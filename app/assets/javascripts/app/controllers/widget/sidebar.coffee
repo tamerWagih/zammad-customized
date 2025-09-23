@@ -86,6 +86,18 @@ class App.Sidebar extends App.Controller
     console.log('Actions empty check:', _.isEmpty(sidebarActions))
     return if _.isEmpty(sidebarActions)
 
+    # For approvals/shares with exactly one action, render one primary button without dropdown
+    if (name is 'approvals' or name is 'shares') and sidebarActions.length is 1
+      action = sidebarActions[0]
+      el.html('<button class="btn btn--primary js-single-action" data-type="' + action.name + '">' + (action.title || '') + '</button>')
+      el.find('.js-single-action').off('click').on 'click', (e) =>
+        e.preventDefault()
+        try
+          action.callback()
+        catch error
+          console.error('Single action callback failed for', name, error)
+      return
+
     console.log('Creating SidebarActionRow for:', name, 'with el:', el)
     @actionsRows[name] = new SidebarActionRow(
       el:    el
