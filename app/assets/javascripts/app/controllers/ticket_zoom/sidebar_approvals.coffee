@@ -38,6 +38,17 @@ class SidebarApprovals extends App.Controller
       ticket_id: @ticket.id
       callback: @refreshApprovals
     )
+    # Ensure actions row is rendered (like checklist does explicitly)
+    try
+      @parentSidebar?.sidebarActionsRender('approvals', [
+        {
+          title: __('Request Approval')
+          name:  'approval-request'
+          callback: @requestApproval
+        }
+      ])
+    catch error
+      console.error('Failed to render approvals actions row:', error)
 
   refreshApprovals: =>
     if @elSidebar
