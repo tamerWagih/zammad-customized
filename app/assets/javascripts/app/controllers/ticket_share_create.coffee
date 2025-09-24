@@ -4,9 +4,11 @@ class App.TicketShareCreate extends App.ControllerModal
   buttonSubmit: __('Share Ticket')
   buttonClass: 'btn--primary'
   head: __('Share Ticket')
+  buttonSubmitDisabled: true
   
   events:
     'submit form': 'submit'
+    'change select[name="shared_with_id"]': 'toggleSubmit'
 
 
   content: ->
@@ -49,6 +51,10 @@ class App.TicketShareCreate extends App.ControllerModal
       ticket_id: @ticket_id
       users: available_users
     }))
+    @toggleSubmit()
+  toggleSubmit: =>
+    selected = @el.find('select[name="shared_with_id"]').val()
+    if selected then @$('.js-submit').removeClass('is-disabled') else @$('.js-submit').addClass('is-disabled')
 
   renderError: (xhr, status, error) =>
     @el.find('.modal-body').html(App.view('ticket_share_create')({

@@ -4,9 +4,9 @@
     <div class="sidebar-block">
       <div class="approval-header">
         <div class="approval-user">
-          <% if approval.requester_id is current_user_id: %>
+          <% if approval.requester_id is @current_user_id: %>
             <strong><%- @T('Request to') %> <%- approval.approver %></strong>
-          <% else if approval.approver_id is current_user_id: %>
+          <% else if approval.approver_id is @current_user_id: %>
             <strong><%- @T('Request from') %> <%- approval.requester %></strong>
           <% else: %>
             <strong><%- approval.approver %></strong>
@@ -36,7 +36,7 @@
         </div>
         
         <% if approval.status is 'pending': %>
-          <% if approval.approver_id is current_user_id: %>
+          <% if approval.approver_id is @current_user_id: %>
             <!-- Show approve/reject buttons to approver -->
             <div class="approval-actions">
               <button class="btn btn-success btn-sm js-approve" data-approval-id="<%= approval.id %>">
@@ -46,7 +46,7 @@
                 <%- @T('Reject') %>
               </button>
             </div>
-          <% else if approval.requester_id is current_user_id: %>
+          <% else if approval.requester_id is @current_user_id: %>
             <!-- Show edit/delete buttons to requester -->
             <div class="approval-actions">
               <button class="btn btn-link btn-sm js-edit-approval" data-approval-id="<%= approval.id %>">
@@ -59,7 +59,7 @@
           <% end %>
         <% else: %>
           <!-- For completed approvals, only show delete to requester -->
-          <% if approval.requester_id is current_user_id: %>
+          <% if approval.requester_id is @current_user_id: %>
             <div class="approval-actions">
               <button class="btn btn-link btn-sm js-delete-approval" data-approval-id="<%= approval.id %>">
                 <%- @T('Delete') %>

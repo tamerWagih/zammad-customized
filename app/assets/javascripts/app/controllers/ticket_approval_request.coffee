@@ -4,9 +4,11 @@ class App.TicketApprovalRequest extends App.ControllerModal
   buttonSubmit: __('Send Approval Request')
   buttonClass: 'btn--primary'
   head: __('Request Approval')
+  buttonSubmitDisabled: true
   
   events:
     'submit form': 'submit'
+    'change select[name="approver_id"]': 'toggleSubmit'
 
 
   content: ->
@@ -58,6 +60,10 @@ class App.TicketApprovalRequest extends App.ControllerModal
     console.log('Generated content:', content)
     
     @el.find('.modal-body').html(content)
+    @toggleSubmit()
+  toggleSubmit: =>
+    selected = @el.find('select[name="approver_id"]').val()
+    if selected then @$('.js-submit').removeClass('is-disabled') else @$('.js-submit').addClass('is-disabled')
 
   renderError: (xhr, status, error) =>
     @el.find('.modal-body').html(App.view('ticket_approval_request')({

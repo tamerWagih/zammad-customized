@@ -25,6 +25,16 @@ const messageText = (
       return i18n.t('%s created ticket |%s|', authorName, objectTitle)
     case 'update':
       return i18n.t('%s updated ticket |%s|', authorName, objectTitle)
+    case 'Approval request':
+      return i18n.t('%s requested approval on |%s|', authorName, objectTitle)
+    case 'Approval approved':
+      return i18n.t('Approval approved for |%s| by %s', objectTitle, authorName)
+    case 'Approval rejected':
+      return i18n.t('Approval rejected for |%s| by %s', objectTitle, authorName)
+    case 'Ticket shared with you':
+      return i18n.t('%s shared ticket |%s| with you', authorName, objectTitle)
+    case 'Share revoked':
+      return i18n.t('%s revoked a share on |%s|', authorName, objectTitle)
     case 'reminder_reached':
       return i18n.t('Pending reminder reached for ticket |%s|', objectTitle)
     case 'escalation':

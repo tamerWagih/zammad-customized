@@ -39,7 +39,7 @@
           </div>
         </div>
         
-        <% if share.shared_by_id is current_user_id: %>
+        <% if share.shared_by_id is @current_user_id: %>
           <!-- Show edit/revoke/delete buttons to person who shared -->
           <div class="share-actions">
             <button class="btn btn-link btn-sm js-edit-share" data-share-id="<%= share.id %>">
