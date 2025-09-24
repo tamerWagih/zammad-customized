@@ -20,10 +20,11 @@ class SidebarApprovals extends App.Controller
     }
 
     # Add action to create new approval request
-    @item.sidebarActions.push
+    @item.sidebarActions.push(
       title: __('Request Approval')
       name: 'approval-request'
       callback: @requestApproval
+    )
 
     console.log('SidebarApprovals item created:', @item)
     console.log('SidebarActions count:', @item.sidebarActions.length)

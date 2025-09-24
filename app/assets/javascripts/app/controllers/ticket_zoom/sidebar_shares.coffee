@@ -20,10 +20,11 @@ class SidebarShares extends App.Controller
     }
 
     # Add action to create new share
-    @item.sidebarActions.push
+    @item.sidebarActions.push(
       title: __('Share Ticket')
       name: 'share-create'
       callback: @createShare
+    )
 
     console.log('SidebarShares item created:', @item)
     console.log('SidebarActions count:', @item.sidebarActions.length)
