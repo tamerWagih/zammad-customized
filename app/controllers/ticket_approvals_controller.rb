@@ -24,9 +24,9 @@ class TicketApprovalsController < ApplicationController
     approver = User.find(params[:approver_id])
     
     # Check if approval already exists
-    existing_approval = @ticket.approvals.find_by(approver_id: approver.id)
+    existing_approval = @ticket.approvals.find_by(approver_id: approver.id, status: 'pending')
     if existing_approval
-      render json: { error: 'Approval request already exists for this approver' }, status: :unprocessable_entity
+      render json: { error: "You have already sent an approval request to #{approver.fullname}" }, status: :unprocessable_entity
       return
     end
 
@@ -38,11 +38,11 @@ class TicketApprovalsController < ApplicationController
       status: 'pending'
     )
 
-    # Notify approver with a link to the ticket
+    # Notify approver with a link to the approval (use model to leverage activity_message)
     OnlineNotification.add(
       type:          'Approval request',
-      object:        'Ticket',
-      o_id:          @ticket.id,
+      object:        'Ticket::Approval',
+      o_id:          approval.id,
       seen:          false,
       user_id:       approver.id,
       created_by_id: current_user.id,
@@ -76,8 +76,8 @@ class TicketApprovalsController < ApplicationController
     begin
       OnlineNotification.add(
         type:          'Approval approved',
-        object:        'Ticket',
-        o_id:          @ticket.id,
+        object:        'Ticket::Approval',
+        o_id:          approval.id,
         seen:          false,
         user_id:       approval.requester_id,
         created_by_id: current_user.id,
@@ -109,8 +109,8 @@ class TicketApprovalsController < ApplicationController
     begin
       OnlineNotification.add(
         type:          'Approval rejected',
-        object:        'Ticket',
-        o_id:          @ticket.id,
+        object:        'Ticket::Approval',
+        o_id:          approval.id,
         seen:          false,
         user_id:       approval.requester_id,
         created_by_id: current_user.id,

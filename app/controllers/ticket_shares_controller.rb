@@ -24,9 +24,9 @@ class TicketSharesController < ApplicationController
     shared_with = User.find(params[:shared_with_id])
     
     # Check if share already exists
-    existing_share = @ticket.shares.find_by(shared_with_id: shared_with.id)
+    existing_share = @ticket.shares.find_by(shared_with_id: shared_with.id, status: 'active')
     if existing_share
-      render json: { error: 'Share already exists for this user' }, status: :unprocessable_entity
+      render json: { error: "You have already shared this ticket with #{shared_with.fullname}" }, status: :unprocessable_entity
       return
     end
 
@@ -39,11 +39,11 @@ class TicketSharesController < ApplicationController
       status: 'active'
     )
 
-    # Notify the shared user with a link to the ticket
+    # Notify the shared user with a link to the share (use model for activity_message)
     OnlineNotification.add(
       type:          'Ticket shared with you',
-      object:        'Ticket',
-      o_id:          @ticket.id,
+      object:        'Ticket::Share',
+      o_id:          share.id,
       seen:          false,
       user_id:       shared_with.id,
       created_by_id: current_user.id,
@@ -79,8 +79,8 @@ class TicketSharesController < ApplicationController
     begin
       OnlineNotification.add(
         type:          'Share revoked',
-        object:        'Ticket',
-        o_id:          @ticket.id,
+        object:        'Ticket::Share',
+        o_id:          share.id,
         seen:          false,
         user_id:       share.shared_with_id,
         created_by_id: current_user.id,
