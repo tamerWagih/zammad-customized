@@ -26,8 +26,8 @@ class App.WidgetShares extends App.Controller
 
   renderShares: (data, status, xhr) =>
     console.log('Shares loaded:', data)
-    shares = data?.shares || []
-    @render(shares)
+    @lastShares = data?.shares || []
+    @render(@lastShares)
 
   renderError: (xhr, status, error) =>
     console.error('Error loading shares:', error)
@@ -74,11 +74,15 @@ class App.WidgetShares extends App.Controller
   editShare: (e) =>
     e.preventDefault()
     share_id = $(e.currentTarget).data('share-id')
+    # Find current share data from last load
+    share = (@lastShares or []).find (s) -> String(s.id) == String(share_id)
+    share ?= (@shares or []).find (s) -> String(s.id) == String(share_id)
 
-    # TODO: Implement edit modal
-    @notify(
-      type: 'notice'
-      msg:  __('Edit functionality not yet implemented')
+    new App.TicketShareEdit(
+      share: share
+      ticket_id: @ticket_id
+      container: @el.closest('.content')
+      callback: => @loadShares()
     )
 
   deleteShare: (e) =>

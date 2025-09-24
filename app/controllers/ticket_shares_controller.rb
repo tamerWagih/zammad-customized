@@ -99,6 +99,34 @@ class TicketSharesController < ApplicationController
     } }
   end
 
+  def update
+    share = @ticket.shares.find(params[:id])
+
+    # Only the person who shared or admin can update
+    unless share.shared_by == current_user || current_user.role?('Admin')
+      render json: { error: 'You can only update shares you created' }, status: :forbidden
+      return
+    end
+
+    # Normalize permissions array if provided
+    attrs = {}
+    attrs[:permissions] = Array(params[:permissions]).map(&:to_s) if params.key?(:permissions)
+    attrs[:message] = params[:message] if params.key?(:message)
+    attrs[:expires_at] = params[:expires_at] if params.key?(:expires_at)
+
+    share.update!(attrs)
+
+    render json: { share: {
+      id: share.id,
+      user: share.shared_with&.fullname,
+      permissions: share.permissions,
+      message: share.message,
+      status: share.status,
+      created_at: share.created_at,
+      expires_at: share.expires_at,
+    } }
+  end
+
   def destroy
     share = @ticket.shares.find(params[:id])
     
