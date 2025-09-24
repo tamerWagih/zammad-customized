@@ -38,11 +38,11 @@ class TicketApprovalsController < ApplicationController
       status: 'pending'
     )
 
-    # Notify approver with a link to the approval (use model to leverage activity_message)
+    # Notify approver with a link to the ticket (ensures click opens ticket)
     OnlineNotification.add(
       type:          'Approval request',
-      object:        'Ticket::Approval',
-      o_id:          approval.id,
+      object:        'Ticket',
+      o_id:          @ticket.id,
       seen:          false,
       user_id:       approver.id,
       created_by_id: current_user.id,
@@ -76,8 +76,8 @@ class TicketApprovalsController < ApplicationController
     begin
       OnlineNotification.add(
         type:          'Approval approved',
-        object:        'Ticket::Approval',
-        o_id:          approval.id,
+        object:        'Ticket',
+        o_id:          @ticket.id,
         seen:          false,
         user_id:       approval.requester_id,
         created_by_id: current_user.id,
@@ -109,8 +109,8 @@ class TicketApprovalsController < ApplicationController
     begin
       OnlineNotification.add(
         type:          'Approval rejected',
-        object:        'Ticket::Approval',
-        o_id:          approval.id,
+        object:        'Ticket',
+        o_id:          @ticket.id,
         seen:          false,
         user_id:       approval.requester_id,
         created_by_id: current_user.id,

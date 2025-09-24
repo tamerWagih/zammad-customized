@@ -39,11 +39,11 @@ class TicketSharesController < ApplicationController
       status: 'active'
     )
 
-    # Notify the shared user with a link to the share (use model for activity_message)
+    # Notify the shared user with a link to the ticket (ensures click opens ticket)
     OnlineNotification.add(
       type:          'Ticket shared with you',
-      object:        'Ticket::Share',
-      o_id:          share.id,
+      object:        'Ticket',
+      o_id:          @ticket.id,
       seen:          false,
       user_id:       shared_with.id,
       created_by_id: current_user.id,
@@ -79,8 +79,8 @@ class TicketSharesController < ApplicationController
     begin
       OnlineNotification.add(
         type:          'Share revoked',
-        object:        'Ticket::Share',
-        o_id:          share.id,
+        object:        'Ticket',
+        o_id:          @ticket.id,
         seen:          false,
         user_id:       share.shared_with_id,
         created_by_id: current_user.id,
