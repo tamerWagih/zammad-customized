@@ -11,8 +11,21 @@ class App.TicketApprovalRequest extends App.ControllerModal
 
   content: ->
     console.log('App.TicketApprovalRequest content called')
-    # Return simple HTML to test
-    '<div class="modal-body"><h3>Test Modal</h3><p>This is a test modal content.</p></div>'
+    # Get available users for approval
+    @ajax(
+      id:          'users_for_approval'
+      type:        'GET'
+      url:         "#{@apiPath}/users"
+      processData: true
+      success:     (data, status, xhr) =>
+        console.log('Users AJAX success:', data)
+        @renderWithUsers(data, status, xhr)
+      error:       (xhr, status, error) =>
+        console.log('Users AJAX error:', error, xhr.responseText)
+        @renderError(xhr, status, error)
+    )
+    # Return loading content initially
+    '<p>Loading approvers...</p>'
 
 
   renderWithUsers: (data, status, xhr) =>

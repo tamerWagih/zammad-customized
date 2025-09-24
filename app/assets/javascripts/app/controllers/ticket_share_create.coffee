@@ -11,14 +11,21 @@ class App.TicketShareCreate extends App.ControllerModal
 
   content: ->
     console.log('App.TicketShareCreate content called')
-    # For now, return a simple form without AJAX to test modal display
-    App.view('ticket_share_create')({
-      ticket_id: @ticket_id
-      users: [
-        { id: 1, firstname: 'John', lastname: 'Doe', email: 'john@example.com' }
-        { id: 2, firstname: 'Jane', lastname: 'Smith', email: 'jane@example.com' }
-      ]
-    })
+    # Get available users for sharing
+    @ajax(
+      id:          'users_for_sharing'
+      type:        'GET'
+      url:         "#{@apiPath}/users"
+      processData: true
+      success:     (data, status, xhr) =>
+        console.log('Users AJAX success:', data)
+        @renderWithUsers(data, status, xhr)
+      error:       (xhr, status, error) =>
+        console.log('Users AJAX error:', error, xhr.responseText)
+        @renderError(xhr, status, error)
+    )
+    # Return loading content initially
+    '<p>Loading users...</p>'
 
 
   renderWithUsers: (data, status, xhr) =>
