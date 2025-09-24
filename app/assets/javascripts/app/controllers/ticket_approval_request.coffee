@@ -23,16 +23,6 @@ class App.TicketApprovalRequest extends App.ControllerModal
       ]
     })
 
-  render: =>
-    # Get available users for approval
-    @ajax(
-      id:          'users_for_approval'
-      type:        'GET'
-      url:         "#{@apiPath}/users"
-      processData: true
-      success:     @renderWithUsers
-      error:       @renderError
-    )
 
   renderWithUsers: (data, status, xhr) =>
     console.log('App.TicketApprovalRequest renderWithUsers called')

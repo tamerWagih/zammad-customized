@@ -23,16 +23,6 @@ class App.TicketShareCreate extends App.ControllerModal
       ]
     })
 
-  render: =>
-    # Get available users for sharing
-    @ajax(
-      id:          'users_for_sharing'
-      type:        'GET'
-      url:         "#{@apiPath}/users"
-      processData: true
-      success:     @renderWithUsers
-      error:       @renderError
-    )
 
   renderWithUsers: (data, status, xhr) =>
     users = if Array.isArray(data) then data else (data?.users || [])
