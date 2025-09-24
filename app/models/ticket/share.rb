@@ -71,4 +71,15 @@ class Ticket::Share < ApplicationModel
   def shared_with_name
     shared_with&.fullname
   end
+
+  def activity_message
+    case status
+    when 'active'
+      "Ticket shared with #{shared_with&.fullname} (#{permissions.join(', ')})"
+    when 'revoked'
+      "Share revoked for #{shared_with&.fullname}"
+    else
+      "Share status changed to #{status}"
+    end
+  end
 end

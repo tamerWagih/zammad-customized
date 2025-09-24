@@ -60,4 +60,17 @@ class Ticket::Approval < ApplicationModel
   def approver_name
     approver&.fullname
   end
+
+  def activity_message
+    case status
+    when 'pending'
+      "Approval request sent to #{approver&.fullname}"
+    when 'approved'
+      "Approval request approved by #{approver&.fullname}"
+    when 'rejected'
+      "Approval request rejected by #{approver&.fullname}"
+    else
+      "Approval request status changed to #{status}"
+    end
+  end
 end
