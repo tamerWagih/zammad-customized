@@ -61,14 +61,14 @@ class App.TicketShareCreate extends App.ControllerModal
     form_data = @formParam(e.currentTarget)
     
     @ajax(
-      id:          'create_ticket_share'
-      type:        'POST'
-      url:         "#{@apiPath}/tickets/#{@ticket_id}/shares"
-      data:        JSON.stringify(form_data)
+      id: 'create_ticket_share'
+      type: 'POST'
+      url: "#{@apiPath}/tickets/#{@ticket_id}/shares"
+      data: JSON.stringify(form_data)
       processData: false
       contentType: 'application/json'
-      success:     @submitSuccess
-      error:       @submitError
+      success: @submitSuccess
+      error: @submitError
     )
 
   submitSuccess: (data, status, xhr) =>

@@ -63,14 +63,14 @@ class App.TicketApprovalRequest extends App.ControllerModal
     form_data = @formParam(e.currentTarget)
     
     @ajax(
-      id:          'create_approval_request'
-      type:        'POST'
-      url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals"
-      data:        JSON.stringify(form_data)
+      id: 'create_approval_request'
+      type: 'POST'
+      url: "#{@apiPath}/tickets/#{@ticket_id}/approvals"
+      data: JSON.stringify(form_data)
       processData: false
       contentType: 'application/json'
-      success:     @submitSuccess
-      error:       @submitError
+      success: @submitSuccess
+      error: @submitError
     )
 
   submitSuccess: (data, status, xhr) =>

@@ -66,12 +66,12 @@ class App.WidgetApprovals extends App.Controller
     approval_id = $(e.currentTarget).data('approval-id')
     
     @ajax(
-      id:          'approve_approval'
-      type:        'POST'
-      url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/approve"
+      id: 'approve_approval'
+      type: 'POST'
+      url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/approve"
       processData: true
-      success:     @approvalSuccess
-      error:       @approvalError
+      success: @approvalSuccess
+      error: @approvalError
     )
 
   reject: (e) =>
@@ -79,12 +79,12 @@ class App.WidgetApprovals extends App.Controller
     approval_id = $(e.currentTarget).data('approval-id')
     
     @ajax(
-      id:          'reject_approval'
-      type:        'POST'
-      url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/reject"
+      id: 'reject_approval'
+      type: 'POST'
+      url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/reject"
       processData: true
-      success:     @approvalSuccess
-      error:       @approvalError
+      success: @approvalSuccess
+      error: @approvalError
     )
 
   editApproval: (e) =>
@@ -102,12 +102,12 @@ class App.WidgetApprovals extends App.Controller
     approval_id = $(e.currentTarget).data('approval-id')
     
     @ajax(
-      id:          'delete_approval'
-      type:        'DELETE'
-      url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
+      id: 'delete_approval'
+      type: 'DELETE'
+      url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
       processData: true
-      success:     @approvalSuccess
-      error:       @approvalError
+      success: @approvalSuccess
+      error: @approvalError
     )
 
   approvalSuccess: (data, status, xhr) =>

@@ -75,12 +75,12 @@ class App.WidgetShares extends App.Controller
     share_id = $(e.currentTarget).data('share-id')
 
     @ajax(
-      id:          'delete_share'
-      type:        'DELETE'
-      url:         "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}"
+      id: 'delete_share'
+      type: 'DELETE'
+      url: "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}"
       processData: true
-      success:     @shareSuccess
-      error:       @shareError
+      success: @shareSuccess
+      error: @shareError
     )
 
   revokeShare: (e) =>
@@ -88,12 +88,12 @@ class App.WidgetShares extends App.Controller
     share_id = $(e.currentTarget).data('share-id')
 
     @ajax(
-      id:          'revoke_share'
-      type:        'POST'
-      url:         "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}/revoke"
+      id: 'revoke_share'
+      type: 'POST'
+      url: "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}/revoke"
       processData: true
-      success:     @shareSuccess
-      error:       @shareError
+      success: @shareSuccess
+      error: @shareError
     )
 
   updatePermissions: (e) =>
