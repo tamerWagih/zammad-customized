@@ -8,11 +8,6 @@ class App.TicketApprovalRequest extends App.ControllerModal
   events:
     'submit form': 'submit'
 
-  constructor: ->
-    console.log('App.TicketApprovalRequest constructor called')
-    console.log('Parameters:', arguments)
-    super
-    console.log('App.TicketApprovalRequest super completed')
 
   content: ->
     console.log('App.TicketApprovalRequest content called')
