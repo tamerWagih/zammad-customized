@@ -75,6 +75,7 @@ Zammad::Application.routes.draw do
   match api_path + '/tickets/:ticket_id/approvals',                           to: 'ticket_approvals#create',                                  via: :post
   match api_path + '/tickets/:ticket_id/approvals/:id/approve',               to: 'ticket_approvals#approve',                                 via: :post
   match api_path + '/tickets/:ticket_id/approvals/:id/reject',                to: 'ticket_approvals#reject',                                  via: :post
+  match api_path + '/tickets/:ticket_id/approvals/:id',                       to: 'ticket_approvals#update',                                  via: :patch
   match api_path + '/tickets/:ticket_id/approvals/:id',                       to: 'ticket_approvals#destroy',                                 via: :delete
 
   # ticket shares

@@ -26,8 +26,8 @@ class App.WidgetApprovals extends App.Controller
 
   renderApprovals: (data, status, xhr) =>
     console.log('Approvals loaded:', data)
-    approvals = data?.approvals || []
-    @render(approvals)
+    @approvals = data?.approvals || []
+    @render(@approvals)
 
   renderError: (xhr, status, error) =>
     console.error('Error loading approvals:', error)
@@ -45,6 +45,7 @@ class App.WidgetApprovals extends App.Controller
       @html App.view('widget/approvals')(
         approvals: approvals
         ticket_id: @ticket_id
+        current_user_id: App.User.current()?.id
       )
     catch error
       console.error('Template rendering error:', error)
@@ -95,11 +96,16 @@ class App.WidgetApprovals extends App.Controller
     e.preventDefault()
     approval_id = $(e.currentTarget).data('approval-id')
     
-    # TODO: Implement edit modal
-    @notify(
-      type: 'notice'
-      msg:  __('Edit functionality not yet implemented')
-    )
+    # Find the approval data
+    approval = @approvals?.find (a) -> a.id.toString() is approval_id.toString()
+    if approval
+      # Create edit modal with current data
+      new App.TicketApprovalEdit(
+        approval: approval
+        ticket_id: @ticket_id
+        container: @el.closest('.content')
+        callback: => @loadApprovals()
+      )
 
   deleteApproval: (e) =>
     e.preventDefault()

@@ -125,6 +125,36 @@ class TicketApprovalsController < ApplicationController
     } }
   end
 
+  def update
+    approval = @ticket.approvals.find(params[:id])
+    
+    # Only the requester can edit pending requests
+    unless approval.requester == current_user
+      render json: { error: 'You can only edit your own approval requests' }, status: :forbidden
+      return
+    end
+
+    # Only allow editing pending requests
+    unless approval.status == 'pending'
+      render json: { error: 'You can only edit pending approval requests' }, status: :unprocessable_entity
+      return
+    end
+
+    approval.update!(
+      message: params[:message],
+      priority: params[:priority].presence || 'normal'
+    )
+
+    render json: { approval: {
+      id: approval.id,
+      status: approval.status,
+      message: approval.message,
+      priority: approval.priority,
+      approver: approval.approver&.fullname,
+      created_at: approval.created_at,
+    } }
+  end
+
   def destroy
     approval = @ticket.approvals.find(params[:id])
     
