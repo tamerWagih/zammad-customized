@@ -12,18 +12,16 @@ class App.TicketShareCreate extends App.ControllerModal
     console.log('App.TicketShareCreate constructor called')
     super
 
-  content: =>
-    # Get available users for sharing
-    @ajax(
-      id:          'users_for_sharing'
-      type:        'GET'
-      url:         "#{@apiPath}/users"
-      processData: true
-      success:     @renderWithUsers
-      error:       @renderError
-    )
-    # Return loading content initially
-    '<div class="modal-body"><p>Loading...</p></div>'
+  content: ->
+    console.log('App.TicketShareCreate content called')
+    # For now, return a simple form without AJAX to test modal display
+    App.view('ticket_share_create')({
+      ticket_id: @ticket_id
+      users: [
+        { id: 1, firstname: 'John', lastname: 'Doe', email: 'john@example.com' }
+        { id: 2, firstname: 'Jane', lastname: 'Smith', email: 'jane@example.com' }
+      ]
+    })
 
   render: =>
     # Get available users for sharing

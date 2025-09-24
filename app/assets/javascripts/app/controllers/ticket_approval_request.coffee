@@ -12,18 +12,16 @@ class App.TicketApprovalRequest extends App.ControllerModal
     console.log('App.TicketApprovalRequest constructor called')
     super
 
-  content: =>
-    # Get available users for approval
-    @ajax(
-      id:          'users_for_approval'
-      type:        'GET'
-      url:         "#{@apiPath}/users"
-      processData: true
-      success:     @renderWithUsers
-      error:       @renderError
-    )
-    # Return loading content initially
-    '<div class="modal-body"><p>Loading...</p></div>'
+  content: ->
+    console.log('App.TicketApprovalRequest content called')
+    # For now, return a simple form without AJAX to test modal display
+    App.view('ticket_approval_request')({
+      ticket_id: @ticket_id
+      approvers: [
+        { id: 1, firstname: 'John', lastname: 'Doe', email: 'john@example.com' }
+        { id: 2, firstname: 'Jane', lastname: 'Smith', email: 'jane@example.com' }
+      ]
+    })
 
   render: =>
     # Get available users for approval
@@ -37,6 +35,7 @@ class App.TicketApprovalRequest extends App.ControllerModal
     )
 
   renderWithUsers: (data, status, xhr) =>
+    console.log('App.TicketApprovalRequest renderWithUsers called')
     users = if Array.isArray(data) then data else (data?.users || [])
     # Get ticket's organization ID
     ticket = App.Ticket.find(@ticket_id)
@@ -54,11 +53,17 @@ class App.TicketApprovalRequest extends App.ControllerModal
         role = App.Role.find(role_id)
         role && (role.name == 'Agent' || role.name == 'Admin')
 
+    console.log('Filtered approvers:', approvers)
+    console.log('Modal element:', @el)
+
     # Update modal content
-    @el.find('.modal-body').html(App.view('ticket_approval_request')({
+    content = App.view('ticket_approval_request')({
       ticket_id: @ticket_id
       approvers: approvers
-    }))
+    })
+    console.log('Generated content:', content)
+    
+    @el.find('.modal-body').html(content)
 
   renderError: (xhr, status, error) =>
     @el.find('.modal-body').html(App.view('ticket_approval_request')({
