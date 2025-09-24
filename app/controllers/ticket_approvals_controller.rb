@@ -13,6 +13,8 @@ class TicketApprovalsController < ApplicationController
       message: a.message,
       priority: a.priority,
       approver: a.approver&.fullname,
+      approver_id: a.approver_id.to_s,
+      requester_id: a.requester_id.to_s,
       created_at: a.created_at,
     } } }
   end

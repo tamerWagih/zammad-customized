@@ -35,16 +35,22 @@ class App.WidgetShares extends App.Controller
 
   render: (shares) =>
     console.log('WidgetShares render called with data:', shares)
+    console.log('App.User.current():', App.User.current())
+    console.log('App.User.current()?.id:', App.User.current()?.id)
     
     console.log('About to render shares widget with data:', shares)
     
     # Test if template is working
     try
       # Render the full template with real data
+      current_user = App.User.current()
+      current_user_id = if current_user then String(current_user.id) else 'unknown'
+      console.log('current_user_id being passed to template:', current_user_id)
+      
       @html App.view('widget/shares')(
         shares: shares
         ticket_id: @ticket_id
-        current_user_id: String(App.User.current()?.id || '')
+        current_user_id: current_user_id
       )
     catch error
       console.error('Template rendering error:', error)

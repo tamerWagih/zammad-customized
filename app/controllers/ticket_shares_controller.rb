@@ -10,6 +10,8 @@ class TicketSharesController < ApplicationController
     render json: { shares: @shares.map { |s| {
       id: s.id,
       user: s.shared_with&.fullname,
+      shared_by_id: s.shared_by_id.to_s,
+      shared_by_name: s.shared_by&.fullname,
       permissions: s.permissions,
       message: s.message,
       status: s.status,
