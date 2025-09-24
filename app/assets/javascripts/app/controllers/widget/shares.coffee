@@ -10,6 +10,7 @@ class App.WidgetShares extends App.Controller
     super
     console.log('WidgetShares constructor called', @el, @ticket_id)
     @loadShares()
+    @renderActions()
 
   loadShares: =>
     console.log('Loading shares for ticket:', @ticket_id)
@@ -50,6 +51,9 @@ class App.WidgetShares extends App.Controller
       @html '<div class="sidebar-block"><h3>Template Error</h3><p>Template failed to render: ' + error.message + '</p></div>'
     
     console.log('Shares widget rendered, element content:', @el.html())
+
+  renderActions: =>
+    @parentVC?.parentSidebar?.sidebarActionsRender('shares', @parentVC?.item?.sidebarActions || [])
 
   openShareCreate: (e) =>
     e?.preventDefault()

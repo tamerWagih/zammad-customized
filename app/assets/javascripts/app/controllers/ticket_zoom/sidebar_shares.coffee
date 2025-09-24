@@ -33,13 +33,12 @@ class SidebarShares extends App.Controller
   showPanel: (el) =>
     @elSidebar = el
     console.log('SidebarShares showPanel called', el, @ticket)
-    new App.WidgetShares(
+    @widget = new App.WidgetShares(
       el:       @elSidebar
       ticket_id: @ticket.id
+      parentVC: @
       callback: @refreshShares
     )
-    # Ensure actions row is rendered explicitly (mirrors checklist pattern)
-    # No header actions for Shares; widget provides in-content button
 
   refreshShares: =>
     if @elSidebar

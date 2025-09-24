@@ -86,12 +86,6 @@ class App.Sidebar extends App.Controller
     console.log('Actions empty check:', _.isEmpty(sidebarActions))
     return if _.isEmpty(sidebarActions)
 
-    # For approvals/shares with exactly one action, render one primary button without dropdown
-    if (name is 'approvals' or name is 'shares')
-      # No header actions; buttons are rendered inside the widget content.
-      el.empty()
-      return
-
     console.log('Creating SidebarActionRow for:', name, 'with el:', el)
     @actionsRows[name] = new SidebarActionRow(
       el:    el

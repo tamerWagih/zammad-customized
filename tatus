@@ -1,0 +1,131 @@
+[33mcommit 1fef64f791fc091b21691678f314166a41980cb8[m
+Author: tamerWagih <mrtamerwagih@gmail.com>
+Date:   Wed Sep 24 09:32:01 2025 +0300
+
+    Approvals/Shares modals: standardize ControllerModal flow (fetch-first, content() returns template, formParams onSubmit)
+
+[1mdiff --git a/app/assets/javascripts/app/controllers/ticket_approval_request.coffee b/app/assets/javascripts/app/controllers/ticket_approval_request.coffee[m
+[1mindex bc6b962655..ab0a12cebf 100644[m
+[1m--- a/app/assets/javascripts/app/controllers/ticket_approval_request.coffee[m
+[1m+++ b/app/assets/javascripts/app/controllers/ticket_approval_request.coffee[m
+[36m@@ -4,85 +4,68 @@[m [mclass App.TicketApprovalRequest extends App.ControllerModal[m
+   buttonSubmit: __('Send Approval Request')[m
+   buttonClass: 'btn--primary'[m
+   head: __('Request Approval')[m
+[31m-  shown: true[m
+[31m-  [m
+[31m-  events:[m
+[31m-    'submit form': 'submit'[m
+[32m+[m[32m  shown: false[m
+ [m
+   constructor: ->[m
+     super[m
+[32m+[m[32m    @approvers = [][m
+[32m+[m[32m    @fetchApprovers()[m
+ [m
+[31m-  content: =>[m
+[31m-    # Return the modal content[m
+[31m-    @render()[m
+[31m-[m
+[31m-  render: =>[m
+[31m-    # Get available users for approval[m
+[32m+[m[32m  fetchApprovers: =>[m
+     @ajax([m
+       id:          'users_for_approval'[m
+       type:        'GET'[m
+       url:         "#{@apiPath}/users"[m
+       processData: true[m
+[31m-      success:     @renderWithUsers[m
+[31m-      error:       @renderError[m
+[32m+[m[32m      success:     @onApproversLoaded[m
+[32m+[m[32m      error:       @onApproversError[m
+     )[m
+ [m
+[31m-  renderWithUsers: (data, status, xhr) =>[m
+[32m+[m[32m  onApproversLoaded: (data, status, xhr) =>[m
+     users = if Array.isArray(data) then data else (data?.users || [])[m
+[31m-    # Get ticket's organization ID[m
+     ticket = App.Ticket.find(@ticket_id)[m
+     ticket_org_id = ticket?.organization_id[m
+[31m-    [m
+[31m-    # Filter to only show agents/admins from the same organization[m
+     current_user_id = App.User.current()?.id[m
+[31m-    approvers = users.filter (user) ->[m
+[31m-      # Exclude current user[m
+[32m+[m
+[32m+[m[32m    @approvers = users.filter (user) ->[m
+       return false if user.id is current_user_id[m
+[31m-      # Only show users from the same organization as the ticket[m
+       return false unless ticket_org_id && user.organization_id == ticket_org_id[m
+[31m-      # Only show agents and admins[m
+       user.role_ids && user.role_ids.some (role_id) ->[m
+         role = App.Role.find(role_id)[m
+         role && (role.name == 'Agent' || role.name == 'Admin')[m
+ [m
+[31m-    @html $(App.view('ticket_approval_request')({[m
+[31m-      ticket_id: @ticket_id[m
+[31m-      approvers: approvers[m
+[31m-    }))[m
+[32m+[m[32m    @update()[m
+[32m+[m
+[32m+[m[32m  onApproversError: (xhr, status, error) =>[m
+[32m+[m[32m    @approvers = [][m
+[32m+[m[32m    @error = true[m
+[32m+[m[32m    @update()[m
+ [m
+[31m-  renderError: (xhr, status, error) =>[m
+[31m-    @html $(App.view('ticket_approval_request')({[m
+[32m+[m[32m  content: =>[m
+[32m+[m[32m    App.view('ticket_approval_request')([m
+       ticket_id: @ticket_id[m
+[31m-      approvers: [][m
+[31m-      error: true[m
+[31m-    }))[m
+[32m+[m[32m      approvers: @approvers[m
+[32m+[m[32m      error: @error[m
+[32m+[m[32m    )[m
+ [m
+[31m-  submit: (e) =>[m
+[31m-    e.preventDefault()[m
+[31m-    [m
+[31m-    form_data = @formParam(e.currentTarget)[m
+[31m-    [m
+[32m+[m[32m  onSubmit: (e) =>[m
+[32m+[m[32m    params = @formParams()[m
+     @ajax([m
+       id:          'create_approval_request'[m
+       type:        'POST'[m
+       url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals"[m
+[31m-      data:        JSON.stringify(form_data)[m
+[32m+[m[32m      data:        JSON.stringify(params)[m
+       processData: false[m
+       contentType: 'application/json'[m
+[31m-      success:     @submitSuccess[m
+[31m-      error:       @submitError[m
+[31m-    )[m
+[31m-[m
+[31m-  submitSuccess: (data, status, xhr) =>[m
+[31m-    @notify([m
+[31m-      type: 'success'[m
+[31m-      msg:  __('Approval request created successfully')[m
+[31m-    )[m
+[31m-    @close()[m
+[31m-    @callback() if @callback[m
+[31m-[m
+[31m-  submitError: (xhr, status, error) =>[m
+[31m-    @notify([m
+[31m-      type: 'error'[m
+[31m-      msg:  __('Failed to create approval request')[m
+[31m-    )[m
+[32m+[m[32m      success:     (data, status, xhr) =>[m
+[32m+[m[32m        @notify([m
+[32m+[m[32m          type: 'success'[m
+[32m+[m[32m          msg:  __('Approval request created successfully')[m
+[32m+[m[32m        )[m
+[32m+[m[32m        @close()[m
+[32m+[m[32m        @callback() if @callback[m
+[32m+[m[32m      error:       (xhr, status, error) =>[m
+[32m+[m[32m        @notify([m
+[32m+[m[32m          type: 'error'[m
+[32m+[m[32m          msg:  __('Failed to create approval request')[m
+[32m+[m[32m        )[m

@@ -33,13 +33,12 @@ class SidebarApprovals extends App.Controller
   showPanel: (el) =>
     @elSidebar = el
     console.log('SidebarApprovals showPanel called', el, @ticket)
-    new App.WidgetApprovals(
+    @widget = new App.WidgetApprovals(
       el:       @elSidebar
       ticket_id: @ticket.id
+      parentVC: @
       callback: @refreshApprovals
     )
-    # Ensure actions row is rendered (like checklist does explicitly)
-    # No header actions for Approvals; widget provides in-content button
 
   refreshApprovals: =>
     if @elSidebar

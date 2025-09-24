@@ -10,6 +10,7 @@ class App.WidgetApprovals extends App.Controller
     super
     console.log('WidgetApprovals constructor called', @el, @ticket_id)
     @loadApprovals()
+    @renderActions()
 
   loadApprovals: =>
     console.log('Loading approvals for ticket:', @ticket_id)
@@ -51,6 +52,9 @@ class App.WidgetApprovals extends App.Controller
       @html '<div class="sidebar-block"><h3>Template Error</h3><p>Template failed to render: ' + error.message + '</p></div>'
     
     console.log('Approvals widget rendered, element content:', @el.html())
+
+  renderActions: =>
+    @parentVC?.parentSidebar?.sidebarActionsRender('approvals', @parentVC?.item?.sidebarActions || [])
 
   openRequestApproval: (e) =>
     e?.preventDefault()
