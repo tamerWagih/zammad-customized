@@ -4,7 +4,13 @@
     <div class="sidebar-block">
       <div class="approval-header">
         <div class="approval-user">
-          <strong><%- approval.approver.toUpperCase() %></strong>
+          <% if approval.requester_id is current_user_id: %>
+            <strong><%- @T('Request to') %> <%- approval.approver %></strong>
+          <% else if approval.approver_id is current_user_id: %>
+            <strong><%- @T('Request from') %> <%- approval.requester %></strong>
+          <% else: %>
+            <strong><%- approval.approver %></strong>
+          <% end %>
         </div>
         <div class="approval-status">
           <span class="label label-<%= approval.status is 'pending' and 'warning' or approval.status is 'approved' and 'success' or 'danger' %>">
@@ -40,7 +46,7 @@
                 <%- @T('Reject') %>
               </button>
             </div>
-          <% else: %>
+          <% else if approval.requester_id is current_user_id: %>
             <!-- Show edit/delete buttons to requester -->
             <div class="approval-actions">
               <button class="btn btn-link btn-sm js-edit-approval" data-approval-id="<%= approval.id %>">

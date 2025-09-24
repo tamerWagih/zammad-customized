@@ -14,6 +14,7 @@ class TicketApprovalsController < ApplicationController
       priority: a.priority,
       approver: a.approver&.fullname,
       approver_id: a.approver_id.to_s,
+      requester: a.requester&.fullname,
       requester_id: a.requester_id.to_s,
       created_at: a.created_at,
     } } }

@@ -4,7 +4,11 @@
     <div class="sidebar-block">
       <div class="share-header">
         <div class="share-user">
-          <strong><%- share.user.toUpperCase() %></strong>
+          <% if share.shared_by_id is current_user_id: %>
+            <strong><%- @T('Shared with') %> <%- share.user %></strong>
+          <% else: %>
+            <strong><%- @T('Shared with you') %></strong>
+          <% end %>
         </div>
         <div class="share-status">
           <span class="label label-<%= share.status is 'active' and 'info' or 'default' %>">
@@ -35,22 +39,32 @@
           </div>
         </div>
         
-        <div class="share-actions">
-          <button class="btn btn-link btn-sm js-edit-share" data-share-id="<%= share.id %>">
-            <%- @T('Edit') %>
-          </button>
-          <button class="btn btn-link btn-sm js-update-permissions" data-share-id="<%= share.id %>">
-            <%- @T('Permissions') %>
-          </button>
-          <% if share.status is 'active': %>
-            <button class="btn btn-link btn-sm js-revoke-share" data-share-id="<%= share.id %>">
-              <%- @T('Revoke') %>
+        <% if share.shared_by_id is current_user_id: %>
+          <!-- Show edit/revoke/delete buttons to person who shared -->
+          <div class="share-actions">
+            <button class="btn btn-link btn-sm js-edit-share" data-share-id="<%= share.id %>">
+              <%- @T('Edit') %>
             </button>
-          <% end %>
-          <button class="btn btn-link btn-sm js-delete-share" data-share-id="<%= share.id %>">
-            <%- @T('Delete') %>
-          </button>
-        </div>
+            <button class="btn btn-link btn-sm js-update-permissions" data-share-id="<%= share.id %>">
+              <%- @T('Permissions') %>
+            </button>
+            <% if share.status is 'active': %>
+              <button class="btn btn-link btn-sm js-revoke-share" data-share-id="<%= share.id %>">
+                <%- @T('Revoke') %>
+              </button>
+            <% end %>
+            <button class="btn btn-link btn-sm js-delete-share" data-share-id="<%= share.id %>">
+              <%- @T('Delete') %>
+            </button>
+          </div>
+        <% else: %>
+          <!-- Show read-only info to shared user -->
+          <div class="share-info">
+            <small class="text-muted">
+              <%- @T('Shared with you by') %> <%- share.shared_by_name %>
+            </small>
+          </div>
+        <% end %>
       </div>
     </div>
   <% end %>
