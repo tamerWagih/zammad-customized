@@ -1,13 +1,13 @@
 
-<% if @approvals && @approvals.length > 0: %>
-  <% for approval in @approvals: %>
+<% if @approvals && @approvals.length > 0 %>
+  <% for approval in @approvals %>
     <div class="sidebar-block">
       <div class="approval-header">
         <div class="approval-user">
           <strong><%- approval.approver.toUpperCase() %></strong>
         </div>
         <div class="approval-status">
-          <span class="label label-<%= approval.status is 'pending' and 'warning' or approval.status is 'approved' and 'success' or 'danger' %>">
+          <span class="label label-<%= approval.status === 'pending' ? 'warning' : approval.status === 'approved' ? 'success' : 'danger' %>">
             <%- @T(approval.status.charAt(0).toUpperCase() + approval.status.slice(1)) %>
           </span>
         </div>
@@ -20,7 +20,7 @@
         
         <div class="approval-meta">
           <div class="approval-priority">
-            <span class="label label-<%= approval.priority is 'high' and 'danger' or approval.priority is 'urgent' and 'danger' or approval.priority is 'low' and 'info' or 'success' %>">
+            <span class="label label-<%= approval.priority === 'high' || approval.priority === 'urgent' ? 'danger' : approval.priority === 'low' ? 'info' : 'success' %>">
               <%- @T(approval.priority.charAt(0).toUpperCase() + approval.priority.slice(1)) %> Priority
             </span>
           </div>
@@ -29,8 +29,8 @@
           </div>
         </div>
         
-        <% if approval.status is 'pending': %>
-          <% if approval.approver_id is current_user_id: %>
+        <% if approval.status === 'pending' %>
+          <% if approval.approver_id === current_user_id %>
             <!-- Show approve/reject buttons to approver -->
             <div class="approval-actions">
               <button class="btn btn-success btn-sm js-approve" data-approval-id="<%= approval.id %>">
@@ -51,9 +51,9 @@
               </button>
             </div>
           <% end %>
-        <% else: %>
+        <% else %>
           <!-- For completed approvals, only show delete to requester -->
-          <% if approval.requester_id is current_user_id: %>
+          <% if approval.requester_id === current_user_id %>
             <div class="approval-actions">
               <button class="btn btn-link btn-sm js-delete-approval" data-approval-id="<%= approval.id %>">
                 <%- @T('Delete') %>
@@ -64,7 +64,7 @@
       </div>
     </div>
   <% end %>
-<% else: %>
+<% else %>
   <div class="sidebar-block">
     <div class="approvals-empty">
       <p><%- @T('No approval requests for this ticket yet.') %></p>

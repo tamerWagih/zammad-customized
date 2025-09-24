@@ -45,7 +45,7 @@ class App.WidgetApprovals extends App.Controller
       @html App.view('widget/approvals')(
         approvals: approvals
         ticket_id: @ticket_id
-        current_user_id: App.User.current()?.id
+        current_user_id: String(App.User.current()?.id || '')
       )
     catch error
       console.error('Template rendering error:', error)

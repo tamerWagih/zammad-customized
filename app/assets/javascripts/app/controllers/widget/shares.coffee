@@ -44,6 +44,7 @@ class App.WidgetShares extends App.Controller
       @html App.view('widget/shares')(
         shares: shares
         ticket_id: @ticket_id
+        current_user_id: String(App.User.current()?.id || '')
       )
     catch error
       console.error('Template rendering error:', error)
