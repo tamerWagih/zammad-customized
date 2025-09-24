@@ -4,7 +4,6 @@ class App.TicketApprovalRequest extends App.ControllerModal
   buttonSubmit: __('Send Approval Request')
   buttonClass: 'btn--primary'
   head: __('Request Approval')
-  shown: true
   
   events:
     'submit form': 'submit'
@@ -14,8 +13,17 @@ class App.TicketApprovalRequest extends App.ControllerModal
     super
 
   content: =>
-    # Return the modal content
-    @render()
+    # Get available users for approval
+    @ajax(
+      id:          'users_for_approval'
+      type:        'GET'
+      url:         "#{@apiPath}/users"
+      processData: true
+      success:     @renderWithUsers
+      error:       @renderError
+    )
+    # Return loading content initially
+    '<div class="modal-body"><p>Loading...</p></div>'
 
   render: =>
     # Get available users for approval
@@ -46,13 +54,14 @@ class App.TicketApprovalRequest extends App.ControllerModal
         role = App.Role.find(role_id)
         role && (role.name == 'Agent' || role.name == 'Admin')
 
-    @html $(App.view('ticket_approval_request')({
+    # Update modal content
+    @el.find('.modal-body').html(App.view('ticket_approval_request')({
       ticket_id: @ticket_id
       approvers: approvers
     }))
 
   renderError: (xhr, status, error) =>
-    @html $(App.view('ticket_approval_request')({
+    @el.find('.modal-body').html(App.view('ticket_approval_request')({
       ticket_id: @ticket_id
       approvers: []
       error: true

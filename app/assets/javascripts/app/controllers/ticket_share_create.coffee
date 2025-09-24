@@ -4,7 +4,6 @@ class App.TicketShareCreate extends App.ControllerModal
   buttonSubmit: __('Share Ticket')
   buttonClass: 'btn--primary'
   head: __('Share Ticket')
-  shown: true
   
   events:
     'submit form': 'submit'
@@ -14,8 +13,17 @@ class App.TicketShareCreate extends App.ControllerModal
     super
 
   content: =>
-    # Return the modal content
-    @render()
+    # Get available users for sharing
+    @ajax(
+      id:          'users_for_sharing'
+      type:        'GET'
+      url:         "#{@apiPath}/users"
+      processData: true
+      success:     @renderWithUsers
+      error:       @renderError
+    )
+    # Return loading content initially
+    '<div class="modal-body"><p>Loading...</p></div>'
 
   render: =>
     # Get available users for sharing
@@ -44,13 +52,14 @@ class App.TicketShareCreate extends App.ControllerModal
       # Include all active users
       return user.active isnt false
 
-    @html $(App.view('ticket_share_create')({
+    # Update modal content
+    @el.find('.modal-body').html(App.view('ticket_share_create')({
       ticket_id: @ticket_id
       users: available_users
     }))
 
   renderError: (xhr, status, error) =>
-    @html $(App.view('ticket_share_create')({
+    @el.find('.modal-body').html(App.view('ticket_share_create')({
       ticket_id: @ticket_id
       users: []
       error: true
