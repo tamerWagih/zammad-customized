@@ -50,7 +50,6 @@ class SidebarShares extends App.Controller
     new App.TicketShareCreate(
       ticket_id: @ticket.id
       container: @elSidebar.closest('.content')
-      callback:  @refreshShares
     )
 
   badgeRender: (el) =>

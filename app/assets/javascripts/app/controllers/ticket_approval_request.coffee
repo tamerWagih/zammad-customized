@@ -10,18 +10,14 @@ class App.TicketApprovalRequest extends App.ControllerModal
 
   constructor: ->
     console.log('App.TicketApprovalRequest constructor called')
+    console.log('Parameters:', arguments)
     super
+    console.log('App.TicketApprovalRequest super completed')
 
   content: ->
     console.log('App.TicketApprovalRequest content called')
-    # For now, return a simple form without AJAX to test modal display
-    App.view('ticket_approval_request')({
-      ticket_id: @ticket_id
-      approvers: [
-        { id: 1, firstname: 'John', lastname: 'Doe', email: 'john@example.com' }
-        { id: 2, firstname: 'Jane', lastname: 'Smith', email: 'jane@example.com' }
-      ]
-    })
+    # Return simple HTML to test
+    '<div class="modal-body"><h3>Test Modal</h3><p>This is a test modal content.</p></div>'
 
 
   renderWithUsers: (data, status, xhr) =>

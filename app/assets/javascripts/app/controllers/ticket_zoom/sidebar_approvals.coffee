@@ -50,7 +50,6 @@ class SidebarApprovals extends App.Controller
     new App.TicketApprovalRequest(
       ticket_id: @ticket.id
       container: @elSidebar.closest('.content')
-      callback:  @refreshApprovals
     )
 
   badgeRender: (el) =>
