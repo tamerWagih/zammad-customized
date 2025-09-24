@@ -23,7 +23,7 @@ class SidebarApprovals extends App.Controller
     @item.sidebarActions.push
       title: __('Request Approval')
       name: 'approval-request'
-      callback: => @requestApproval()
+      callback: @requestApproval
 
     console.log('SidebarApprovals item created:', @item)
     console.log('SidebarActions count:', @item.sidebarActions.length)
@@ -45,6 +45,7 @@ class SidebarApprovals extends App.Controller
       @showPanel(@elSidebar)
 
   requestApproval: =>
+    console.log('SidebarApprovals requestApproval called')
     # Create approval request modal
     new App.TicketApprovalRequest(
       ticket_id: @ticket.id

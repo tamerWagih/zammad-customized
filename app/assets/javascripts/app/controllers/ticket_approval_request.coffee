@@ -10,6 +10,7 @@ class App.TicketApprovalRequest extends App.ControllerModal
     'submit form': 'submit'
 
   constructor: ->
+    console.log('App.TicketApprovalRequest constructor called')
     super
 
   content: =>

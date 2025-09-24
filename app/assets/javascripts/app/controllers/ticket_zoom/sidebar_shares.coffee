@@ -23,7 +23,7 @@ class SidebarShares extends App.Controller
     @item.sidebarActions.push
       title: __('Share Ticket')
       name: 'share-create'
-      callback: => @createShare()
+      callback: @createShare
 
     console.log('SidebarShares item created:', @item)
     console.log('SidebarActions count:', @item.sidebarActions.length)
@@ -45,6 +45,7 @@ class SidebarShares extends App.Controller
       @showPanel(@elSidebar)
 
   createShare: =>
+    console.log('SidebarShares createShare called')
     # Create share modal
     new App.TicketShareCreate(
       ticket_id: @ticket.id

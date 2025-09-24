@@ -10,6 +10,7 @@ class App.TicketShareCreate extends App.ControllerModal
     'submit form': 'submit'
 
   constructor: ->
+    console.log('App.TicketShareCreate constructor called')
     super
 
   content: =>
