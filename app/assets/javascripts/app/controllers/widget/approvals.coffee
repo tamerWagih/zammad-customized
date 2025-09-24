@@ -97,7 +97,7 @@ class App.WidgetApprovals extends App.Controller
     approval_id = $(e.currentTarget).data('approval-id')
     
     # Find the approval data
-    approval = @approvals?.find (a) -> a.id.toString() is approval_id.toString()
+    approval = @approvals?.find (a) -> a.id.toString() == approval_id.toString()
     if approval
       # Create edit modal with current data
       new App.TicketApprovalEdit(
