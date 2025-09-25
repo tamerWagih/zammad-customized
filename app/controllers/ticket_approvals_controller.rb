@@ -144,8 +144,8 @@ class TicketApprovalsController < ApplicationController
     end
 
     approval.update!(
-      message: params[:message],
-      priority: params[:priority].presence || 'normal'
+      message: params[:approval][:message],
+      priority: params[:approval][:priority].presence || 'normal'
     )
 
     render json: { approval: {

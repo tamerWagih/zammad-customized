@@ -73,10 +73,10 @@ class TicketSharesController < ApplicationController
       return
     end
 
-    share.revoke!
-
-    # Optionally notify the shared user about revocation
     begin
+      share.revoke!
+      
+      # Notify the shared user about revocation
       OnlineNotification.add(
         type:          'Share revoked',
         object:        'Ticket',
@@ -85,7 +85,9 @@ class TicketSharesController < ApplicationController
         user_id:       share.shared_with_id,
         created_by_id: current_user.id,
       )
-    rescue StandardError
+    rescue StandardError => e
+      render json: { error: "Failed to revoke share: #{e.message}" }, status: :unprocessable_entity
+      return
     end
 
     render json: { share: {
@@ -136,8 +138,14 @@ class TicketSharesController < ApplicationController
       return
     end
 
-    share.destroy
-    render json: { success: true }
+    begin
+      share.destroy!
+      render json: { success: true }
+    rescue ActiveRecord::RecordNotDestroyed => e
+      render json: { error: "Failed to delete share: #{e.message}" }, status: :unprocessable_entity
+    rescue StandardError => e
+      render json: { error: "An error occurred: #{e.message}" }, status: :internal_server_error
+    end
   end
 
   private

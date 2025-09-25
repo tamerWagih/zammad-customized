@@ -45,9 +45,6 @@
             <button class="btn btn-link btn-sm js-edit-share" data-share-id="<%= share.id %>">
               <%- @T('Edit') %>
             </button>
-            <button class="btn btn-link btn-sm js-update-permissions" data-share-id="<%= share.id %>">
-              <%- @T('Permissions') %>
-            </button>
             <% if share.status is 'active': %>
               <button class="btn btn-link btn-sm js-revoke-share" data-share-id="<%= share.id %>">
                 <%- @T('Revoke') %>

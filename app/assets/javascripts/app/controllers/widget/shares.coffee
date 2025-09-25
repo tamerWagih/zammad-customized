@@ -3,7 +3,6 @@ class App.WidgetShares extends App.Controller
     'click .js-edit-share': 'editShare'
     'click .js-delete-share': 'deleteShare'
     'click .js-revoke-share': 'revokeShare'
-    'click .js-update-permissions': 'updatePermissions'
     'click .js-create-share': 'openShareCreate'
 
   constructor: ->
@@ -57,7 +56,6 @@ class App.WidgetShares extends App.Controller
     share_id = $(e.currentTarget).data('share-id')
     # Find current share data from last load
     share = (@lastShares or []).find (s) -> String(s.id) == String(share_id)
-    share ?= (@shares or []).find (s) -> String(s.id) == String(share_id)
 
     new App.TicketShareEdit(
       share: share
@@ -94,21 +92,6 @@ class App.WidgetShares extends App.Controller
       error: @shareError
     )
 
-  updatePermissions: (e) =>
-    e.preventDefault()
-    share_id = $(e.currentTarget).data('share-id')
-    
-    # Find current share data from last load
-    share = (@lastShares or []).find (s) -> String(s.id) == String(share_id)
-    share ?= (@shares or []).find (s) -> String(s.id) == String(share_id)
-
-    # Open edit modal for permissions (same as edit functionality)
-    new App.TicketShareEdit(
-      share: share
-      ticket_id: @ticket_id
-      container: @el.closest('.content')
-      callback: => @loadShares()
-    )
 
   shareSuccess: (data, status, xhr) =>
     # Get the action type from the AJAX request to show appropriate message
