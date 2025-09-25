@@ -10,14 +10,11 @@ class App.Sidebar extends App.Controller
 
   constructor: ->
     super
-    console.log('App.Sidebar constructor called with items:', @items?.length || 0)
 
     for item in @items
       item.parentSidebar = @
 
-    console.log('About to call App.Sidebar render')
     @render()
-    console.log('App.Sidebar render completed')
 
     # get active tab by name
     if @name
@@ -35,7 +32,6 @@ class App.Sidebar extends App.Controller
     @toggleTabAction(name)
 
   render: =>
-    console.log('App.Sidebar.render called with items:', @items?.length || 0)
     itemsLocal = []
     for item in @items
       try
@@ -61,32 +57,23 @@ class App.Sidebar extends App.Controller
         @badgeRender(el, item)
 
     # init sidebar content
-    console.log('Processing sidebar items:', itemsLocal)
     for item in itemsLocal
-      console.log('Processing item:', item.name, 'has callback:', !!item.sidebarCallback, 'has actions:', item.sidebarActions?.length || 0)
       if item.sidebarCallback
         el = localEl.filter('.sidebar[data-tab="' + item.name + '"]')
-        console.log('Found element for', item.name, ':', el.length, 'elements')
         item.sidebarCallback(el.find('.sidebar-content'))
-        console.log('About to call sidebarActionsRender for', item.name)
         @sidebarActionsRender(item.name, item.sidebarActions, el.find('.js-actions'))
 
     @html(localEl)
 
   sidebarActionsRender: (name, sidebarActions, el = undefined) =>
-    console.log('sidebarActionsRender called for:', name, 'with actions:', sidebarActions, 'el:', el)
-    
     if !el
       el = @el.find('.sidebar[data-tab="' + name + '"] .js-actions')
-      console.log('Found el by selector:', el)
 
     @actionsRows ||= {}
     @actionsRows[name]?.releaseController()
     
-    console.log('Actions empty check:', _.isEmpty(sidebarActions))
     return if _.isEmpty(sidebarActions)
 
-    console.log('Creating SidebarActionRow for:', name, 'with el:', el)
     @actionsRows[name] = new SidebarActionRow(
       el:    el
       items: sidebarActions
@@ -180,12 +167,6 @@ class SidebarActionRow extends App.Controller
       type:  @type
     )
 
-    try
-      console.log('SidebarActionRow rendered for items:', (@items || []).map((i) -> i.name))
-      console.log('SidebarActionRow HTML:', @el?.html())
-    catch error
-      console.error('Error rendering SidebarActionRow:', error)
-
     for item in @items
       do (item) =>
         @$('[data-type="' + item.name + '"]').off('click').on(
@@ -194,10 +175,6 @@ class SidebarActionRow extends App.Controller
             e.preventDefault()
             item.callback()
         )
-        try
-          console.log('Bound click handler for sidebar action:', item.name)
-        catch error
-          console.error('Error binding click handler for', item.name, error)
 
     # When there is exactly one action, also bind the primary split button to the same callback
     if @items?.length is 1
