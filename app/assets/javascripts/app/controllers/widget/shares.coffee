@@ -69,6 +69,7 @@ class App.WidgetShares extends App.Controller
   deleteShare: (e) =>
     e.preventDefault()
     share_id = $(e.currentTarget).data('share-id')
+    @setCurrentAction('delete')
 
     @ajax(
       id: 'delete_share'
@@ -82,6 +83,7 @@ class App.WidgetShares extends App.Controller
   revokeShare: (e) =>
     e.preventDefault()
     share_id = $(e.currentTarget).data('share-id')
+    @setCurrentAction('revoke')
 
     @ajax(
       id: 'revoke_share'
@@ -96,28 +98,56 @@ class App.WidgetShares extends App.Controller
     e.preventDefault()
     share_id = $(e.currentTarget).data('share-id')
     
-    # TODO: Implement permissions modal
-    @notify(
-      type: 'notice'
-      msg:  __('Permissions functionality not yet implemented')
+    # Find current share data from last load
+    share = (@lastShares or []).find (s) -> String(s.id) == String(share_id)
+    share ?= (@shares or []).find (s) -> String(s.id) == String(share_id)
+
+    # Open edit modal for permissions (same as edit functionality)
+    new App.TicketShareEdit(
+      share: share
+      ticket_id: @ticket_id
+      container: @el.closest('.content')
+      callback: => @loadShares()
     )
 
   shareSuccess: (data, status, xhr) =>
-    @notify(
-      type: 'success'
-      msg:  __('Share updated successfully')
-    )
+    # Get the action type from the AJAX request to show appropriate message
+    action = @getCurrentAction()
+    if action is 'revoke'
+      @notify(type: 'success', msg: __('Share revoked successfully'))
+    else if action is 'delete'
+      @notify(type: 'success', msg: __('Share deleted successfully'))
+    else
+      @notify(type: 'success', msg: __('Share updated successfully'))
+    
     # Reload shares from backend
     @loadShares()
     @callback() if @callback
+    @clearCurrentAction()
 
   shareError: (xhr, status, error) =>
-    @notify(
-      type: 'error'
-      msg:  __('Failed to update share')
-    )
+    action = @getCurrentAction()
+    if action is 'revoke'
+      @notify(type: 'error', msg: __('Failed to revoke share'))
+    else if action is 'delete'
+      @notify(type: 'error', msg: __('Failed to delete share'))
+    else
+      @notify(type: 'error', msg: __('Failed to update share'))
+    @clearCurrentAction()
+
+  getCurrentAction: =>
+    @currentAction
+
+  setCurrentAction: (action) =>
+    @currentAction = action
+
+  clearCurrentAction: =>
+    @currentAction = null
 
 
   refresh: =>
     if @callback
       @callback()
+
+  reload: =>
+    @loadShares()

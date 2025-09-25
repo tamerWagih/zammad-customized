@@ -55,6 +55,7 @@ class App.WidgetApprovals extends App.Controller
   approve: (e) =>
     e.preventDefault()
     approval_id = $(e.currentTarget).data('approval-id')
+    @setCurrentAction('approve')
     
     @ajax(
       id: 'approve_approval'
@@ -68,6 +69,7 @@ class App.WidgetApprovals extends App.Controller
   reject: (e) =>
     e.preventDefault()
     approval_id = $(e.currentTarget).data('approval-id')
+    @setCurrentAction('reject')
     
     @ajax(
       id: 'reject_approval'
@@ -96,6 +98,7 @@ class App.WidgetApprovals extends App.Controller
   deleteApproval: (e) =>
     e.preventDefault()
     approval_id = $(e.currentTarget).data('approval-id')
+    @setCurrentAction('delete')
     
     @ajax(
       id: 'delete_approval'
@@ -107,21 +110,47 @@ class App.WidgetApprovals extends App.Controller
     )
 
   approvalSuccess: (data, status, xhr) =>
-    @notify(
-      type: 'success'
-      msg:  __('Approval updated successfully')
-    )
+    # Get the action type from the AJAX request to show appropriate message
+    action = @getCurrentAction()
+    if action is 'approve'
+      @notify(type: 'success', msg: __('Approval request approved successfully'))
+    else if action is 'reject'
+      @notify(type: 'success', msg: __('Approval request rejected successfully'))
+    else if action is 'delete'
+      @notify(type: 'success', msg: __('Approval request deleted successfully'))
+    else
+      @notify(type: 'success', msg: __('Approval updated successfully'))
+    
     # Reload approvals from backend
     @loadApprovals()
     @callback() if @callback
+    @clearCurrentAction()
 
   approvalError: (xhr, status, error) =>
-    @notify(
-      type: 'error'
-      msg:  __('Failed to update approval')
-    )
+    action = @getCurrentAction()
+    if action is 'approve'
+      @notify(type: 'error', msg: __('Failed to approve request'))
+    else if action is 'reject'
+      @notify(type: 'error', msg: __('Failed to reject request'))
+    else if action is 'delete'
+      @notify(type: 'error', msg: __('Failed to delete approval request'))
+    else
+      @notify(type: 'error', msg: __('Failed to update approval'))
+    @clearCurrentAction()
+
+  getCurrentAction: =>
+    @currentAction
+
+  setCurrentAction: (action) =>
+    @currentAction = action
+
+  clearCurrentAction: =>
+    @currentAction = null
 
 
   refresh: =>
     if @callback
       @callback()
+
+  reload: =>
+    @loadApprovals()
