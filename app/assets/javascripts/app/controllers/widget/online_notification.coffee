@@ -226,10 +226,23 @@ class App.OnlineNotificationContentWidget extends App.CollectionController
         if !item.seen
           if @container.fetchedData
             item = @prepareForObjectListItem(item)
+            
+            # Debug logging for notification processing
+            if item.type?.includes('shared') || item.type?.includes('Approval')
+              console.log('DEBUG: Processing notification item:', {
+                type: item.type,
+                object: item.object,
+                o_id: item.o_id,
+                objectNative: item.objectNative?.constructor.name,
+                hasActivityMessage: !!item.objectNative?.activityMessage
+              })
+            
             if item.objectNative && item.objectNative.activityMessage
               title = item.objectNative.activityMessage(item)
+              console.log('DEBUG: Generated title from objectNative:', title) if item.type?.includes('shared') || item.type?.includes('Approval')
             else
               title = "Need objectNative in item #{item.object}.find(#{item.o_id})"
+              console.log('DEBUG: Using fallback title:', title) if item.type?.includes('shared') || item.type?.includes('Approval')
             title = App.Utils.html2text(title.replace(/<.+?>/g, '"'))
             @notifyDesktop(
               url: item.link
