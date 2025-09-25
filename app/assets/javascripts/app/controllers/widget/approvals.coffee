@@ -12,9 +12,6 @@ class App.WidgetApprovals extends App.Controller
     @renderActions()
 
   loadApprovals: =>
-    return if @isLoading
-    
-    @isLoading = true
     @ajax(
       id:          'load_approvals'
       type:        'GET'
@@ -22,7 +19,6 @@ class App.WidgetApprovals extends App.Controller
       processData: true
       success:     @renderApprovals
       error:       @renderError
-      complete:    => @isLoading = false
     )
 
   renderApprovals: (data, status, xhr) =>

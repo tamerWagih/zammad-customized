@@ -30,22 +30,6 @@ class SidebarApprovals extends App.Controller
       parentVC: @
       callback: @refreshApprovals
     )
-    
-    # Set up periodic refresh to catch changes from other users
-    @startPeriodicRefresh()
-
-  startPeriodicRefresh: =>
-    # Refresh every 60 seconds when panel is active (less aggressive)
-    @stopPeriodicRefresh()
-    @refreshInterval = setInterval =>
-      if @widget?.reload && !@widget.isLoading
-        @widget.reload()
-    , 60000
-
-  stopPeriodicRefresh: =>
-    if @refreshInterval
-      clearInterval(@refreshInterval)
-      @refreshInterval = null
 
   refreshApprovals: =>
     if @elSidebar

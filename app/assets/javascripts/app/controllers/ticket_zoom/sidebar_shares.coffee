@@ -30,22 +30,6 @@ class SidebarShares extends App.Controller
       parentVC: @
       callback: @refreshShares
     )
-    
-    # Set up periodic refresh to catch changes from other users
-    @startPeriodicRefresh()
-
-  startPeriodicRefresh: =>
-    # Refresh every 30 seconds when panel is active
-    @stopPeriodicRefresh()
-    @refreshInterval = setInterval =>
-      if @widget?.reload
-        @widget.reload()
-    , 30000
-
-  stopPeriodicRefresh: =>
-    if @refreshInterval
-      clearInterval(@refreshInterval)
-      @refreshInterval = null
 
   refreshShares: =>
     if @elSidebar
