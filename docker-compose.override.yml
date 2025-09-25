@@ -7,7 +7,7 @@ services:
       - .:/opt/zammad:delegated
       - zammad-assets:/opt/zammad/public/assets
     environment:
-      - RAILS_ENV=development
+      - RAILS_ENV=production
       - RAILS_LOG_TO_STDOUT=true
       - VITE_RUBY_HOST=0.0.0.0
 
@@ -15,16 +15,28 @@ services:
     volumes:
       - .:/opt/zammad:delegated
       - zammad-assets:/opt/zammad/public/assets:ro
+    environment:
+      - RAILS_ENV=production
+      - RAILS_LOG_TO_STDOUT=true
 
   zammad-scheduler:
     volumes:
       - .:/opt/zammad:delegated
+    environment:
+      - RAILS_ENV=production
+      - RAILS_LOG_TO_STDOUT=true
 
   zammad-init:
     volumes:
       - .:/opt/zammad:delegated
+    environment:
+      - RAILS_ENV=production
+      - RAILS_LOG_TO_STDOUT=true
 
   zammad-nginx:
     volumes:
       - .:/opt/zammad:delegated
       - zammad-assets:/opt/zammad/public/assets:ro
+    environment:
+      - RAILS_ENV=production
+      - RAILS_LOG_TO_STDOUT=true

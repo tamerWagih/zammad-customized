@@ -46,7 +46,8 @@ const messageText = (
     case 'update.received_merge':
       return i18n.t('Another ticket was merged into ticket |%s|', objectTitle)
     default:
-      return null
+      // Fallback: show raw type to avoid "Unknown action" log spam
+      return i18n.t('%s on |%s|', type, objectTitle)
   }
 }
 

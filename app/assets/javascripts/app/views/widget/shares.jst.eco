@@ -4,7 +4,7 @@
     <div class="sidebar-block">
       <div class="share-header">
         <div class="share-user">
-          <% if share.shared_by_id is current_user_id: %>
+          <% if share.shared_by_id is @current_user_id: %>
             <strong><%- @T('Shared with') %> <%- share.user %></strong>
           <% else: %>
             <strong><%- @T('Shared with you') %></strong>
