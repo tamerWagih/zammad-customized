@@ -12,13 +12,19 @@ class App.WidgetShares extends App.Controller
     
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketShare:create', (data) =>
-      @delay(=> @loadShares(), 500, 'share-reload')
+      @delay =>
+        @loadShares()
+      , 500, 'share-reload'
     )
     @controllerBind('TicketShare:update', (data) =>
-      @delay(=> @loadShares(), 500, 'share-reload')
+      @delay =>
+        @loadShares()
+      , 500, 'share-reload'
     )
     @controllerBind('TicketShare:destroy', (data) =>
-      @delay(=> @loadShares(), 500, 'share-reload')
+      @delay =>
+        @loadShares()
+      , 500, 'share-reload'
     )
 
   loadShares: =>
