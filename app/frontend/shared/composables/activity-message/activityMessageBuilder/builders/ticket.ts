@@ -20,10 +20,6 @@ const messageText = (
 
   const objectTitle = metaObject.title || '-'
 
-  // Debug logging for notification types
-  if (type.includes('shared') || type.includes('Approval')) {
-    console.log('DEBUG: ticket.ts messageText called with type:', type, 'author:', authorName, 'title:', objectTitle)
-  }
 
   switch (type) {
     case 'create':

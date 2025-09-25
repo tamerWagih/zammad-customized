@@ -353,15 +353,6 @@ class App.Controller extends Spine.Controller
     # convert backend name space to local name space
     item.object = item.object.replace('::', '')
 
-    # Debug logging for approval/share notifications
-    if item.type?.includes('shared') || item.type?.includes('Approval')
-      console.log('DEBUG: prepareForObjectListItem called with item:', {
-        type: item.type,
-        object: item.object,
-        o_id: item.o_id,
-        created_by_id: item.created_by_id
-      })
-
     # lookup real data
     if App[item.object] && App[item.object].exists(item.o_id)
       object            = App[item.object].findNative(item.o_id)
@@ -370,14 +361,6 @@ class App.Controller extends Spine.Controller
       item.title        = object.displayName()
       item.object_name  = object.objectDisplayName()
       item.cssIcon      = object.iconActivity(@Session.get())
-      
-      # Debug logging for successful lookup
-      if item.type?.includes('shared') || item.type?.includes('Approval')
-        console.log('DEBUG: Successfully found objectNative:', object?.constructor.name, 'for', item.type)
-    else
-      # Debug logging for failed lookup
-      if item.type?.includes('shared') || item.type?.includes('Approval')
-        console.log('DEBUG: Failed to find objectNative for', item.type, 'object:', item.object, 'o_id:', item.o_id, 'exists:', App[item.object]?.exists?(item.o_id))
 
     item.created_by = App.User.findNative(item.created_by_id)
     item

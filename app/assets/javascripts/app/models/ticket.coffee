@@ -119,6 +119,16 @@ class App.Ticket extends App.Model
         App.i18n.translateContent('Ticket |%s| was merged into another ticket', item.title)
       when 'update.received_merge'
         App.i18n.translateContent('Another ticket was merged into ticket |%s|', item.title)
+      when 'Approval request'
+        App.i18n.translateContent('%s requested approval on |%s|', item.created_by.displayName(), item.title)
+      when 'Approval approved'
+        App.i18n.translateContent('Approval approved for |%s| by %s', item.title, item.created_by.displayName())
+      when 'Approval rejected'
+        App.i18n.translateContent('Approval rejected for |%s| by %s', item.title, item.created_by.displayName())
+      when 'Ticket shared with you'
+        App.i18n.translateContent('%s shared ticket |%s| with you', item.created_by.displayName(), item.title)
+      when 'Share revoked'
+        App.i18n.translateContent('%s revoked a share on |%s|', item.created_by.displayName(), item.title)
       else
         "Unknow action for (#{@objectDisplayName()}/#{item.type}), extend activityMessage() of model."
 

@@ -18,10 +18,6 @@ export const useActivityMessage = (
     log.error(`Object missing ${activity.value.objectName}.`)
   }
 
-  // Debug logging for notification types
-  if (activity.value.typeName.includes('shared') || activity.value.typeName.includes('Approval')) {
-    console.log('DEBUG: Notification type:', activity.value.typeName, 'object:', activity.value.objectName)
-  }
   
   const message = builder.value?.messageText(
     activity.value.typeName,
