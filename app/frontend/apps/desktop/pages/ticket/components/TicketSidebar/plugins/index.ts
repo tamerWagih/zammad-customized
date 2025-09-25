@@ -21,11 +21,7 @@ export const pluginFiles = Object.entries(pluginModules)
   })
   .sort(([, p1], [, p2]) => p1.order - p2.order)
 
-// Debug: print loaded sidebar plugins (temporary)
-try {
-  // eslint-disable-next-line no-console
-  console.log('[Sidebar] Loaded plugins:', Object.keys(Object.fromEntries(pluginFiles)))
-} catch {}
+// Plugin files loaded and sorted by order
 
 export const useTicketSidebarPlugins = (screen: TicketSidebarScreenType) => {
   const { hasPermission } = useSessionStore()

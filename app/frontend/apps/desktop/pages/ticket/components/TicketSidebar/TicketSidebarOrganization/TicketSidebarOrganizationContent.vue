@@ -37,7 +37,7 @@ const actions: MenuItem[] = [
     icon: 'organization-edit',
     show: (entity) => entity?.policy.update,
     onClick: (id) => {
-      console.log(id, 'Edit organization')
+      // TODO: Implement edit organization functionality
     },
   },
 ]
