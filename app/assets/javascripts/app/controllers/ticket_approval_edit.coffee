@@ -9,7 +9,6 @@ class App.TicketApprovalEdit extends App.ControllerModal
     'submit form': 'submit'
 
   content: ->
-    console.log('App.TicketApprovalEdit content called')
     # Return simple edit form
     """
     <div class="form-horizontal">

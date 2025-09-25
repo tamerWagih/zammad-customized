@@ -12,7 +12,6 @@ class App.TicketShareCreate extends App.ControllerModal
 
 
   content: ->
-    console.log('App.TicketShareCreate content called')
     # Get available users for sharing
     @ajax(
       id:          'users_for_sharing'
@@ -20,10 +19,8 @@ class App.TicketShareCreate extends App.ControllerModal
       url:         "#{@apiPath}/users"
       processData: true
       success:     (data, status, xhr) =>
-        console.log('Users AJAX success:', data)
         @renderWithUsers(data, status, xhr)
       error:       (xhr, status, error) =>
-        console.log('Users AJAX error:', error, xhr.responseText)
         @renderError(xhr, status, error)
     )
     # Return loading content initially

@@ -12,7 +12,6 @@ class App.TicketApprovalRequest extends App.ControllerModal
 
 
   content: ->
-    console.log('App.TicketApprovalRequest content called')
     # Get available users for approval
     @ajax(
       id:          'users_for_approval'
@@ -20,10 +19,8 @@ class App.TicketApprovalRequest extends App.ControllerModal
       url:         "#{@apiPath}/users"
       processData: true
       success:     (data, status, xhr) =>
-        console.log('Users AJAX success:', data)
         @renderWithUsers(data, status, xhr)
       error:       (xhr, status, error) =>
-        console.log('Users AJAX error:', error, xhr.responseText)
         @renderError(xhr, status, error)
     )
     # Return loading content initially
@@ -31,7 +28,6 @@ class App.TicketApprovalRequest extends App.ControllerModal
 
 
   renderWithUsers: (data, status, xhr) =>
-    console.log('App.TicketApprovalRequest renderWithUsers called')
     users = if Array.isArray(data) then data else (data?.users || [])
     # Get ticket's organization ID
     ticket = App.Ticket.find(@ticket_id)
@@ -49,15 +45,12 @@ class App.TicketApprovalRequest extends App.ControllerModal
         role = App.Role.find(role_id)
         role && (role.name == 'Agent' || role.name == 'Admin')
 
-    console.log('Filtered approvers:', approvers)
-    console.log('Modal element:', @el)
 
     # Update modal content
     content = App.view('ticket_approval_request')({
       ticket_id: @ticket_id
       approvers: approvers
     })
-    console.log('Generated content:', content)
     
     @el.find('.modal-body').html(content)
     @toggleSubmit()

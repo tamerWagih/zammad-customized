@@ -8,12 +8,10 @@ class App.WidgetShares extends App.Controller
 
   constructor: ->
     super
-    console.log('WidgetShares constructor called', @el, @ticket_id)
     @loadShares()
     @renderActions()
 
   loadShares: =>
-    console.log('Loading shares for ticket:', @ticket_id)
     
     @ajax(
       id:          'load_shares'
@@ -25,39 +23,22 @@ class App.WidgetShares extends App.Controller
     )
 
   renderShares: (data, status, xhr) =>
-    console.log('Shares loaded:', data)
     @lastShares = data?.shares || []
     @render(@lastShares)
 
   renderError: (xhr, status, error) =>
-    console.error('Error loading shares:', error)
     @html '<div class="sidebar-block"><div class="alert alert-danger">Unable to load shares</div></div>'
 
   render: (shares) =>
-    console.log('WidgetShares render called with data:', shares)
-    console.log('App.User.current():', App.User.current())
-    console.log('App.User.current()?.id:', App.User.current()?.id)
+    # Render the full template with real data
+    current_user = App.User.current()
+    current_user_id = if current_user then String(current_user.id) else 'unknown'
     
-    console.log('About to render shares widget with data:', shares)
-    
-    # Test if template is working
-    try
-      # Render the full template with real data
-      current_user = App.User.current()
-      current_user_id = if current_user then String(current_user.id) else 'unknown'
-      console.log('current_user_id being passed to template:', current_user_id)
-      
-      @html App.view('widget/shares')(
-        shares: shares
-        ticket_id: @ticket_id
-        current_user_id: current_user_id
-      )
-    catch error
-      console.error('Template rendering error:', error)
-      # Fallback to simple HTML if template fails
-      @html '<div class="sidebar-block"><h3>Template Error</h3><p>Template failed to render: ' + error.message + '</p></div>'
-    
-    console.log('Shares widget rendered, element content:', @el.html())
+    @html App.view('widget/shares')(
+      shares: shares
+      ticket_id: @ticket_id
+      current_user_id: current_user_id
+    )
 
   renderActions: =>
     @parentVC?.parentSidebar?.sidebarActionsRender('shares', @parentVC?.item?.sidebarActions || [])

@@ -1,11 +1,5 @@
 class SidebarApprovals extends App.Controller
   sidebarItem: =>
-    console.log('SidebarApprovals sidebarItem called')
-    console.log('Current view:', @ticket.currentView())
-    console.log('Has ticket.agent permission:', @permissionCheck('ticket.agent'))
-    console.log('Has admin permission:', @permissionCheck('admin.*'))
-    console.log('Ticket editable:', @ticket.editable())
-    console.log('User current:', App.User.current())
     
     return if @ticket.currentView() isnt 'agent'
     return unless @permissionCheck('ticket.agent') or @permissionCheck('admin.*')
@@ -26,14 +20,10 @@ class SidebarApprovals extends App.Controller
       callback: @requestApproval
     )
 
-    console.log('SidebarApprovals item created:', @item)
-    console.log('SidebarActions count:', @item.sidebarActions.length)
-    console.log('SidebarActions details:', @item.sidebarActions)
     @item
 
   showPanel: (el) =>
     @elSidebar = el
-    console.log('SidebarApprovals showPanel called', el, @ticket)
     @widget = new App.WidgetApprovals(
       el:       @elSidebar
       ticket_id: @ticket.id
@@ -46,7 +36,6 @@ class SidebarApprovals extends App.Controller
       @showPanel(@elSidebar)
 
   requestApproval: =>
-    console.log('SidebarApprovals requestApproval called')
     # Create approval request modal
     new App.TicketApprovalRequest(
       ticket_id: @ticket.id
