@@ -110,11 +110,9 @@ class TicketSharesController < ApplicationController
       return
     end
 
-    # Normalize permissions array if provided
-    attrs = {}
-    attrs[:permissions] = Array(params[:permissions]).map(&:to_s) if params.key?(:permissions)
-    attrs[:message] = params[:message] if params.key?(:message)
-    attrs[:expires_at] = params[:expires_at] if params.key?(:expires_at)
+    # Use permitted parameters
+    attrs = share_params.to_h
+    attrs[:permissions] = Array(attrs[:permissions]).map(&:to_s) if attrs[:permissions].present?
 
     share.update!(attrs)
 
@@ -157,5 +155,9 @@ class TicketSharesController < ApplicationController
   def check_permissions
     # Check if user can access the ticket (same as show action)
     authorize!(@ticket, :show?)
+  end
+
+  def share_params
+    params.permit(:message, :expires_at, permissions: [])
   end
 end

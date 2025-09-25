@@ -10,8 +10,22 @@ class App.WidgetApprovals extends App.Controller
     super
     @loadApprovals()
     @renderActions()
+    
+    # Listen for real-time updates from other users with debounce
+    @controllerBind('TicketApproval:create', (data) =>
+      @delay(=> @loadApprovals(), 500, 'approval-reload')
+    )
+    @controllerBind('TicketApproval:update', (data) =>
+      @delay(=> @loadApprovals(), 500, 'approval-reload')
+    )
+    @controllerBind('TicketApproval:destroy', (data) =>
+      @delay(=> @loadApprovals(), 500, 'approval-reload')
+    )
 
   loadApprovals: =>
+    return if @isLoadingApprovals
+    
+    @isLoadingApprovals = true
     @ajax(
       id:          'load_approvals'
       type:        'GET'
@@ -19,6 +33,7 @@ class App.WidgetApprovals extends App.Controller
       processData: true
       success:     @renderApprovals
       error:       @renderError
+      complete:    => @isLoadingApprovals = false
     )
 
   renderApprovals: (data, status, xhr) =>

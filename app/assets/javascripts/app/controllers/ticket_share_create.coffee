@@ -65,6 +65,10 @@ class App.TicketShareCreate extends App.ControllerModal
     
     form_data = @formParam(e.currentTarget)
     
+    # Ensure permissions is always an array
+    if form_data.permissions and !Array.isArray(form_data.permissions)
+      form_data.permissions = [form_data.permissions]
+    
     @ajax(
       id: 'create_ticket_share'
       type: 'POST'

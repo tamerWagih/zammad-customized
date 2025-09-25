@@ -50,6 +50,10 @@ class App.TicketShareEdit extends App.ControllerModal
     e.preventDefault()
     form_data = @formParam(e.currentTarget)
 
+    # Ensure permissions is always an array
+    if form_data.permissions and !Array.isArray(form_data.permissions)
+      form_data.permissions = [form_data.permissions]
+
     @ajax(
       id: 'update_share'
       type: 'PATCH'

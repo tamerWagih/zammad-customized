@@ -144,8 +144,8 @@ class TicketApprovalsController < ApplicationController
     end
 
     approval.update!(
-      message: params[:approval][:message],
-      priority: params[:approval][:priority].presence || 'normal'
+      message: approval_params[:message],
+      priority: approval_params[:priority].presence || 'normal'
     )
 
     render json: { approval: {
@@ -186,5 +186,9 @@ class TicketApprovalsController < ApplicationController
   def check_permissions
     # Check if user can access the ticket (same as show action)
     authorize!(@ticket, :show?)
+  end
+
+  def approval_params
+    params.require(:approval).permit(:message, :priority)
   end
 end

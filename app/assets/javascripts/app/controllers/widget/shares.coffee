@@ -9,9 +9,22 @@ class App.WidgetShares extends App.Controller
     super
     @loadShares()
     @renderActions()
+    
+    # Listen for real-time updates from other users with debounce
+    @controllerBind('TicketShare:create', (data) =>
+      @delay(=> @loadShares(), 500, 'share-reload')
+    )
+    @controllerBind('TicketShare:update', (data) =>
+      @delay(=> @loadShares(), 500, 'share-reload')
+    )
+    @controllerBind('TicketShare:destroy', (data) =>
+      @delay(=> @loadShares(), 500, 'share-reload')
+    )
 
   loadShares: =>
+    return if @isLoadingShares
     
+    @isLoadingShares = true
     @ajax(
       id:          'load_shares'
       type:        'GET'
@@ -19,6 +32,7 @@ class App.WidgetShares extends App.Controller
       processData: true
       success:     @renderShares
       error:       @renderError
+      complete:    => @isLoadingShares = false
     )
 
   renderShares: (data, status, xhr) =>
