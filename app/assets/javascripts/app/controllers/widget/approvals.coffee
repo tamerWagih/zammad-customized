@@ -12,7 +12,9 @@ class App.WidgetApprovals extends App.Controller
     @renderActions()
 
   loadApprovals: =>
+    return if @isLoading
     
+    @isLoading = true
     @ajax(
       id:          'load_approvals'
       type:        'GET'
@@ -20,6 +22,7 @@ class App.WidgetApprovals extends App.Controller
       processData: true
       success:     @renderApprovals
       error:       @renderError
+      complete:    => @isLoading = false
     )
 
   renderApprovals: (data, status, xhr) =>
@@ -27,7 +30,13 @@ class App.WidgetApprovals extends App.Controller
     @render(@approvals)
 
   renderError: (xhr, status, error) =>
-    @html '<div class="sidebar-block"><div class="alert alert-danger">Unable to load approvals</div></div>'
+    error_message = 'Unable to load approvals'
+    if xhr?.responseJSON?.error
+      error_message = xhr.responseJSON.error
+    else if xhr?.statusText
+      error_message = "Unable to load approvals: #{xhr.statusText}"
+    
+    @html "<div class='sidebar-block'><div class='alert alert-danger'>#{error_message}</div></div>"
 
   render: (approvals) =>
     # Render the full template with real data
@@ -92,7 +101,7 @@ class App.WidgetApprovals extends App.Controller
         approval: approval
         ticket_id: @ticket_id
         container: @el.closest('.content')
-        callback: => @loadApprovals()
+        callback: @callback
       )
 
   deleteApproval: (e) =>
@@ -121,7 +130,7 @@ class App.WidgetApprovals extends App.Controller
     else
       @notify(type: 'success', msg: __('Approval updated successfully'))
     
-    # Reload approvals from backend
+    # Reload approvals from backend immediately
     @loadApprovals()
     @callback() if @callback
     @clearCurrentAction()

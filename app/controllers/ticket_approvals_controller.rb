@@ -167,8 +167,14 @@ class TicketApprovalsController < ApplicationController
       return
     end
 
-    approval.destroy
-    render json: { success: true }
+    begin
+      approval.destroy!
+      render json: { success: true }
+    rescue ActiveRecord::RecordNotDestroyed => e
+      render json: { error: "Failed to delete approval: #{e.message}" }, status: :unprocessable_entity
+    rescue StandardError => e
+      render json: { error: "An error occurred: #{e.message}" }, status: :internal_server_error
+    end
   end
 
   private

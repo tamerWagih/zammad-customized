@@ -35,12 +35,12 @@ class SidebarApprovals extends App.Controller
     @startPeriodicRefresh()
 
   startPeriodicRefresh: =>
-    # Refresh every 30 seconds when panel is active
+    # Refresh every 60 seconds when panel is active (less aggressive)
     @stopPeriodicRefresh()
     @refreshInterval = setInterval =>
-      if @widget?.reload
+      if @widget?.reload && !@widget.isLoading
         @widget.reload()
-    , 30000
+    , 60000
 
   stopPeriodicRefresh: =>
     if @refreshInterval
