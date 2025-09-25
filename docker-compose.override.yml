@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  zammad-railsserver:
+    volumes:
+      # Mount source code for live updates
+      - .:/opt/zammad:delegated
+      - zammad-assets:/opt/zammad/public/assets
+    environment:
+      - RAILS_ENV=development
+      - RAILS_LOG_TO_STDOUT=true
+      - VITE_RUBY_HOST=0.0.0.0
+
+  zammad-websocket:
+    volumes:
+      - .:/opt/zammad:delegated
+      - zammad-assets:/opt/zammad/public/assets:ro
+
+  zammad-scheduler:
+    volumes:
+      - .:/opt/zammad:delegated
+
+  zammad-init:
+    volumes:
+      - .:/opt/zammad:delegated
+
+  zammad-nginx:
+    volumes:
+      - .:/opt/zammad:delegated
+      - zammad-assets:/opt/zammad/public/assets:ro
