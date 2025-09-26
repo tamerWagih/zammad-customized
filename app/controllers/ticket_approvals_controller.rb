@@ -184,8 +184,12 @@ class TicketApprovalsController < ApplicationController
 
     # No need to notify requester since they performed the action
 
-    # Broadcast ticket update to all sessions for real-time updates
+    # Trigger full ticket reload for real-time updates (like attribute bar does)
     begin
+      # Reload ticket to get fresh data
+      @ticket.reload
+      
+      # Broadcast ticket update with fresh data
       Sessions.broadcast(
         {
           event: 'Ticket:update',
@@ -196,12 +200,6 @@ class TicketApprovalsController < ApplicationController
         },
         'authenticated'
       )
-    rescue StandardError
-    end
-
-    # Touch ticket to trigger real-time updates
-    begin
-      @ticket.touch
     rescue StandardError
     end
 
@@ -258,8 +256,12 @@ class TicketApprovalsController < ApplicationController
       
       approval.destroy!
       
-      # Broadcast ticket update to all sessions for real-time updates
+      # Trigger full ticket reload for real-time updates (like attribute bar does)
       begin
+        # Reload ticket to get fresh data
+        @ticket.reload
+        
+        # Broadcast ticket update with fresh data
         Sessions.broadcast(
           {
             event: 'Ticket:update',
@@ -270,12 +272,6 @@ class TicketApprovalsController < ApplicationController
           },
           'authenticated'
         )
-      rescue StandardError
-      end
-      
-      # Touch ticket to trigger real-time updates
-      begin
-        @ticket.touch
       rescue StandardError
       end
       
