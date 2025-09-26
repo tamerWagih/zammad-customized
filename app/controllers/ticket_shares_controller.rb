@@ -49,6 +49,16 @@ class TicketSharesController < ApplicationController
       created_by_id: current_user.id,
     ) rescue nil
 
+    # Real-time updates
+    begin
+      @ticket.touch
+      @ticket.reload
+      Sessions.broadcast({ event: 'Ticket:update', data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
+      Sessions.broadcast({ event: 'Ticket:touch',  data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
+      Sessions.broadcast({ event: 'TicketShare:create', data: { ticket_id: @ticket.id, share_id: share.id } }, 'authenticated')
+    rescue StandardError
+    end
+
     render json: { share: {
       id: share.id,
       user: share.shared_with&.fullname,
@@ -90,6 +100,16 @@ class TicketSharesController < ApplicationController
       return
     end
 
+    # Real-time updates
+    begin
+      @ticket.touch
+      @ticket.reload
+      Sessions.broadcast({ event: 'Ticket:update', data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
+      Sessions.broadcast({ event: 'Ticket:touch',  data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
+      Sessions.broadcast({ event: 'TicketShare:update', data: { ticket_id: @ticket.id, share_id: share.id, action: 'revoke' } }, 'authenticated')
+    rescue StandardError
+    end
+
     render json: { share: {
       id: share.id,
       user: share.shared_with&.fullname,
@@ -116,6 +136,16 @@ class TicketSharesController < ApplicationController
 
     share.update!(attrs)
 
+    # Real-time updates
+    begin
+      @ticket.touch
+      @ticket.reload
+      Sessions.broadcast({ event: 'Ticket:update', data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
+      Sessions.broadcast({ event: 'Ticket:touch',  data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
+      Sessions.broadcast({ event: 'TicketShare:update', data: { ticket_id: @ticket.id, share_id: share.id, action: 'update' } }, 'authenticated')
+    rescue StandardError
+    end
+
     render json: { share: {
       id: share.id,
       user: share.shared_with&.fullname,
@@ -138,6 +168,17 @@ class TicketSharesController < ApplicationController
 
     begin
       share.destroy!
+
+      # Real-time updates
+      begin
+        @ticket.touch
+        @ticket.reload
+        Sessions.broadcast({ event: 'Ticket:update', data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
+        Sessions.broadcast({ event: 'Ticket:touch',  data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
+        Sessions.broadcast({ event: 'TicketShare:destroy', data: { ticket_id: @ticket.id, share_id: share.id } }, 'authenticated')
+      rescue StandardError
+      end
+
       render json: { success: true }
     rescue ActiveRecord::RecordNotDestroyed => e
       render json: { error: "Failed to delete share: #{e.message}" }, status: :unprocessable_entity

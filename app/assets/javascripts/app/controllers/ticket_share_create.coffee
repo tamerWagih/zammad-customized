@@ -29,19 +29,13 @@ class App.TicketShareCreate extends App.ControllerModal
 
   renderWithUsers: (data, status, xhr) =>
     users = if Array.isArray(data) then data else (data?.users || [])
-    # Get ticket's organization ID
-    ticket = App.Ticket.find(@ticket_id)
-    ticket_org_id = ticket?.organization_id
-    
-    # Filter to only show users from the same organization
+    # Only Admins and Agents are valid share targets
     current_user_id = App.User.current()?.id
     available_users = users.filter (user) ->
-      # Exclude current user
       return false if user.id is current_user_id
-      # Only show users from the same organization as the ticket
-      return false unless ticket_org_id && user.organization_id == ticket_org_id
-      # Include all active users
-      return user.active isnt false
+      roles = (user.roles or []).map (r) -> if typeof r is 'string' then r else r?.name
+      hasAgentOrAdmin = roles.includes('Agent') or roles.includes('Admin')
+      return !!hasAgentOrAdmin && user.active isnt false
 
     # Update modal content
     @el.find('.modal-body').html(App.view('ticket_share_create')({

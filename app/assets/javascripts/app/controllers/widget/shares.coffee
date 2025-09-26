@@ -73,6 +73,10 @@ class App.WidgetShares extends App.Controller
 
   editShare: (e) =>
     e.preventDefault()
+    e.stopPropagation()
+    e.stopImmediatePropagation()
+    return if @__editModalOpen
+    @__editModalOpen = true
     share_id = $(e.currentTarget).data('share-id')
     # Find current share data from last load
     share = (@lastShares or []).find (s) -> String(s.id) == String(share_id)
@@ -84,32 +88,61 @@ class App.WidgetShares extends App.Controller
       callback: => @loadShares()
     )
 
+    @delay =>
+      @__editModalOpen = false
+    , 100
+
   deleteShare: (e) =>
     e.preventDefault()
+    e.stopPropagation()
+    e.stopImmediatePropagation()
+    return if @_requestInFlight
     share_id = $(e.currentTarget).data('share-id')
     @setCurrentAction('delete')
 
-    @ajax(
-      id: 'delete_share'
-      type: 'DELETE'
-      url: "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}"
-      processData: true
-      success: @shareSuccess
-      error: @shareError
+    new App.ControllerConfirm(
+      message: __('Are you sure you want to delete this share? This action cannot be undone.'),
+      buttonClass: 'btn--danger',
+      callback: =>
+        @_requestInFlight = true
+        @ajax(
+          id: 'delete_share'
+          type: 'DELETE'
+          url: "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}"
+          processData: true
+          success: (data, status, xhr) =>
+            @_requestInFlight = false
+            @shareSuccess(data, status, xhr)
+          error: (xhr, status, error) =>
+            @_requestInFlight = false
+            @shareError(xhr, status, error)
+          complete: => @_requestInFlight = false
+        )
+      buttonCancel: true
+      container: @el.closest('.content')
     )
 
   revokeShare: (e) =>
     e.preventDefault()
+    e.stopPropagation()
+    e.stopImmediatePropagation()
+    return if @_requestInFlight
     share_id = $(e.currentTarget).data('share-id')
     @setCurrentAction('revoke')
 
+    @_requestInFlight = true
     @ajax(
       id: 'revoke_share'
       type: 'POST'
       url: "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}/revoke"
       processData: true
-      success: @shareSuccess
-      error: @shareError
+      success: (data, status, xhr) =>
+        @_requestInFlight = false
+        @shareSuccess(data, status, xhr)
+      error: (xhr, status, error) =>
+        @_requestInFlight = false
+        @shareError(xhr, status, error)
+      complete: => @_requestInFlight = false
     )
 
 

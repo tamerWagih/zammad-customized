@@ -48,12 +48,14 @@ class App.TicketShareEdit extends App.ControllerModal
 
   submit: (e) =>
     e.preventDefault()
+    return if @_requestInFlight
     form_data = @formParam(e.currentTarget)
 
     # Ensure permissions is always an array
     if form_data.permissions and typeof form_data.permissions is 'string'
       form_data.permissions = [form_data.permissions]
 
+    @_requestInFlight = true
     @ajax(
       id: 'update_share'
       type: 'PATCH'
@@ -61,8 +63,13 @@ class App.TicketShareEdit extends App.ControllerModal
       data: JSON.stringify(form_data)
       processData: false
       contentType: 'application/json'
-      success: @submitSuccess
-      error: @submitError
+      success: (data, status, xhr) =>
+        @_requestInFlight = false
+        @submitSuccess(data, status, xhr)
+      error: (xhr, status, error) =>
+        @_requestInFlight = false
+        @submitError(xhr, status, error)
+      complete: => @_requestInFlight = false
     )
 
   submitSuccess: (data, status, xhr) =>
