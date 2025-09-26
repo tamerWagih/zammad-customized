@@ -11,31 +11,12 @@ class App.WidgetApprovals extends App.Controller
     @loadApprovals()
     @renderActions()
     
-    # Listen for real-time updates from other users with debounce
-    @controllerBind('TicketApproval:create', (data) =>
-      @delay =>
-        @loadApprovals()
-      , 500, 'approval-reload'
-    )
-    @controllerBind('TicketApproval:update', (data) =>
-      @delay =>
-        @loadApprovals()
-      , 500, 'approval-reload'
-    )
-    @controllerBind('TicketApproval:destroy', (data) =>
-      @delay =>
-        @loadApprovals()
-      , 500, 'approval-reload'
-    )
-
-    # refresh on notification events relevant to approvals
+    # Listen for notification events to refresh approvals
     @controllerBind('OnlineNotification::changed', =>
       @delay =>
         @loadApprovals()
       , 800, 'approval-reload-notify'
     )
-    
-    # Additional event listeners are handled above
 
   loadApprovals: =>
     return if @isLoadingApprovals
@@ -158,20 +139,12 @@ class App.WidgetApprovals extends App.Controller
     action = @getCurrentAction()
     if action is 'approve'
       @notify(type: 'success', msg: __('Approval request approved successfully'))
-      # Trigger event for real-time updates
-      App.Event.trigger('TicketApproval:update', data.approval) if data.approval
     else if action is 'reject'
       @notify(type: 'success', msg: __('Approval request rejected successfully'))
-      # Trigger event for real-time updates
-      App.Event.trigger('TicketApproval:update', data.approval) if data.approval
     else if action is 'delete'
       @notify(type: 'success', msg: __('Approval request deleted successfully'))
-      # Trigger event for real-time updates
-      App.Event.trigger('TicketApproval:destroy', data.approval) if data.approval
     else
       @notify(type: 'success', msg: __('Approval updated successfully'))
-      # Trigger event for real-time updates
-      App.Event.trigger('TicketApproval:update', data.approval) if data.approval
     
     # Reload approvals from backend immediately
     @loadApprovals()
