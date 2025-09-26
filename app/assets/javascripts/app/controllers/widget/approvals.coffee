@@ -159,19 +159,19 @@ class App.WidgetApprovals extends App.Controller
     if action is 'approve'
       @notify(type: 'success', msg: __('Approval request approved successfully'))
       # Trigger event for real-time updates
-      App.Event.trigger('TicketApproval:update', data.approval) if data.approval
+      @trigger('TicketApproval:update', data.approval) if data.approval
     else if action is 'reject'
       @notify(type: 'success', msg: __('Approval request rejected successfully'))
       # Trigger event for real-time updates
-      App.Event.trigger('TicketApproval:update', data.approval) if data.approval
+      @trigger('TicketApproval:update', data.approval) if data.approval
     else if action is 'delete'
       @notify(type: 'success', msg: __('Approval request deleted successfully'))
       # Trigger event for real-time updates
-      App.Event.trigger('TicketApproval:destroy', data.approval) if data.approval
+      @trigger('TicketApproval:destroy', data.approval) if data.approval
     else
       @notify(type: 'success', msg: __('Approval updated successfully'))
       # Trigger event for real-time updates
-      App.Event.trigger('TicketApproval:update', data.approval) if data.approval
+      @trigger('TicketApproval:update', data.approval) if data.approval
     
     # Reload approvals from backend immediately
     @loadApprovals()

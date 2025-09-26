@@ -69,7 +69,7 @@ class App.TicketApprovalEdit extends App.ControllerModal
     )
     
     # Trigger event for real-time updates
-    App.Event.trigger('TicketApproval:update', data.approval)
+    @trigger('TicketApproval:update', data.approval)
     
     @close()
     @callback() if @callback
