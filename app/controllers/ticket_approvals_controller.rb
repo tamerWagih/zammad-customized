@@ -52,6 +52,18 @@ class TicketApprovalsController < ApplicationController
     begin
       @ticket.touch
       @ticket.reload
+      # Custom approval event for widgets
+      Sessions.broadcast(
+        {
+          event: 'approval_updated',
+          data:  {
+            ticket_id:  @ticket.id,
+            approval_id: approval.id,
+            action:     'create',
+          },
+        },
+        'authenticated'
+      )
       Sessions.broadcast(
         {
           event: 'Ticket:update',
@@ -106,6 +118,18 @@ class TicketApprovalsController < ApplicationController
     begin
       @ticket.touch
       @ticket.reload
+      # Custom approval event for widgets
+      Sessions.broadcast(
+        {
+          event: 'approval_updated',
+          data:  {
+            ticket_id:  @ticket.id,
+            approval_id: approval.id,
+            action:     'approve',
+          },
+        },
+        'authenticated'
+      )
       Sessions.broadcast(
         {
           event: 'Ticket:update',
@@ -156,6 +180,18 @@ class TicketApprovalsController < ApplicationController
     begin
       @ticket.touch
       @ticket.reload
+      # Custom approval event for widgets
+      Sessions.broadcast(
+        {
+          event: 'approval_updated',
+          data:  {
+            ticket_id:  @ticket.id,
+            approval_id: approval.id,
+            action:     'reject',
+          },
+        },
+        'authenticated'
+      )
       Sessions.broadcast(
         {
           event: 'Ticket:update',
@@ -231,6 +267,19 @@ class TicketApprovalsController < ApplicationController
       # Reload ticket to get fresh data
       @ticket.reload
       
+      # Custom approval event for widgets
+      Sessions.broadcast(
+        {
+          event: 'approval_updated',
+          data:  {
+            ticket_id:  @ticket.id,
+            approval_id: approval.id,
+            action:     'update',
+          },
+        },
+        'authenticated'
+      )
+
       # Broadcast ticket update with fresh data
       Sessions.broadcast(
         {
@@ -306,6 +355,19 @@ class TicketApprovalsController < ApplicationController
         # Reload ticket to get fresh data
         @ticket.reload
         
+        # Custom approval event for widgets
+        Sessions.broadcast(
+          {
+            event: 'approval_deleted',
+            data:  {
+              ticket_id:  @ticket.id,
+              approval_id: approval.id,
+              action:     'delete',
+            },
+          },
+          'authenticated'
+        )
+
         # Broadcast ticket update with fresh data
         Sessions.broadcast(
           {
