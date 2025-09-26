@@ -88,6 +88,8 @@ class App.TicketShareEdit extends App.ControllerModal
 
   submitSuccess: (data, status, xhr) =>
     @notify(type: 'success', msg: __('Share updated successfully'))
+    # Update sender immediately like approvals
+    App.Event.trigger('Ticket:update', { id: @ticket_id })
     @close()
     @callback() if @callback
 

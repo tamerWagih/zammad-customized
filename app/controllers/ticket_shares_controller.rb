@@ -136,6 +136,19 @@ class TicketSharesController < ApplicationController
 
     share.update!(attrs)
 
+    # Notify shared user about update
+    begin
+      OnlineNotification.add(
+        type:          'Share updated',
+        object:        'Ticket',
+        o_id:          @ticket.id,
+        seen:          false,
+        user_id:       share.shared_with_id,
+        created_by_id: current_user.id,
+      ) if share.shared_with_id.present?
+    rescue StandardError
+    end
+
     # Real-time updates
     begin
       @ticket.touch
