@@ -130,6 +130,7 @@ class App.WidgetApprovals extends App.Controller
 
   deleteApproval: (e) =>
     e.preventDefault()
+    e.stopPropagation()
     approval_id = $(e.currentTarget).data('approval-id')
     
     # Use standard confirmation modal
@@ -145,17 +146,18 @@ class App.WidgetApprovals extends App.Controller
           type: 'DELETE'
           url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
           processData: true
-          success: @approvalSuccess
-          error: @approvalError
+          success: (data, status, xhr) =>
+            @approvalSuccess(data, status, xhr)
+            @__deleteConfirmOpen = false
+          error: (xhr, status, error) =>
+            @approvalError(xhr, status, error)
+            @__deleteConfirmOpen = false
         )
-        @__deleteConfirmOpen = false
+      onSubmit: =>
+        @formDisable(@el)
       buttonCancel: true
       container: @el.closest('.content')
     )
-    # ensure reset if user closes without confirm
-    @delay =>
-      @__deleteConfirmOpen = false
-    , 2000, 'approval-confirm-reset'
 
   approvalSuccess: (data, status, xhr) =>
     # Get the action type from the AJAX request to show appropriate message

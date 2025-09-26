@@ -38,9 +38,7 @@ class App.TicketApprovalRequest extends App.ControllerModal
     approvers = users.filter (user) ->
       # Exclude current user
       return false if user.id is current_user_id
-      # Only show users from the same organization as the ticket
-      return false unless ticket_org_id && user.organization_id == ticket_org_id
-      # Only show agents and admins
+      # Only show agents and admins, regardless of org (admins may span orgs)
       user.role_ids && user.role_ids.some (role_id) ->
         role = App.Role.find(role_id)
         role && (role.name == 'Agent' || role.name == 'Admin')
@@ -74,9 +72,9 @@ class App.TicketApprovalRequest extends App.ControllerModal
       id: 'create_approval_request'
       type: 'POST'
       url: "#{@apiPath}/tickets/#{@ticket_id}/approvals"
-      data: JSON.stringify(form_data)
-      processData: false
-      contentType: 'application/json'
+      data: form_data
+      processData: true
+      contentType: 'application/x-www-form-urlencoded; charset=UTF-8'
       success: @submitSuccess
       error: @submitError
     )

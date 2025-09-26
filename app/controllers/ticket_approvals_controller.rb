@@ -143,11 +143,13 @@ class TicketApprovalsController < ApplicationController
       return
     end
 
-    # Update the approval
-    approval.update!(
-      message: approval_params[:message],
-      priority: approval_params[:priority].presence || 'normal'
-    )
+    # Allow both nested approval params and flat form params
+    attrs = {
+      message:  approval_params[:message] || params[:message],
+      priority: (approval_params[:priority] || params[:priority]).presence || 'normal'
+    }
+
+    approval.update!(attrs)
 
     # Notify approver about the edit
     begin
