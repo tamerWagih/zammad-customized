@@ -210,8 +210,18 @@ class TicketApprovalsController < ApplicationController
         end
       end
       
+      # Store approval data before deletion for frontend event
+      approval_data = {
+        id: approval.id,
+        status: approval.status,
+        message: approval.message,
+        priority: approval.priority,
+        approver: approval.approver&.fullname,
+        created_at: approval.created_at,
+      }
+      
       approval.destroy!
-      render json: { success: true }
+      render json: { success: true, approval: approval_data }
     rescue ActiveRecord::RecordNotDestroyed => e
       render json: { error: "Failed to delete approval: #{e.message}" }, status: :unprocessable_entity
     rescue StandardError => e
