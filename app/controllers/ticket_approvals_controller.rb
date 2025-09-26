@@ -186,6 +186,9 @@ class TicketApprovalsController < ApplicationController
 
     # Trigger full ticket reload for real-time updates (like attribute bar does)
     begin
+      # Ensure updated_at changes so receivers fetch (see TicketZoom.fetchMayBe)
+      @ticket.touch
+      
       # Reload ticket to get fresh data
       @ticket.reload
       
@@ -258,6 +261,9 @@ class TicketApprovalsController < ApplicationController
       
       # Trigger full ticket reload for real-time updates (like attribute bar does)
       begin
+        # Ensure updated_at changes so receivers fetch (see TicketZoom.fetchMayBe)
+        @ticket.touch
+        
         # Reload ticket to get fresh data
         @ticket.reload
         
