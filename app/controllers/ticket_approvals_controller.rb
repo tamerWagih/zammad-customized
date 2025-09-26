@@ -48,6 +48,23 @@ class TicketApprovalsController < ApplicationController
       created_by_id: current_user.id,
     ) rescue nil
 
+    # Ensure receiver sidebars get real-time updates
+    begin
+      @ticket.touch
+      @ticket.reload
+      Sessions.broadcast(
+        {
+          event: 'Ticket:update',
+          data:  {
+            id: @ticket.id,
+            updated_at: @ticket.updated_at,
+          },
+        },
+        'authenticated'
+      )
+    rescue StandardError
+    end
+
     render json: { approval: {
       id: approval.id,
       status: approval.status,
@@ -85,9 +102,20 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
-    # Touch ticket to trigger real-time updates
+    # Ensure receiver sidebars get real-time updates
     begin
       @ticket.touch
+      @ticket.reload
+      Sessions.broadcast(
+        {
+          event: 'Ticket:update',
+          data:  {
+            id: @ticket.id,
+            updated_at: @ticket.updated_at,
+          },
+        },
+        'authenticated'
+      )
     rescue StandardError
     end
 
@@ -124,9 +152,20 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
-    # Touch ticket to trigger real-time updates
+    # Ensure receiver sidebars get real-time updates
     begin
       @ticket.touch
+      @ticket.reload
+      Sessions.broadcast(
+        {
+          event: 'Ticket:update',
+          data:  {
+            id: @ticket.id,
+            updated_at: @ticket.updated_at,
+          },
+        },
+        'authenticated'
+      )
     rescue StandardError
     end
 
