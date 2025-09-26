@@ -131,6 +131,10 @@ class TicketApprovalsController < ApplicationController
   def update
     approval = @ticket.approvals.find(params[:id])
     
+    # Debug logging
+    Rails.logger.info "Approval update params: #{params.inspect}"
+    Rails.logger.info "Message: #{params[:message]}, Priority: #{params[:priority]}"
+    
     # Only the requester can edit pending requests
     unless approval.requester == current_user
       render json: { error: 'You can only edit your own approval requests' }, status: :forbidden
@@ -144,10 +148,18 @@ class TicketApprovalsController < ApplicationController
     end
 
     # Update with flat params like create method
-    approval.update!(
-      message: params[:message],
-      priority: params[:priority].presence || 'normal'
-    )
+    begin
+      approval.update!(
+        message: params[:message],
+        priority: params[:priority].presence || 'normal'
+      )
+    rescue ActiveRecord::RecordInvalid => e
+      render json: { error: "Validation failed: #{e.message}" }, status: :unprocessable_entity
+      return
+    rescue StandardError => e
+      render json: { error: "Update failed: #{e.message}" }, status: :internal_server_error
+      return
+    end
 
     # Notify approver about the edit
     begin
