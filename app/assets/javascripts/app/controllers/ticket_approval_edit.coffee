@@ -17,7 +17,7 @@ class App.TicketApprovalEdit extends App.ControllerModal
           #{__('Message')}
         </label>
         <div class="col-sm-9">
-          <textarea name="approval[message]" class="form-control" rows="4" placeholder="#{__('Optional message for the approver...')}">#{@approval?.message || ''}</textarea>
+          <textarea name="message" class="form-control" rows="4" placeholder="#{__('Optional message for the approver...')}">#{@approval?.message || ''}</textarea>
         </div>
       </div>
 
@@ -26,7 +26,7 @@ class App.TicketApprovalEdit extends App.ControllerModal
           #{__('Priority')}
         </label>
         <div class="col-sm-9">
-          <select name="approval[priority]" class="form-control">
+          <select name="priority" class="form-control">
             <option value="low" #{if @approval?.priority is 'low' then 'selected' else ''}>
               #{__('Low')}
             </option>
@@ -50,20 +50,14 @@ class App.TicketApprovalEdit extends App.ControllerModal
     
     form_data = @formParam(e.currentTarget)
     
-    # Convert flat form data to nested structure expected by backend
-    nested_data = {
-      approval: {
-        message: form_data['approval[message]'] || form_data.message || '',
-        priority: form_data['approval[priority]'] || form_data.priority || 'normal'
-      }
-    }
-    
+    # Send flat form data like create method does
     @ajax(
       id: 'update_approval_request'
       type: 'PATCH'
       url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{@approval.id}"
-      data: nested_data
+      data: form_data
       processData: true
+      contentType: 'application/x-www-form-urlencoded; charset=UTF-8'
       success: @submitSuccess
       error: @submitError
     )
@@ -73,6 +67,10 @@ class App.TicketApprovalEdit extends App.ControllerModal
       type: 'success'
       msg:  __('Approval request updated successfully')
     )
+    
+    # Trigger event for real-time updates
+    App.Event.trigger('TicketApproval:update', data.approval)
+    
     @close()
     @callback() if @callback
 

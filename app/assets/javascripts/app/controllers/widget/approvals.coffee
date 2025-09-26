@@ -34,6 +34,13 @@ class App.WidgetApprovals extends App.Controller
         @loadApprovals()
       , 800, 'approval-reload-notify'
     )
+    
+    # Also listen for direct approval events
+    @controllerBind('TicketApproval:update', =>
+      @delay =>
+        @loadApprovals()
+      , 500, 'approval-reload'
+    )
 
   loadApprovals: =>
     return if @isLoadingApprovals

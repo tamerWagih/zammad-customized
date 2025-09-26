@@ -143,13 +143,11 @@ class TicketApprovalsController < ApplicationController
       return
     end
 
-    # Allow both nested approval params and flat form params
-    attrs = {
-      message:  approval_params[:message] || params[:message],
-      priority: (approval_params[:priority] || params[:priority]).presence || 'normal'
-    }
-
-    approval.update!(attrs)
+    # Update with flat params like create method
+    approval.update!(
+      message: params[:message],
+      priority: params[:priority].presence || 'normal'
+    )
 
     # Notify approver about the edit
     begin
@@ -163,6 +161,7 @@ class TicketApprovalsController < ApplicationController
       ) if approval.approver_id.present?
     rescue StandardError
     end
+
 
     render json: { approval: {
       id: approval.id,
