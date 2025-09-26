@@ -31,10 +31,28 @@ class App.TicketShareCreate extends App.ControllerModal
     users = if Array.isArray(data) then data else (data?.users || [])
     # Only Admins and Agents are valid share targets
     current_user_id = App.User.current()?.id
+
+    resolveRoleNames = (user) ->
+      names = []
+      # If API provided role_ids, resolve via App.Role store
+      if Array.isArray(user.role_ids)
+        for rid in user.role_ids
+          role = App.Role.find(rid)
+          names.push(role.name) if role?.name
+      # If API provided roles as objects or strings, include their names
+      if Array.isArray(user.roles)
+        for r in user.roles
+          if typeof r is 'string'
+            names.push(r)
+          else if r?.name
+            names.push(r.name)
+      # Deduplicate
+      _.uniq(names)
+
     available_users = users.filter (user) ->
       return false if user.id is current_user_id
-      roles = (user.roles or []).map (r) -> if typeof r is 'string' then r else r?.name
-      hasAgentOrAdmin = roles.includes('Agent') or roles.includes('Admin')
+      roleNames = resolveRoleNames(user)
+      hasAgentOrAdmin = roleNames.includes('Agent') or roleNames.includes('Admin')
       return !!hasAgentOrAdmin && user.active isnt false
 
     # Update modal content
