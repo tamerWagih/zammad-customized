@@ -50,11 +50,6 @@ class App.TicketApprovalEdit extends App.ControllerModal
     
     form_data = @formParam(e.currentTarget)
     
-    # Debug logging
-    console.log 'Edit form data:', form_data
-    console.log 'Message:', form_data.message
-    console.log 'Priority:', form_data.priority
-    
     # Send flat form data like create method does
     @ajax(
       id: 'update_approval_request'
@@ -80,9 +75,6 @@ class App.TicketApprovalEdit extends App.ControllerModal
     @callback() if @callback
 
   submitError: (xhr, status, error) =>
-    console.log 'Edit error:', xhr, status, error
-    console.log 'Response:', xhr.responseText
-    
     error_msg = __('Failed to update approval request')
     try
       response = JSON.parse(xhr.responseText)
