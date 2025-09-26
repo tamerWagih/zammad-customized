@@ -124,15 +124,23 @@ class App.WidgetApprovals extends App.Controller
   deleteApproval: (e) =>
     e.preventDefault()
     approval_id = $(e.currentTarget).data('approval-id')
-    @setCurrentAction('delete')
     
-    @ajax(
-      id: 'delete_approval'
-      type: 'DELETE'
-      url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
-      processData: true
-      success: @approvalSuccess
-      error: @approvalError
+    # Show confirmation dialog
+    @confirm(
+      text: __('Are you sure you want to delete this approval request? This action cannot be undone.'),
+      confirm: =>
+        @setCurrentAction('delete')
+        
+        @ajax(
+          id: 'delete_approval'
+          type: 'DELETE'
+          url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
+          processData: true
+          success: @approvalSuccess
+          error: @approvalError
+        )
+      cancel: =>
+        # User cancelled, do nothing
     )
 
   approvalSuccess: (data, status, xhr) =>

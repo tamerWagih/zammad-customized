@@ -50,16 +50,13 @@ class App.TicketApprovalEdit extends App.ControllerModal
     
     form_data = @formParam(e.currentTarget)
     
-    # Wrap data in approval parameter as expected by Rails
-    approval_data = { approval: form_data }
-    
+    # Send as form data instead of JSON
     @ajax(
       id: 'update_approval_request'
       type: 'PATCH'
       url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{@approval.id}"
-      data: JSON.stringify(approval_data)
-      processData: false
-      contentType: 'application/json'
+      data: form_data
+      processData: true
       success: @submitSuccess
       error: @submitError
     )

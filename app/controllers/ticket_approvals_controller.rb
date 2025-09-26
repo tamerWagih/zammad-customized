@@ -143,10 +143,24 @@ class TicketApprovalsController < ApplicationController
       return
     end
 
+    # Update the approval
     approval.update!(
       message: approval_params[:message],
       priority: approval_params[:priority].presence || 'normal'
     )
+
+    # Notify approver about the edit
+    begin
+      OnlineNotification.add(
+        type:          'Approval request updated',
+        object:        'Ticket',
+        o_id:          @ticket.id,
+        seen:          false,
+        user_id:       approval.approver_id,
+        created_by_id: current_user.id,
+      ) if approval.approver_id.present?
+    rescue StandardError
+    end
 
     render json: { approval: {
       id: approval.id,
@@ -156,6 +170,10 @@ class TicketApprovalsController < ApplicationController
       approver: approval.approver&.fullname,
       created_at: approval.created_at,
     } }
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  rescue StandardError => e
+    render json: { error: "An error occurred: #{e.message}" }, status: :internal_server_error
   end
 
   def destroy
@@ -168,6 +186,21 @@ class TicketApprovalsController < ApplicationController
     end
 
     begin
+      # Notify approver about deletion if they haven't responded yet
+      if approval.status == 'pending' && approval.approver_id.present?
+        begin
+          OnlineNotification.add(
+            type:          'Approval request deleted',
+            object:        'Ticket',
+            o_id:          @ticket.id,
+            seen:          false,
+            user_id:       approval.approver_id,
+            created_by_id: current_user.id,
+          )
+        rescue StandardError
+        end
+      end
+      
       approval.destroy!
       render json: { success: true }
     rescue ActiveRecord::RecordNotDestroyed => e
