@@ -68,11 +68,17 @@ class App.TicketApprovalEdit extends App.ControllerModal
       msg:  __('Approval request updated successfully')
     )
     
-    # Trigger Ticket:update event to refresh all ticket-related widgets
+    # Trigger the same success pattern as delete for immediate updates
     App.Event.trigger('Ticket:update', { id: @ticket_id })
     
+    # Call parent widget's success handler for immediate update
+    if @parentWidget && @parentWidget.approvalSuccess
+      @parentWidget.approvalSuccess(data, status, xhr)
+    else
+      # Fallback to callback
+      @callback() if @callback
+    
     @close()
-    @callback() if @callback
 
   submitError: (xhr, status, error) =>
     error_msg = __('Failed to update approval request')

@@ -117,6 +117,7 @@ class App.WidgetApprovals extends App.Controller
         ticket_id: @ticket_id
         container: @el.closest('.content')
         callback: => @loadApprovals()
+        parentWidget: @
       )
 
   deleteApproval: (e) =>
