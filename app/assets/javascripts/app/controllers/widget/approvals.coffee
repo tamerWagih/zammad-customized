@@ -19,6 +19,14 @@ class App.WidgetApprovals extends App.Controller
       , 500, 'approval-reload'
     )
     
+    # Listen for custom approval events for real-time updates
+    @controllerBind('approval_updated approval_deleted', (data) =>
+      return if data.ticket_id.toString() isnt @ticket_id.toString()
+      @delay =>
+        @loadApprovals()
+      , 300, 'approval-reload-custom'
+    )
+    
     # Listen for notification events to refresh approvals
     @controllerBind('OnlineNotification::changed', =>
       @delay =>

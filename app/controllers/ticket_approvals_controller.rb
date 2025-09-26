@@ -195,6 +195,22 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
+    # Broadcast approval update to all sessions for real-time updates
+    begin
+      Sessions.broadcast(
+        {
+          event: 'approval_updated',
+          data: { 
+            ticket_id: @ticket.id,
+            approval_id: approval.id,
+            action: 'update'
+          }
+        },
+        'authenticated'
+      )
+    rescue StandardError
+    end
+
     # Touch ticket to trigger real-time updates
     begin
       @ticket.touch
@@ -264,6 +280,22 @@ class TicketApprovalsController < ApplicationController
       }
       
       approval.destroy!
+      
+      # Broadcast approval deletion to all sessions for real-time updates
+      begin
+        Sessions.broadcast(
+          {
+            event: 'approval_deleted',
+            data: { 
+              ticket_id: @ticket.id,
+              approval_id: approval.id,
+              action: 'delete'
+            }
+          },
+          'authenticated'
+        )
+      rescue StandardError
+      end
       
       # Touch ticket to trigger real-time updates
       begin
