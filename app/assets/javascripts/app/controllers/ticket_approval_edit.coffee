@@ -68,6 +68,9 @@ class App.TicketApprovalEdit extends App.ControllerModal
       msg:  __('Approval request updated successfully')
     )
     
+    # Trigger Ticket:update event to refresh all ticket-related widgets
+    App.Event.trigger('Ticket:update', { id: @ticket_id })
+    
     @close()
     @callback() if @callback
 

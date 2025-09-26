@@ -11,6 +11,14 @@ class App.WidgetApprovals extends App.Controller
     @loadApprovals()
     @renderActions()
     
+    # Listen for ticket updates to refresh approvals
+    @controllerBind('Ticket:update', (data) =>
+      return if data.id.toString() isnt @ticket_id.toString()
+      @delay =>
+        @loadApprovals()
+      , 500, 'approval-reload'
+    )
+    
     # Listen for notification events to refresh approvals
     @controllerBind('OnlineNotification::changed', =>
       @delay =>
@@ -145,6 +153,9 @@ class App.WidgetApprovals extends App.Controller
       @notify(type: 'success', msg: __('Approval request deleted successfully'))
     else
       @notify(type: 'success', msg: __('Approval updated successfully'))
+    
+    # Trigger Ticket:update event to refresh all ticket-related widgets
+    App.Event.trigger('Ticket:update', { id: @ticket_id })
     
     # Reload approvals from backend immediately
     @loadApprovals()
