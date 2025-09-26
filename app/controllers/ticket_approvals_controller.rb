@@ -4,6 +4,9 @@ class TicketApprovalsController < ApplicationController
   before_action :authenticate_and_authorize!
   before_action :set_ticket
   before_action :check_permissions
+  
+  # Debug logging for controller loading
+  Rails.logger.info "TicketApprovalsController loaded"
 
   def index
     @approvals = @ticket.approvals.includes(:approver, :requester).order(created_at: :desc)
@@ -129,6 +132,10 @@ class TicketApprovalsController < ApplicationController
   end
 
   def update
+    Rails.logger.info "=== UPDATE METHOD CALLED ==="
+    Rails.logger.info "Ticket ID: #{params[:ticket_id]}"
+    Rails.logger.info "Approval ID: #{params[:id]}"
+    
     approval = @ticket.approvals.find(params[:id])
     
     # Debug logging
