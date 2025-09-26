@@ -125,12 +125,12 @@ class App.WidgetApprovals extends App.Controller
     e.preventDefault()
     approval_id = $(e.currentTarget).data('approval-id')
     
-    # Show confirmation dialog
-    @confirm(
-      text: __('Are you sure you want to delete this approval request? This action cannot be undone.'),
-      confirm: =>
+    # Use standard confirmation modal
+    new App.ControllerConfirm(
+      message: __('Are you sure you want to delete this approval request? This action cannot be undone.'),
+      buttonClass: 'btn--danger',
+      callback: =>
         @setCurrentAction('delete')
-        
         @ajax(
           id: 'delete_approval'
           type: 'DELETE'
@@ -139,8 +139,7 @@ class App.WidgetApprovals extends App.Controller
           success: @approvalSuccess
           error: @approvalError
         )
-      cancel: =>
-        # User cancelled, do nothing
+      container: @el.closest('.content')
     )
 
   approvalSuccess: (data, status, xhr) =>

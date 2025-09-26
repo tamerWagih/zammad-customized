@@ -17,7 +17,7 @@ class App.TicketApprovalEdit extends App.ControllerModal
           #{__('Message')}
         </label>
         <div class="col-sm-9">
-          <textarea name="message" class="form-control" rows="4" placeholder="#{__('Optional message for the approver...')}">#{@approval?.message || ''}</textarea>
+          <textarea name="approval[message]" class="form-control" rows="4" placeholder="#{__('Optional message for the approver...')}">#{@approval?.message || ''}</textarea>
         </div>
       </div>
 
@@ -26,7 +26,7 @@ class App.TicketApprovalEdit extends App.ControllerModal
           #{__('Priority')}
         </label>
         <div class="col-sm-9">
-          <select name="priority" class="form-control">
+          <select name="approval[priority]" class="form-control">
             <option value="low" #{if @approval?.priority is 'low' then 'selected' else ''}>
               #{__('Low')}
             </option>
