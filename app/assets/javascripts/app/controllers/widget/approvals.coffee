@@ -28,6 +28,13 @@ class App.WidgetApprovals extends App.Controller
       , 500, 'approval-reload'
     )
 
+    # refresh on notification events relevant to approvals
+    @controllerBind('OnlineNotification::changed', =>
+      @delay =>
+        @loadApprovals()
+      , 800, 'approval-reload-notify'
+    )
+
   loadApprovals: =>
     return if @isLoadingApprovals
     
@@ -126,6 +133,8 @@ class App.WidgetApprovals extends App.Controller
     approval_id = $(e.currentTarget).data('approval-id')
     
     # Use standard confirmation modal
+    return if @__deleteConfirmOpen
+    @__deleteConfirmOpen = true
     new App.ControllerConfirm(
       message: __('Are you sure you want to delete this approval request? This action cannot be undone.'),
       buttonClass: 'btn--danger',
@@ -139,8 +148,12 @@ class App.WidgetApprovals extends App.Controller
           success: @approvalSuccess
           error: @approvalError
         )
+        @__deleteConfirmOpen = false
+      buttonCancel: true
       container: @el.closest('.content')
     )
+    # ensure reset if user closes without confirm
+    @delay => @__deleteConfirmOpen = false, 2000, 'approval-confirm-reset'
 
   approvalSuccess: (data, status, xhr) =>
     # Get the action type from the AJAX request to show appropriate message

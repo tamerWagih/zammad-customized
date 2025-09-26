@@ -125,6 +125,10 @@ class App.Ticket extends App.Model
         App.i18n.translateContent('Approval approved for |%s| by %s', item.title, item.created_by.displayName())
       when 'Approval rejected'
         App.i18n.translateContent('Approval rejected for |%s| by %s', item.title, item.created_by.displayName())
+      when 'Approval request updated'
+        App.i18n.translateContent('Approval request updated for |%s| by %s', item.title, item.created_by.displayName())
+      when 'Approval request deleted'
+        App.i18n.translateContent('Approval request deleted for |%s| by %s', item.title, item.created_by.displayName())
       when 'Ticket shared with you'
         App.i18n.translateContent('%s shared ticket |%s| with you', item.created_by.displayName(), item.title)
       when 'Share revoked'

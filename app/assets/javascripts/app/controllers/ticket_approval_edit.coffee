@@ -57,6 +57,7 @@ class App.TicketApprovalEdit extends App.ControllerModal
       url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{@approval.id}"
       data: form_data
       processData: true
+      contentType: 'application/x-www-form-urlencoded; charset=UTF-8'
       success: @submitSuccess
       error: @submitError
     )
