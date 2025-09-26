@@ -136,7 +136,8 @@ class App.WidgetApprovals extends App.Controller
     # Use standard confirmation modal
     return if @__deleteConfirmOpen
     @__deleteConfirmOpen = true
-    new App.ControllerConfirm(
+    
+    confirm_modal = new App.ControllerConfirm(
       message: __('Are you sure you want to delete this approval request? This action cannot be undone.'),
       buttonClass: 'btn--danger',
       callback: =>
@@ -153,11 +154,18 @@ class App.WidgetApprovals extends App.Controller
             @approvalError(xhr, status, error)
             @__deleteConfirmOpen = false
         )
-      onSubmit: =>
-        @formDisable(@el)
       buttonCancel: true
       container: @el.closest('.content')
     )
+    
+    # Reset flag when modal is closed (cancel or X button)
+    confirm_modal.el.on 'hidden.bs.modal', =>
+      @__deleteConfirmOpen = false
+    
+    # Reset flag after a delay in case user cancels
+    @delay =>
+      @__deleteConfirmOpen = false
+    , 3000, 'approval-confirm-reset'
 
   approvalSuccess: (data, status, xhr) =>
     # Get the action type from the AJAX request to show appropriate message

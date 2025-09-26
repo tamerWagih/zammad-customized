@@ -50,14 +50,20 @@ class App.TicketApprovalEdit extends App.ControllerModal
     
     form_data = @formParam(e.currentTarget)
     
-    # Send as form data instead of JSON
+    # Convert flat form data to nested structure expected by backend
+    nested_data = {
+      approval: {
+        message: form_data['approval[message]'] || form_data.message || '',
+        priority: form_data['approval[priority]'] || form_data.priority || 'normal'
+      }
+    }
+    
     @ajax(
       id: 'update_approval_request'
       type: 'PATCH'
       url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{@approval.id}"
-      data: form_data
+      data: nested_data
       processData: true
-      contentType: 'application/x-www-form-urlencoded; charset=UTF-8'
       success: @submitSuccess
       error: @submitError
     )
