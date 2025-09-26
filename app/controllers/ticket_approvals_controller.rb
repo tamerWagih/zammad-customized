@@ -182,28 +182,16 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
-    # Notify requester about the edit (for real-time updates)
-    begin
-      OnlineNotification.add(
-        type:          'Approval request updated',
-        object:        'Ticket',
-        o_id:          @ticket.id,
-        seen:          false,
-        user_id:       approval.requester_id,
-        created_by_id: current_user.id,
-      ) if approval.requester_id.present?
-    rescue StandardError
-    end
+    # No need to notify requester since they performed the action
 
-    # Broadcast approval update to all sessions for real-time updates
+    # Broadcast ticket update to all sessions for real-time updates
     begin
       Sessions.broadcast(
         {
-          event: 'approval_updated',
+          event: 'Ticket:update',
           data: { 
-            ticket_id: @ticket.id,
-            approval_id: approval.id,
-            action: 'update'
+            id: @ticket.id,
+            updated_at: @ticket.updated_at
           }
         },
         'authenticated'
@@ -256,18 +244,7 @@ class TicketApprovalsController < ApplicationController
         end
       end
 
-      # Notify requester about deletion (for real-time updates)
-      begin
-        OnlineNotification.add(
-          type:          'Approval request deleted',
-          object:        'Ticket',
-          o_id:          @ticket.id,
-          seen:          false,
-          user_id:       approval.requester_id,
-          created_by_id: current_user.id,
-        ) if approval.requester_id.present?
-      rescue StandardError
-      end
+      # No need to notify requester since they performed the action
       
       # Store approval data before deletion for frontend event
       approval_data = {
@@ -281,15 +258,14 @@ class TicketApprovalsController < ApplicationController
       
       approval.destroy!
       
-      # Broadcast approval deletion to all sessions for real-time updates
+      # Broadcast ticket update to all sessions for real-time updates
       begin
         Sessions.broadcast(
           {
-            event: 'approval_deleted',
+            event: 'Ticket:update',
             data: { 
-              ticket_id: @ticket.id,
-              approval_id: approval.id,
-              action: 'delete'
+              id: @ticket.id,
+              updated_at: @ticket.updated_at
             }
           },
           'authenticated'
