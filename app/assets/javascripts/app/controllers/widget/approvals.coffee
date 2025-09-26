@@ -122,7 +122,13 @@ class App.WidgetApprovals extends App.Controller
   deleteApproval: (e) =>
     e.preventDefault()
     e.stopPropagation()
+    e.stopImmediatePropagation()
+    
     approval_id = $(e.currentTarget).data('approval-id')
+    
+    # Prevent multiple modals
+    return if @__deleteModalOpen
+    @__deleteModalOpen = true
     
     # Simple confirmation modal like translation controller
     new App.ControllerConfirm(
@@ -141,6 +147,11 @@ class App.WidgetApprovals extends App.Controller
       buttonCancel: true
       container: @el.closest('.content')
     )
+    
+    # Reset flag after modal is created
+    @delay =>
+      @__deleteModalOpen = false
+    , 100
 
   approvalSuccess: (data, status, xhr) =>
     # Get the action type from the AJAX request to show appropriate message

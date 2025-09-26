@@ -85,6 +85,18 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
+    # Broadcast ticket update to all sessions for real-time updates
+    begin
+      Sessions.broadcast(
+        {
+          event: 'Ticket:update',
+          data: { id: @ticket.id }
+        },
+        'authenticated'
+      )
+    rescue StandardError
+    end
+
     render json: { approval: {
       id: approval.id,
       status: approval.status,
@@ -115,6 +127,18 @@ class TicketApprovalsController < ApplicationController
         user_id:       approval.requester_id,
         created_by_id: current_user.id,
       ) if approval.requester_id.present?
+    rescue StandardError
+    end
+
+    # Broadcast ticket update to all sessions for real-time updates
+    begin
+      Sessions.broadcast(
+        {
+          event: 'Ticket:update',
+          data: { id: @ticket.id }
+        },
+        'authenticated'
+      )
     rescue StandardError
     end
 
@@ -170,6 +194,17 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
+    # Broadcast ticket update to all sessions for real-time updates
+    begin
+      Sessions.broadcast(
+        {
+          event: 'Ticket:update',
+          data: { id: @ticket.id }
+        },
+        'authenticated'
+      )
+    rescue StandardError
+    end
 
     render json: { approval: {
       id: approval.id,
@@ -221,6 +256,19 @@ class TicketApprovalsController < ApplicationController
       }
       
       approval.destroy!
+      
+      # Broadcast ticket update to all sessions for real-time updates
+      begin
+        Sessions.broadcast(
+          {
+            event: 'Ticket:update',
+            data: { id: @ticket.id }
+          },
+          'authenticated'
+        )
+      rescue StandardError
+      end
+      
       render json: { success: true, approval: approval_data }
     rescue ActiveRecord::RecordNotDestroyed => e
       render json: { error: "Failed to delete approval: #{e.message}" }, status: :unprocessable_entity
