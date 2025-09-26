@@ -82,5 +82,6 @@ Zammad::Application.routes.draw do
   match api_path + '/tickets/:ticket_id/shares',                              to: 'ticket_shares#index',                                      via: :get
   match api_path + '/tickets/:ticket_id/shares',                              to: 'ticket_shares#create',                                     via: :post
   match api_path + '/tickets/:ticket_id/shares/:id/revoke',                   to: 'ticket_shares#revoke',                                     via: :post
+  match api_path + '/tickets/:ticket_id/shares/:id',                          to: 'ticket_shares#update',                                     via: :patch
   match api_path + '/tickets/:ticket_id/shares/:id',                          to: 'ticket_shares#destroy',                                    via: :delete
 end

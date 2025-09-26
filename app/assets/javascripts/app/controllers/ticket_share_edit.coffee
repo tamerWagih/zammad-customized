@@ -11,7 +11,21 @@ class App.TicketShareEdit extends App.ControllerModal
   content: ->
     permissions = @share?.permissions or []
     checked = (name) -> if permissions?.indexOf(name) >= 0 then 'checked' else ''
-    expiresAt = @share?.expires_at ? ''
+    # Normalize expires_at to datetime-local value (YYYY-MM-DDTHH:MM)
+    expiresAt = ''
+    if @share?.expires_at
+      try
+        dt = new Date(@share.expires_at)
+        # Pad to 2 digits
+        pad = (n) -> ("0" + n).slice(-2)
+        y = dt.getFullYear()
+        m = pad(dt.getMonth()+1)
+        d = pad(dt.getDate())
+        hh = pad(dt.getHours())
+        mm = pad(dt.getMinutes())
+        expiresAt = "#{y}-#{m}-#{d}T#{hh}:#{mm}"
+      catch
+        expiresAt = @share.expires_at
 
     """
     <div class="form-horizontal">
