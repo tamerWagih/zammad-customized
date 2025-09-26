@@ -182,6 +182,19 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
+    # Notify requester about the edit (for real-time updates)
+    begin
+      OnlineNotification.add(
+        type:          'Approval request updated',
+        object:        'Ticket',
+        o_id:          @ticket.id,
+        seen:          false,
+        user_id:       approval.requester_id,
+        created_by_id: current_user.id,
+      ) if approval.requester_id.present?
+    rescue StandardError
+    end
+
     # Touch ticket to trigger real-time updates
     begin
       @ticket.touch
@@ -226,6 +239,19 @@ class TicketApprovalsController < ApplicationController
         rescue StandardError
         end
       end
+
+      # Notify requester about deletion (for real-time updates)
+      begin
+        OnlineNotification.add(
+          type:          'Approval request deleted',
+          object:        'Ticket',
+          o_id:          @ticket.id,
+          seen:          false,
+          user_id:       approval.requester_id,
+          created_by_id: current_user.id,
+        ) if approval.requester_id.present?
+      rescue StandardError
+      end
       
       # Store approval data before deletion for frontend event
       approval_data = {
@@ -239,15 +265,9 @@ class TicketApprovalsController < ApplicationController
       
       approval.destroy!
       
-      # Broadcast ticket update to all sessions for real-time updates
+      # Touch ticket to trigger real-time updates
       begin
-        Sessions.broadcast(
-          {
-            event: 'Ticket:update',
-            data: { id: @ticket.id }
-          },
-          'authenticated'
-        )
+        @ticket.touch
       rescue StandardError
       end
       
