@@ -135,10 +135,7 @@ class App.WidgetApprovals extends App.Controller
     e.stopPropagation()
     approval_id = $(e.currentTarget).data('approval-id')
     
-    # Use standard confirmation modal
-    return if @__deleteConfirmOpen
-    @__deleteConfirmOpen = true
-    
+    # Simple confirmation modal like edit
     confirm_modal = new App.ControllerConfirm(
       message: __('Are you sure you want to delete this approval request? This action cannot be undone.'),
       buttonClass: 'btn--danger',
@@ -149,25 +146,12 @@ class App.WidgetApprovals extends App.Controller
           type: 'DELETE'
           url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
           processData: true
-          success: (data, status, xhr) =>
-            @approvalSuccess(data, status, xhr)
-            @__deleteConfirmOpen = false
-          error: (xhr, status, error) =>
-            @approvalError(xhr, status, error)
-            @__deleteConfirmOpen = false
+          success: @approvalSuccess
+          error: @approvalError
         )
       buttonCancel: true
       container: @el.closest('.content')
     )
-    
-    # Reset flag when modal is closed (cancel or X button)
-    confirm_modal.el.on 'hidden.bs.modal', =>
-      @__deleteConfirmOpen = false
-    
-    # Reset flag after a delay in case user cancels
-    @delay =>
-      @__deleteConfirmOpen = false
-    , 3000, 'approval-confirm-reset'
 
   approvalSuccess: (data, status, xhr) =>
     # Get the action type from the AJAX request to show appropriate message
