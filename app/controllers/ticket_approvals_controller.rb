@@ -74,6 +74,16 @@ class TicketApprovalsController < ApplicationController
         },
         'authenticated'
       )
+      Sessions.broadcast(
+        {
+          event: 'Ticket:touch',
+          data:  {
+            id: @ticket.id,
+            updated_at: @ticket.updated_at,
+          },
+        },
+        'authenticated'
+      )
     rescue StandardError
     end
 
@@ -140,6 +150,16 @@ class TicketApprovalsController < ApplicationController
         },
         'authenticated'
       )
+      Sessions.broadcast(
+        {
+          event: 'Ticket:touch',
+          data:  {
+            id: @ticket.id,
+            updated_at: @ticket.updated_at,
+          },
+        },
+        'authenticated'
+      )
     rescue StandardError
     end
 
@@ -195,6 +215,16 @@ class TicketApprovalsController < ApplicationController
       Sessions.broadcast(
         {
           event: 'Ticket:update',
+          data:  {
+            id: @ticket.id,
+            updated_at: @ticket.updated_at,
+          },
+        },
+        'authenticated'
+      )
+      Sessions.broadcast(
+        {
+          event: 'Ticket:touch',
           data:  {
             id: @ticket.id,
             updated_at: @ticket.updated_at,
@@ -291,6 +321,16 @@ class TicketApprovalsController < ApplicationController
         },
         'authenticated'
       )
+      Sessions.broadcast(
+        {
+          event: 'Ticket:touch',
+          data: { 
+            id: @ticket.id,
+            updated_at: @ticket.updated_at
+          }
+        },
+        'authenticated'
+      )
     rescue StandardError
     end
 
@@ -372,6 +412,16 @@ class TicketApprovalsController < ApplicationController
         Sessions.broadcast(
           {
             event: 'Ticket:update',
+            data: { 
+              id: @ticket.id,
+              updated_at: @ticket.updated_at
+            }
+          },
+          'authenticated'
+        )
+        Sessions.broadcast(
+          {
+            event: 'Ticket:touch',
             data: { 
               id: @ticket.id,
               updated_at: @ticket.updated_at
