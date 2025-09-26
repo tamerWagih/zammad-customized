@@ -153,7 +153,9 @@ class App.WidgetApprovals extends App.Controller
       container: @el.closest('.content')
     )
     # ensure reset if user closes without confirm
-    @delay => @__deleteConfirmOpen = false, 2000, 'approval-confirm-reset'
+    @delay =>
+      @__deleteConfirmOpen = false
+    , 2000, 'approval-confirm-reset'
 
   approvalSuccess: (data, status, xhr) =>
     # Get the action type from the AJAX request to show appropriate message
