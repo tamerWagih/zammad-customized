@@ -85,15 +85,9 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
-    # Broadcast ticket update to all sessions for real-time updates
+    # Touch ticket to trigger real-time updates
     begin
-      Sessions.broadcast(
-        {
-          event: 'Ticket:update',
-          data: { id: @ticket.id }
-        },
-        'authenticated'
-      )
+      @ticket.touch
     rescue StandardError
     end
 
@@ -130,15 +124,9 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
-    # Broadcast ticket update to all sessions for real-time updates
+    # Touch ticket to trigger real-time updates
     begin
-      Sessions.broadcast(
-        {
-          event: 'Ticket:update',
-          data: { id: @ticket.id }
-        },
-        'authenticated'
-      )
+      @ticket.touch
     rescue StandardError
     end
 
@@ -194,15 +182,9 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
-    # Broadcast ticket update to all sessions for real-time updates
+    # Touch ticket to trigger real-time updates
     begin
-      Sessions.broadcast(
-        {
-          event: 'Ticket:update',
-          data: { id: @ticket.id }
-        },
-        'authenticated'
-      )
+      @ticket.touch
     rescue StandardError
     end
 

@@ -12,7 +12,7 @@ class App.WidgetApprovals extends App.Controller
     @renderActions()
     
     # Listen for ticket updates to refresh approvals
-    @controllerBind('Ticket:update', (data) =>
+    @controllerBind('Ticket:update Ticket:touch', (data) =>
       return if data.id.toString() isnt @ticket_id.toString()
       @delay =>
         @loadApprovals()
