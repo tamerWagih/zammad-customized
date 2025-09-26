@@ -135,8 +135,8 @@ class App.WidgetApprovals extends App.Controller
     e.stopPropagation()
     approval_id = $(e.currentTarget).data('approval-id')
     
-    # Simple confirmation modal like edit
-    confirm_modal = new App.ControllerConfirm(
+    # Simple confirmation modal like translation controller
+    new App.ControllerConfirm(
       message: __('Are you sure you want to delete this approval request? This action cannot be undone.'),
       buttonClass: 'btn--danger',
       callback: =>
@@ -159,19 +159,19 @@ class App.WidgetApprovals extends App.Controller
     if action is 'approve'
       @notify(type: 'success', msg: __('Approval request approved successfully'))
       # Trigger event for real-time updates
-      @trigger('TicketApproval:update', data.approval) if data.approval
+      App.Event.trigger('TicketApproval:update', data.approval) if data.approval
     else if action is 'reject'
       @notify(type: 'success', msg: __('Approval request rejected successfully'))
       # Trigger event for real-time updates
-      @trigger('TicketApproval:update', data.approval) if data.approval
+      App.Event.trigger('TicketApproval:update', data.approval) if data.approval
     else if action is 'delete'
       @notify(type: 'success', msg: __('Approval request deleted successfully'))
       # Trigger event for real-time updates
-      @trigger('TicketApproval:destroy', data.approval) if data.approval
+      App.Event.trigger('TicketApproval:destroy', data.approval) if data.approval
     else
       @notify(type: 'success', msg: __('Approval updated successfully'))
       # Trigger event for real-time updates
-      @trigger('TicketApproval:update', data.approval) if data.approval
+      App.Event.trigger('TicketApproval:update', data.approval) if data.approval
     
     # Reload approvals from backend immediately
     @loadApprovals()
