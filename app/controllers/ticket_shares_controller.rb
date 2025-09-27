@@ -70,10 +70,7 @@ class TicketSharesController < ApplicationController
       created_by_id: current_user.id,
     ) rescue nil
 
-    # Trigger real-time updates
-    @ticket.touch
-    Sessions.broadcast('Ticket:update', { id: @ticket.id, updated_at: @ticket.updated_at })
-    Sessions.broadcast('TicketShare:create', { share: share.as_json })
+    # Real-time updates are handled automatically by Ticket::Share::TriggersSubscriptions
 
     render json: { share: {
       id: share.id,
@@ -116,10 +113,7 @@ class TicketSharesController < ApplicationController
       return
     end
 
-    # Trigger real-time updates
-    @ticket.touch
-    Sessions.broadcast('Ticket:update', { id: @ticket.id, updated_at: @ticket.updated_at })
-    Sessions.broadcast('TicketShare:update', { share: share.as_json })
+    # Real-time updates are handled automatically by Ticket::Share::TriggersSubscriptions
 
     render json: { share: {
       id: share.id,
@@ -160,10 +154,7 @@ class TicketSharesController < ApplicationController
     rescue StandardError
     end
 
-    # Trigger real-time updates
-    @ticket.touch
-    Sessions.broadcast('Ticket:update', { id: @ticket.id, updated_at: @ticket.updated_at })
-    Sessions.broadcast('TicketShare:update', { share: share.as_json })
+    # Real-time updates are handled automatically by Ticket::Share::TriggersSubscriptions
 
     render json: { share: {
       id: share.id,
@@ -199,10 +190,7 @@ class TicketSharesController < ApplicationController
       
       share.destroy!
 
-      # Trigger real-time updates
-      @ticket.touch
-      Sessions.broadcast('Ticket:update', { id: @ticket.id, updated_at: @ticket.updated_at })
-      Sessions.broadcast('TicketShare:destroy', { share: share_data })
+      # Real-time updates are handled automatically by Ticket::Share::TriggersSubscriptions
 
       render json: { success: true }
     rescue ActiveRecord::RecordNotDestroyed => e

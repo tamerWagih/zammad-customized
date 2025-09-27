@@ -56,10 +56,7 @@ class TicketApprovalsController < ApplicationController
       created_by_id: current_user.id,
     ) rescue nil
 
-    # Trigger real-time updates
-    @ticket.touch
-    Sessions.broadcast('Ticket:update', { id: @ticket.id, updated_at: @ticket.updated_at })
-    Sessions.broadcast('TicketApproval:create', { approval: approval.as_json })
+    # Real-time updates are handled automatically by Ticket::Approval::TriggersSubscriptions
 
     render json: { approval: {
       id: approval.id,
@@ -104,10 +101,7 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
-    # Trigger real-time updates
-    @ticket.touch
-    Sessions.broadcast('Ticket:update', { id: @ticket.id, updated_at: @ticket.updated_at })
-    Sessions.broadcast('TicketApproval:update', { approval: approval.as_json })
+    # Real-time updates are handled automatically by Ticket::Approval::TriggersSubscriptions
 
     render json: { approval: {
       id: approval.id,
@@ -148,10 +142,7 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
-    # Trigger real-time updates
-    @ticket.touch
-    Sessions.broadcast('Ticket:update', { id: @ticket.id, updated_at: @ticket.updated_at })
-    Sessions.broadcast('TicketApproval:update', { approval: approval.as_json })
+    # Real-time updates are handled automatically by Ticket::Approval::TriggersSubscriptions
 
     render json: { approval: {
       id: approval.id,
@@ -207,10 +198,7 @@ class TicketApprovalsController < ApplicationController
 
     # No need to notify requester since they performed the action
 
-    # Trigger real-time updates
-    @ticket.touch
-    Sessions.broadcast('Ticket:update', { id: @ticket.id, updated_at: @ticket.updated_at })
-    Sessions.broadcast('TicketApproval:update', { approval: approval.as_json })
+    # Real-time updates are handled automatically by Ticket::Approval::TriggersSubscriptions
 
     render json: { approval: {
       id: approval.id,
@@ -265,10 +253,7 @@ class TicketApprovalsController < ApplicationController
       
       approval.destroy!
       
-      # Trigger real-time updates
-      @ticket.touch
-      Sessions.broadcast('Ticket:update', { id: @ticket.id, updated_at: @ticket.updated_at })
-      Sessions.broadcast('TicketApproval:destroy', { approval: approval_data })
+      # Real-time updates are handled automatically by Ticket::Approval::TriggersSubscriptions
       
       render json: { success: true, approval: approval_data }
     rescue ActiveRecord::RecordNotDestroyed => e

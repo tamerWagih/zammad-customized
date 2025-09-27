@@ -5,6 +5,7 @@ class Ticket::Approval < ApplicationModel
   include HasSearchIndexBackend
   include ChecksClientNotification
   include HasTags
+  include Ticket::Approval::TriggersSubscriptions
 
   belongs_to :ticket
   belongs_to :approver, class_name: 'User'

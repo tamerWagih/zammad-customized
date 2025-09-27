@@ -5,6 +5,7 @@ class Ticket::Share < ApplicationModel
   include HasSearchIndexBackend
   include ChecksClientNotification
   include HasTags
+  include Ticket::Share::TriggersSubscriptions
 
   belongs_to :ticket
   belongs_to :shared_with, class_name: 'User'
