@@ -736,15 +736,23 @@ returns a hex color code
   def share_permissions_for(user)
     return { read: false, comment: false, edit: false } unless user
     
-    share = shares.active_current.find_by(shared_with: user)
-    return { read: false, comment: false, edit: false } unless share
+    # Check if shares table exists and association is available
+    return { read: false, comment: false, edit: false } unless respond_to?(:shares)
     
-    permissions = share.permissions || []
-    {
-      read: permissions.include?('read'),
-      comment: permissions.include?('comment'),
-      edit: permissions.include?('edit')
-    }
+    begin
+      share = shares.active_current.find_by(shared_with: user)
+      return { read: false, comment: false, edit: false } unless share
+      
+      permissions = share.permissions || []
+      {
+        read: permissions.include?('read'),
+        comment: permissions.include?('comment'),
+        edit: permissions.include?('edit')
+      }
+    rescue StandardError => e
+      Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
+      { read: false, comment: false, edit: false }
+    end
   end
 
   # Check if user can share with read permission
@@ -770,6 +778,12 @@ returns a hex color code
 
   # Revoke expired shares
   def revoke_expired_shares!
-    shares.where('expires_at < ?', Time.current).update_all(status: 'revoked')
+    return unless respond_to?(:shares)
+    
+    begin
+      shares.where('expires_at < ?', Time.current).update_all(status: 'revoked')
+    rescue StandardError => e
+      Rails.logger.warn "Failed to revoke expired shares for ticket #{id}: #{e.message}"
+    end
   end
 end

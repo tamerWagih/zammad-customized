@@ -48,12 +48,21 @@ class TicketsController < ApplicationController
 
     auto_assign_ticket(ticket)
     
-    # Revoke expired shares before rendering
-    ticket.revoke_expired_shares!
+    # Revoke expired shares before rendering (with error handling)
+    begin
+      ticket.revoke_expired_shares! if ticket.respond_to?(:revoke_expired_shares!)
+    rescue StandardError => e
+      Rails.logger.warn "Failed to revoke expired shares for ticket #{ticket.id}: #{e.message}"
+    end
 
     if response_expand?
       result = ticket.attributes_with_association_names
-      result[:share_permissions] = ticket.share_permissions_for(current_user)
+      begin
+        result[:share_permissions] = ticket.share_permissions_for(current_user) if ticket.respond_to?(:share_permissions_for)
+      rescue StandardError => e
+        Rails.logger.warn "Failed to get share permissions for ticket #{ticket.id}: #{e.message}"
+        result[:share_permissions] = { read: false, comment: false, edit: false }
+      end
       render json: result, status: :ok
       return
     end
@@ -69,9 +78,14 @@ class TicketsController < ApplicationController
       return
     end
 
-    # Add share_permissions to the ticket JSON
+    # Add share_permissions to the ticket JSON (with error handling)
     ticket_json = ticket.as_json
-    ticket_json[:share_permissions] = ticket.share_permissions_for(current_user)
+    begin
+      ticket_json[:share_permissions] = ticket.share_permissions_for(current_user) if ticket.respond_to?(:share_permissions_for)
+    rescue StandardError => e
+      Rails.logger.warn "Failed to get share permissions for ticket #{ticket.id}: #{e.message}"
+      ticket_json[:share_permissions] = { read: false, comment: false, edit: false }
+    end
     render json: ticket_json
   end
 
