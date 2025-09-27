@@ -80,9 +80,11 @@ class App.TicketApprovalRequest extends App.ControllerModal
     )
 
   submitSuccess: (data, status, xhr) =>
+    # Use custom message if provided, otherwise default
+    message = data.message || __('Approval request created successfully')
     @notify(
       type: 'success'
-      msg:  __('Approval request created successfully')
+      msg:  message
     )
     @close()
     @callback() if @callback

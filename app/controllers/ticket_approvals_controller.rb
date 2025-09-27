@@ -26,7 +26,46 @@ class TicketApprovalsController < ApplicationController
     # Check if approval already exists
     existing_approval = @ticket.approvals.find_by(approver_id: approver.id, status: 'pending')
     if existing_approval
-      render json: { error: "You have already sent an approval request to #{approver.fullname}" }, status: :unprocessable_entity
+      # Update existing approval instead of failing
+      existing_approval.update!(
+        message: params[:message],
+        priority: params[:priority].presence || 'normal'
+      )
+      
+      # Notify approver about update
+      begin
+        OnlineNotification.add(
+          type:          'Approval request updated',
+          object:        'Ticket',
+          o_id:          @ticket.id,
+          seen:          false,
+          user_id:       approver.id,
+          created_by_id: current_user.id,
+        ) if approver.id.present?
+      rescue StandardError
+      end
+      
+      # Real-time updates
+      begin
+        @ticket.touch
+        @ticket.reload
+        Sessions.broadcast({ event: 'Ticket:update', data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
+        Sessions.broadcast({ event: 'Ticket:touch',  data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
+        Sessions.broadcast({ event: 'TicketApproval:update', data: { ticket_id: @ticket.id, approval_id: existing_approval.id, action: 'update' } }, 'authenticated')
+      rescue StandardError
+      end
+      
+      render json: { 
+        approval: {
+          id: existing_approval.id,
+          approver: existing_approval.approver&.fullname,
+          message: existing_approval.message,
+          priority: existing_approval.priority,
+          status: existing_approval.status,
+          created_at: existing_approval.created_at,
+        },
+        message: "Approval request updated successfully for #{approver.fullname}"
+      }, status: :ok
       return
     end
 

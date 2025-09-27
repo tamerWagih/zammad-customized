@@ -13,12 +13,13 @@ class SidebarApprovals extends App.Controller
       sidebarActions: []
     }
 
-    # Add action to create new approval request
-    @item.sidebarActions.push(
-      title: __('Request Approval')
-      name: 'approval-request'
-      callback: @requestApproval
-    )
+    # Only allow requesting approval if user is not a receiver of this ticket
+    unless @isReceiver()
+      @item.sidebarActions.push(
+        title: __('Request Approval')
+        name: 'approval-request'
+        callback: @requestApproval
+      )
 
     @item
 
@@ -54,6 +55,18 @@ class SidebarApprovals extends App.Controller
       counter: ''
       counterPossible: false
     ))
+
+  isReceiver: =>
+    # Check if current user is a receiver of a share or approval for this ticket
+    current_user = App.User.current()
+    return false unless current_user
+    
+    # Check if user has share permissions (indicating they are a receiver)
+    share_permissions = @ticket?.share_permissions
+    if share_permissions
+      return share_permissions.read || share_permissions.comment || share_permissions.edit
+    
+    return false
 
 App.Config.set('450-Approvals', SidebarApprovals, 'TicketZoomSidebar')
 

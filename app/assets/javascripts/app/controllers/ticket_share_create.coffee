@@ -90,9 +90,11 @@ class App.TicketShareCreate extends App.ControllerModal
     )
 
   submitSuccess: (data, status, xhr) =>
+    # Use custom message if provided, otherwise default
+    message = data.message || __('Ticket shared successfully')
     @notify(
       type: 'success'
-      msg:  __('Ticket shared successfully')
+      msg:  message
     )
     @close()
     @callback() if @callback

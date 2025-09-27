@@ -13,12 +13,13 @@ class SidebarShares extends App.Controller
       sidebarActions: []
     }
 
-    # Add action to create new share
-    @item.sidebarActions.push(
-      title: __('Share Ticket')
-      name: 'share-create'
-      callback: @createShare
-    )
+    # Only allow sharing if user is not a receiver of this ticket
+    unless @isReceiver()
+      @item.sidebarActions.push(
+        title: __('Share Ticket')
+        name: 'share-create'
+        callback: @createShare
+      )
 
     @item
 
@@ -54,6 +55,18 @@ class SidebarShares extends App.Controller
       counter: ''
       counterPossible: false
     ))
+
+  isReceiver: =>
+    # Check if current user is a receiver of a share or approval for this ticket
+    current_user = App.User.current()
+    return false unless current_user
+    
+    # Check if user has share permissions (indicating they are a receiver)
+    share_permissions = @ticket?.share_permissions
+    if share_permissions
+      return share_permissions.read || share_permissions.comment || share_permissions.edit
+    
+    return false
 
 App.Config.set('451-Shares', SidebarShares, 'TicketZoomSidebar')
 

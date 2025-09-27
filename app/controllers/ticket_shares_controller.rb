@@ -26,7 +26,48 @@ class TicketSharesController < ApplicationController
     # Check if share already exists
     existing_share = @ticket.shares.find_by(shared_with_id: shared_with.id, status: 'active')
     if existing_share
-      render json: { error: "You have already shared this ticket with #{shared_with.fullname}" }, status: :unprocessable_entity
+      # Update existing share instead of failing
+      attrs = share_params.to_h
+      attrs[:permissions] = Array(attrs[:permissions]).map(&:to_s) if attrs[:permissions].present?
+      attrs[:permissions] ||= ['read']
+      
+      existing_share.update!(attrs)
+      
+      # Notify shared user about update
+      begin
+        OnlineNotification.add(
+          type:          'Share updated',
+          object:        'Ticket',
+          o_id:          @ticket.id,
+          seen:          false,
+          user_id:       shared_with.id,
+          created_by_id: current_user.id,
+        ) if shared_with.id.present?
+      rescue StandardError
+      end
+      
+      # Real-time updates
+      begin
+        @ticket.touch
+        @ticket.reload
+        Sessions.broadcast({ event: 'Ticket:update', data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
+        Sessions.broadcast({ event: 'Ticket:touch',  data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
+        Sessions.broadcast({ event: 'TicketShare:update', data: { ticket_id: @ticket.id, share_id: existing_share.id, action: 'update' } }, 'authenticated')
+      rescue StandardError
+      end
+      
+      render json: { 
+        share: {
+          id: existing_share.id,
+          user: existing_share.shared_with&.fullname,
+          permissions: existing_share.permissions,
+          message: existing_share.message,
+          status: existing_share.status,
+          created_at: existing_share.created_at,
+          expires_at: existing_share.expires_at,
+        },
+        message: "Share updated successfully for #{shared_with.fullname}"
+      }, status: :ok
       return
     end
 
