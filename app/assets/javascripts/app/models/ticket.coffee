@@ -133,6 +133,8 @@ class App.Ticket extends App.Model
         App.i18n.translateContent('%s shared ticket |%s| with you', item.created_by.displayName(), item.title)
       when 'Share revoked'
         App.i18n.translateContent('%s revoked a share on |%s|', item.created_by.displayName(), item.title)
+      when 'Ticket/Share updated'
+        App.i18n.translateContent('%s updated share on |%s|', item.created_by.displayName(), item.title)
       else
         "Unknow action for (#{@objectDisplayName()}/#{item.type}), extend activityMessage() of model."
 

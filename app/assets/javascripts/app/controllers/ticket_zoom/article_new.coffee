@@ -191,6 +191,11 @@ class App.TicketZoomArticleNew extends App.Controller
     current_user = App.User.current()
     share_permissions = ticket?.share_permissions || {}
     
+    # Debug: Log share permissions
+    console.log 'DEBUG: Share permissions:', share_permissions
+    console.log 'DEBUG: Current user:', current_user?.id
+    console.log 'DEBUG: Ticket owner:', ticket?.owner_id
+    
     # Check if share is expired (if expires_at is provided)
     is_share_expired = false
     if ticket?.share_expires_at
@@ -198,6 +203,7 @@ class App.TicketZoomArticleNew extends App.Controller
         expires_date = new Date(ticket.share_expires_at)
         current_date = new Date()
         is_share_expired = expires_date <= current_date
+        console.log 'DEBUG: Share expires at:', ticket.share_expires_at, 'Current date:', current_date, 'Is expired:', is_share_expired
       catch
         is_share_expired = false
     

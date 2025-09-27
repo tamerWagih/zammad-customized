@@ -15154,24 +15154,44 @@ div.accounted-time-value {
 /* Article add disabled state for share permissions */
 .article-add.is-disabled {
   opacity: 0.6;
-  pointer-events: none;
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+  
+  * {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+  }
   
   .js-textarea {
-    background-color: #f5f5f5;
-    color: #999;
-    cursor: not-allowed;
+    background-color: #f5f5f5 !important;
+    color: #999 !important;
+    cursor: not-allowed !important;
+    border: 1px solid #ddd !important;
+  }
+  
+  .textBubble {
+    background-color: #f9f9f9 !important;
+    border: 1px solid #ddd !important;
   }
   
   .attachmentPlaceholder {
-    background-color: #f5f5f5;
-    color: #999;
+    background-color: #f5f5f5 !important;
+    color: #999 !important;
+    border: 1px solid #ddd !important;
   }
   
   .attachmentPlaceholder-inputHolder.disabled {
-    background-color: #f5f5f5;
-    color: #999;
+    background-color: #f5f5f5 !important;
+    color: #999 !important;
     padding: 10px;
     border-radius: 4px;
     text-align: center;
+    border: 1px solid #ddd !important;
+  }
+  
+  /* Disable all form elements */
+  input, textarea, button, select {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
   }
 }
