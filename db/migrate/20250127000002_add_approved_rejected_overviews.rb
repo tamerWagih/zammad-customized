@@ -8,7 +8,7 @@ class AddApprovedRejectedOverviews < ActiveRecord::Migration[7.2]
 
     # Create "Approved Tickets" overview
     execute <<-SQL
-      INSERT INTO overviews (id, name, link, prio, condition, order_by, view_by, updated_by_id, created_by_id, created_at, updated_at)
+      INSERT INTO overviews (id, name, link, prio, condition, "order", view, updated_by_id, created_by_id, created_at, updated_at)
       VALUES (
         100,
         'Approved Tickets',
@@ -32,7 +32,7 @@ class AddApprovedRejectedOverviews < ActiveRecord::Migration[7.2]
 
     # Create "Rejected Tickets" overview
     execute <<-SQL
-      INSERT INTO overviews (id, name, link, prio, condition, order_by, view_by, updated_by_id, created_by_id, created_at, updated_at)
+      INSERT INTO overviews (id, name, link, prio, condition, "order", view, updated_by_id, created_by_id, created_at, updated_at)
       VALUES (
         101,
         'Rejected Tickets',
