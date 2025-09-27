@@ -2,36 +2,41 @@
 
 class AddApprovalTicketStates < ActiveRecord::Migration[6.1]
   def up
-    # Create new ticket state types for approval workflow
-    Ticket::StateType.create_if_not_exists(
-      id: 7,
-      name: __('approved')
-    )
+    # Create new ticket state types for approval workflow using direct SQL
+    execute <<-SQL
+      INSERT INTO ticket_state_types (id, name, created_at, updated_at) 
+      VALUES (7, 'approved', NOW(), NOW())
+      ON CONFLICT (id) DO NOTHING;
+    SQL
     
-    Ticket::StateType.create_if_not_exists(
-      id: 8,
-      name: __('rejected')
-    )
+    execute <<-SQL
+      INSERT INTO ticket_state_types (id, name, created_at, updated_at) 
+      VALUES (8, 'rejected', NOW(), NOW())
+      ON CONFLICT (id) DO NOTHING;
+    SQL
     
-    # Create ticket states for approved and rejected
-    Ticket::State.create_if_not_exists(
-      id: 7,
-      name: __('approved'),
-      state_type_id: Ticket::StateType.find_by(name: 'approved').id,
-      ignore_escalation: true,
-    )
+    # Create ticket states for approved and rejected using direct SQL
+    execute <<-SQL
+      INSERT INTO ticket_states (id, name, state_type_id, ignore_escalation, created_at, updated_at)
+      VALUES (7, 'approved', 7, true, NOW(), NOW())
+      ON CONFLICT (id) DO NOTHING;
+    SQL
     
-    Ticket::State.create_if_not_exists(
-      id: 8,
-      name: __('rejected'),
-      state_type_id: Ticket::StateType.find_by(name: 'rejected').id,
-      ignore_escalation: true,
-    )
+    execute <<-SQL
+      INSERT INTO ticket_states (id, name, state_type_id, ignore_escalation, created_at, updated_at)
+      VALUES (8, 'rejected', 8, true, NOW(), NOW())
+      ON CONFLICT (id) DO NOTHING;
+    SQL
   end
   
   def down
-    # Remove the created states and state types
-    Ticket::State.where(name: ['approved', 'rejected']).destroy_all
-    Ticket::StateType.where(name: ['approved', 'rejected']).destroy_all
+    # Remove the created states and state types using direct SQL
+    execute <<-SQL
+      DELETE FROM ticket_states WHERE name IN ('approved', 'rejected');
+    SQL
+    
+    execute <<-SQL
+      DELETE FROM ticket_state_types WHERE name IN ('approved', 'rejected');
+    SQL
   end
 end
