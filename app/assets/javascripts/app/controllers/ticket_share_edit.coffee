@@ -65,6 +65,14 @@ class App.TicketShareEdit extends App.ControllerModal
   submit: (e) =>
     e.preventDefault()
     
+    # Safety check - ensure we have share data
+    unless @share?.id
+      @notify(
+        type: 'error'
+        msg: __('Share data not available. Please close and try again.')
+      )
+      return
+    
     form_data = @formParam(e.currentTarget)
     
     # Send flat form data like approval edit does

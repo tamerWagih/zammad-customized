@@ -81,6 +81,15 @@ class App.WidgetShares extends App.Controller
     # Find current share data from last load
     share = (@lastShares or []).find (s) -> String(s.id) == String(share_id)
 
+    # Safety check - if share not found, show error and return
+    unless share
+      @notify(
+        type: 'error'
+        msg: __('Share data not found. Please refresh and try again.')
+      )
+      @__editModalOpen = false
+      return
+
     new App.TicketShareEdit(
       share: share
       ticket_id: @ticket_id

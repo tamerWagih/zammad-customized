@@ -34,9 +34,16 @@ class TicketSharesController < ApplicationController
     attrs = share_params.to_h
     attrs[:shared_with] = shared_with
     attrs[:shared_by] = current_user
+    
+    # Debug permissions
+    Rails.logger.info "Share create - Raw permissions: #{params[:permissions].inspect}"
+    Rails.logger.info "Share create - Permitted permissions: #{attrs[:permissions].inspect}"
+    
     attrs[:permissions] = Array(attrs[:permissions]).map(&:to_s) if attrs[:permissions].present?
     attrs[:permissions] ||= ['read']  # Default to read if no permissions specified
     attrs[:status] = 'active'
+    
+    Rails.logger.info "Share create - Final permissions: #{attrs[:permissions].inspect}"
 
     share = @ticket.shares.create!(attrs)
 

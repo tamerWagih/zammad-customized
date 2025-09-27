@@ -77,17 +77,14 @@ class App.TicketShareCreate extends App.ControllerModal
     
     form_data = @formParam(e.currentTarget)
     
-    # Ensure permissions is always an array
-    if form_data.permissions and typeof form_data.permissions is 'string'
-      form_data.permissions = [form_data.permissions]
-    
+    # Send flat form data like approval create does
     @ajax(
       id: 'create_ticket_share'
       type: 'POST'
       url: "#{@apiPath}/tickets/#{@ticket_id}/shares"
-      data: JSON.stringify(form_data)
-      processData: false
-      contentType: 'application/json'
+      data: form_data
+      processData: true
+      contentType: 'application/x-www-form-urlencoded; charset=UTF-8'
       success: @submitSuccess
       error: @submitError
     )
