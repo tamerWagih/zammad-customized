@@ -65,9 +65,9 @@ class SidebarShares extends App.Controller
     if @ticket?.owner_id && String(@ticket.owner_id) == String(current_user.id)
       return true
     
-    # Users with share access (read/comment/edit) can share and request approval
+    # Users with edit access can share and request approval
     share_permissions = @ticket?.share_permissions
-    if share_permissions && (share_permissions.read || share_permissions.comment || share_permissions.edit)
+    if share_permissions && share_permissions.edit
       return true
     
     # Everyone else cannot share or request approval
