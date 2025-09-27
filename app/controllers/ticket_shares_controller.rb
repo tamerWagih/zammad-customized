@@ -38,24 +38,27 @@ class TicketSharesController < ApplicationController
       return
     end
 
-    # Use permitted parameters
-    attrs = share_params.to_h
-    attrs[:shared_with] = shared_with
-    attrs[:shared_by] = current_user
-    
-    # Debug permissions
+    # Debug permissions first
     Rails.logger.info "Share create - Raw params: #{params.inspect}"
     Rails.logger.info "Share create - Raw permissions: #{params[:permissions].inspect}"
-    Rails.logger.info "Share create - Permitted permissions: #{attrs[:permissions].inspect}"
     
-    attrs[:permissions] = Array(attrs[:permissions]).map(&:to_s) if attrs[:permissions].present?
-    attrs[:permissions] ||= ['read']  # Default to read if no permissions specified
-    attrs[:status] = 'active'
+    # Process permissions like approval does - directly from params
+    permissions = Array(params[:permissions]).map(&:to_s) if params[:permissions].present?
+    permissions ||= ['read']  # Default to read if no permissions specified
     
-    Rails.logger.info "Share create - Final permissions: #{attrs[:permissions].inspect}"
-    Rails.logger.info "Share create - Final attrs: #{attrs.inspect}"
-
-    share = @ticket.shares.create!(attrs)
+    Rails.logger.info "Share create - Processed permissions: #{permissions.inspect}"
+    
+    # Create share directly like approval does
+    share = @ticket.shares.create!(
+      shared_with: shared_with,
+      shared_by: current_user,
+      message: params[:message],
+      expires_at: params[:expires_at],
+      permissions: permissions,
+      status: 'active'
+    )
+    
+    Rails.logger.info "Share create - Created share with permissions: #{share.permissions.inspect}"
 
     # Notify the shared user with a link to the ticket (ensures click opens ticket)
     OnlineNotification.add(
