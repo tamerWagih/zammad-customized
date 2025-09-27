@@ -6,7 +6,10 @@ class TicketSharesController < ApplicationController
   before_action :check_permissions
 
   def index
-    @shares = @ticket.shares.includes(:shared_with, :shared_by).order(created_at: :desc)
+    # Only show active shares, or all shares for the person who created them (for management)
+    @shares = @ticket.shares.includes(:shared_with, :shared_by).where(
+      "status = 'active' OR shared_by_id = ?", current_user.id
+    ).order(created_at: :desc)
     render json: { shares: @shares.map { |s| {
       id: s.id,
       user: s.shared_with&.fullname,
