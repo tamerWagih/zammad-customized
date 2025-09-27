@@ -88,31 +88,18 @@ class TicketsController < ApplicationController
     # Add share_permissions and share_expires_at to the ticket JSON (with error handling)
     ticket_json = ticket.as_json
     begin
-      Rails.logger.info "DEBUG: Getting share permissions for user #{current_user.id} on ticket #{ticket.id}"
-      Rails.logger.info "DEBUG: Ticket responds to shares: #{ticket.respond_to?(:shares)}"
-      Rails.logger.info "DEBUG: Ticket responds to share_permissions_for: #{ticket.respond_to?(:share_permissions_for)}"
-      
       # Check all shares for this ticket
       if ticket.respond_to?(:shares)
-        all_shares = ticket.shares
-        Rails.logger.info "DEBUG: All shares for ticket #{ticket.id}: #{all_shares.count}"
-        all_shares.each do |share|
-          Rails.logger.info "DEBUG: Share #{share.id}: shared_with=#{share.shared_with_id}, permissions=#{share.permissions}, status=#{share.status}, expires_at=#{share.expires_at}"
-        end
-        
         if current_user
           user_share = ticket.shares.active_current.find_by(shared_with: current_user)
-          Rails.logger.info "DEBUG: Found user share: #{user_share.inspect}"
           ticket_json[:share_expires_at] = user_share&.expires_at
         end
       end
       
       ticket_json[:share_permissions] = ticket.share_permissions_for(current_user) if ticket.respond_to?(:share_permissions_for)
-      Rails.logger.info "DEBUG: Final share permissions: #{ticket_json[:share_permissions].inspect}"
       
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for ticket #{ticket.id}: #{e.message}"
-      Rails.logger.warn "DEBUG: Error details: #{e.backtrace.first(5)}"
       ticket_json[:share_permissions] = { read: false, comment: false, edit: false }
       ticket_json[:share_expires_at] = nil
     end
