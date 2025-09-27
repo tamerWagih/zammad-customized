@@ -1,6 +1,6 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
-class AddApprovalTicketStates < ActiveRecord::Migration[6.1]
+class AddApprovalTicketStates < ActiveRecord::Migration[7.2]
   def up
     # Create new ticket state types for approval workflow using direct SQL
     execute <<-SQL
