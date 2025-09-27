@@ -100,7 +100,14 @@ class App.TicketShareCreate extends App.ControllerModal
     @callback() if @callback
 
   submitError: (xhr, status, error) =>
+    error_msg = __('Failed to share ticket')
+    try
+      response = JSON.parse(xhr.responseText)
+      error_msg = response.error if response?.error
+    catch
+      error_msg = xhr.responseText || error_msg
+    
     @notify(
       type: 'error'
-      msg:  __('Failed to share ticket')
+      msg: error_msg
     )

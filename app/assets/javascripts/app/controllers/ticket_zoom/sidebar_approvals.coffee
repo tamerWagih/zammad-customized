@@ -61,12 +61,26 @@ class SidebarApprovals extends App.Controller
     current_user = App.User.current()
     return false unless current_user
     
-    # Check if user has share permissions (indicating they are a receiver)
+    # Method 1: Check if user has share permissions (indicating they are a receiver)
     share_permissions = @ticket?.share_permissions
-    if share_permissions
-      return share_permissions.read || share_permissions.comment || share_permissions.edit
+    if share_permissions && (share_permissions.read || share_permissions.comment || share_permissions.edit)
+      return true
     
-    return false
+    # Method 2: Check if user is the ticket owner (owners can always request approval)
+    if @ticket?.owner_id && String(@ticket.owner_id) == String(current_user.id)
+      return false
+    
+    # Method 3: Check if user is in the same organization as owner (agents/admins can request approval)
+    if @ticket?.organization_id && current_user.organization_id && 
+       String(@ticket.organization_id) == String(current_user.organization_id)
+      return false
+    
+    # Method 4: Check if user has ticket.agent permission (agents can request approval)
+    if current_user.permissions && current_user.permissions.indexOf('ticket.agent') >= 0
+      return false
+    
+    # If none of the above, they might be a receiver
+    return true
 
 App.Config.set('450-Approvals', SidebarApprovals, 'TicketZoomSidebar')
 

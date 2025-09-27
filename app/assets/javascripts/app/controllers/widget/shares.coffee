@@ -7,6 +7,7 @@ class App.WidgetShares extends App.Controller
 
   constructor: ->
     super
+    @lastShares = []  # Initialize to prevent undefined errors
     @loadShares()
     @renderActions()
     
@@ -81,13 +82,40 @@ class App.WidgetShares extends App.Controller
     # Find current share data from last load
     share = (@lastShares or []).find (s) -> String(s.id) == String(share_id)
 
-    # Safety check - if share not found, show error and return
+    # Safety check - if share not found, try to reload shares first
     unless share
-      @notify(
-        type: 'error'
-        msg: __('Share data not found. Please refresh and try again.')
+      # Try to reload shares and find the share again
+      @ajax(
+        id: 'reload_share_for_edit'
+        type: 'GET'
+        url: "#{@apiPath}/tickets/#{@ticket_id}/shares"
+        processData: true
+        success: (data, status, xhr) =>
+          @lastShares = data?.shares || []
+          share = @lastShares.find (s) -> String(s.id) == String(share_id)
+          if share
+            # Found it after reload, proceed with edit
+            new App.TicketShareEdit(
+              share: share
+              ticket_id: @ticket_id
+              container: @el.closest('.content')
+              parentWidget: @
+              callback: => @loadShares()
+            )
+          else
+            # Still not found, show error
+            @notify(
+              type: 'error'
+              msg: __('Share data not found. Please refresh and try again.')
+            )
+          @__editModalOpen = false
+        error: (xhr, status, error) =>
+          @notify(
+            type: 'error'
+            msg: __('Share data not found. Please refresh and try again.')
+          )
+          @__editModalOpen = false
       )
-      @__editModalOpen = false
       return
 
     new App.TicketShareEdit(

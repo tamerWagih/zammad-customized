@@ -90,7 +90,14 @@ class App.TicketApprovalRequest extends App.ControllerModal
     @callback() if @callback
 
   submitError: (xhr, status, error) =>
+    error_msg = __('Failed to create approval request')
+    try
+      response = JSON.parse(xhr.responseText)
+      error_msg = response.error if response?.error
+    catch
+      error_msg = xhr.responseText || error_msg
+    
     @notify(
       type: 'error'
-      msg:  __('Failed to create approval request')
+      msg: error_msg
     )
