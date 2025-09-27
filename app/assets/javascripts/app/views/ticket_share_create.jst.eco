@@ -12,7 +12,7 @@
     <div class="col-sm-9">
       <select name="shared_with_id" class="form-control" required>
         <option value="">
-          <%- @T('Select a user from your organization...') %>
+          <%- @T('Select a user to share with...') %>
         </option>
         <% for user in @users: %>
           <option value="<%= user.id %>">
@@ -21,7 +21,7 @@
         <% end %>
       </select>
       <small class="help-block">
-        <%- @T('Only users from the same organization are shown') %>
+        <%- @T('Only agents and admins are shown') %>
       </small>
     </div>
   </div>
