@@ -212,9 +212,9 @@ class App.TicketZoomArticleNew extends App.Controller
       can_comment = false
       can_edit = false
     else
-      # No share permissions - allow comment/edit for now (maintain functionality)
-      can_comment = true
-      can_edit = true
+      # No share permissions - read-only access
+      can_comment = false
+      can_edit = false
 
     @html App.view('ticket_zoom/article_new')(
       ticket:           ticket
