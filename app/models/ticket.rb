@@ -731,4 +731,45 @@ returns a hex color code
     self.owner_id = 1
     true
   end
+
+  # Check share permissions for a given user
+  def share_permissions_for(user)
+    return { read: false, comment: false, edit: false } unless user
+    
+    share = shares.active_current.find_by(shared_with: user)
+    return { read: false, comment: false, edit: false } unless share
+    
+    permissions = share.permissions || []
+    {
+      read: permissions.include?('read'),
+      comment: permissions.include?('comment'),
+      edit: permissions.include?('edit')
+    }
+  end
+
+  # Check if user can share with read permission
+  def can_share_read?(user)
+    share_permissions_for(user)[:read]
+  end
+
+  # Check if user can share with comment permission
+  def can_share_comment?(user)
+    share_permissions_for(user)[:comment]
+  end
+
+  # Check if user can share with edit permission
+  def can_share_edit?(user)
+    share_permissions_for(user)[:edit]
+  end
+
+  # Check if user has any share access
+  def has_share_access?(user)
+    perms = share_permissions_for(user)
+    perms[:read] || perms[:comment] || perms[:edit]
+  end
+
+  # Revoke expired shares
+  def revoke_expired_shares!
+    shares.where('expires_at < ?', Time.current).update_all(status: 'revoked')
+  end
 end

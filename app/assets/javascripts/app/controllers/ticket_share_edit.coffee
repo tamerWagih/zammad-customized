@@ -8,6 +8,11 @@ class App.TicketShareEdit extends App.ControllerModal
   events:
     'submit form': 'submit'
 
+  constructor: ->
+    super
+    @share = @params.share
+    @ticket_id = @params.ticket_id
+
   content: ->
     permissions = @share?.permissions or []
     checked = (name) -> if permissions?.indexOf(name) >= 0 then 'checked' else ''

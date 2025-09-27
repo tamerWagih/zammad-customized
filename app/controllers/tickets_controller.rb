@@ -47,9 +47,13 @@ class TicketsController < ApplicationController
     authorize!(ticket)
 
     auto_assign_ticket(ticket)
+    
+    # Revoke expired shares before rendering
+    ticket.revoke_expired_shares!
 
     if response_expand?
       result = ticket.attributes_with_association_names
+      result[:share_permissions] = ticket.share_permissions_for(current_user)
       render json: result, status: :ok
       return
     end
@@ -65,7 +69,10 @@ class TicketsController < ApplicationController
       return
     end
 
-    render json: ticket
+    # Add share_permissions to the ticket JSON
+    ticket_json = ticket.as_json
+    ticket_json[:share_permissions] = ticket.share_permissions_for(current_user)
+    render json: ticket_json
   end
 
   def auto_assign_ticket(ticket)
