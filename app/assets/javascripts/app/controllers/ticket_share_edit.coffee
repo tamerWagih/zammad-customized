@@ -98,9 +98,6 @@ class App.TicketShareEdit extends App.ControllerModal
       msg:  __('Share updated successfully')
     )
     
-    # Trigger the same success pattern as approval edit for immediate updates
-    App.Event.trigger('Ticket:update', { id: @ticket_id })
-    
     # Call parent widget's success handler for immediate update
     if @parentWidget && @parentWidget.shareSuccess
       @parentWidget.shareSuccess(data, status, xhr)

@@ -68,9 +68,6 @@ class App.TicketApprovalEdit extends App.ControllerModal
       msg:  __('Approval request updated successfully')
     )
     
-    # Trigger the same success pattern as delete for immediate updates
-    App.Event.trigger('Ticket:update', { id: @ticket_id })
-    
     # Call parent widget's success handler for immediate update
     if @parentWidget && @parentWidget.approvalSuccess
       @parentWidget.approvalSuccess(data, status, xhr)

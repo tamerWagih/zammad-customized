@@ -168,9 +168,6 @@ class App.WidgetApprovals extends App.Controller
     else
       @notify(type: 'success', msg: __('Approval updated successfully'))
     
-    # Trigger Ticket:update event to refresh all ticket-related widgets
-    App.Event.trigger('Ticket:update', { id: @ticket_id })
-    
     # Reload approvals from backend immediately
     @loadApprovals()
     @callback() if @callback

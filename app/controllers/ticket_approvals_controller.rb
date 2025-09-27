@@ -56,44 +56,7 @@ class TicketApprovalsController < ApplicationController
       created_by_id: current_user.id,
     ) rescue nil
 
-    # Ensure receiver sidebars get real-time updates
-    begin
-      @ticket.touch
-      @ticket.reload
-      # Custom approval event for widgets
-      Sessions.broadcast(
-        {
-          event: 'approval_updated',
-          data:  {
-            ticket_id:  @ticket.id,
-            approval_id: approval.id,
-            action:     'create',
-          },
-        },
-        'authenticated'
-      )
-      Sessions.broadcast(
-        {
-          event: 'Ticket:update',
-          data:  {
-            id: @ticket.id,
-            updated_at: @ticket.updated_at,
-          },
-        },
-        'authenticated'
-      )
-      Sessions.broadcast(
-        {
-          event: 'Ticket:touch',
-          data:  {
-            id: @ticket.id,
-            updated_at: @ticket.updated_at,
-          },
-        },
-        'authenticated'
-      )
-    rescue StandardError
-    end
+    # Real-time updates are handled automatically by Ticket::TriggersSubscriptions
 
     render json: { approval: {
       id: approval.id,
@@ -138,44 +101,7 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
-    # Ensure receiver sidebars get real-time updates
-    begin
-      @ticket.touch
-      @ticket.reload
-      # Custom approval event for widgets
-      Sessions.broadcast(
-        {
-          event: 'approval_updated',
-          data:  {
-            ticket_id:  @ticket.id,
-            approval_id: approval.id,
-            action:     'approve',
-          },
-        },
-        'authenticated'
-      )
-      Sessions.broadcast(
-        {
-          event: 'Ticket:update',
-          data:  {
-            id: @ticket.id,
-            updated_at: @ticket.updated_at,
-          },
-        },
-        'authenticated'
-      )
-      Sessions.broadcast(
-        {
-          event: 'Ticket:touch',
-          data:  {
-            id: @ticket.id,
-            updated_at: @ticket.updated_at,
-          },
-        },
-        'authenticated'
-      )
-    rescue StandardError
-    end
+    # Real-time updates are handled automatically by Ticket::TriggersSubscriptions
 
     render json: { approval: {
       id: approval.id,
@@ -216,44 +142,7 @@ class TicketApprovalsController < ApplicationController
     rescue StandardError
     end
 
-    # Ensure receiver sidebars get real-time updates
-    begin
-      @ticket.touch
-      @ticket.reload
-      # Custom approval event for widgets
-      Sessions.broadcast(
-        {
-          event: 'approval_updated',
-          data:  {
-            ticket_id:  @ticket.id,
-            approval_id: approval.id,
-            action:     'reject',
-          },
-        },
-        'authenticated'
-      )
-      Sessions.broadcast(
-        {
-          event: 'Ticket:update',
-          data:  {
-            id: @ticket.id,
-            updated_at: @ticket.updated_at,
-          },
-        },
-        'authenticated'
-      )
-      Sessions.broadcast(
-        {
-          event: 'Ticket:touch',
-          data:  {
-            id: @ticket.id,
-            updated_at: @ticket.updated_at,
-          },
-        },
-        'authenticated'
-      )
-    rescue StandardError
-    end
+    # Real-time updates are handled automatically by Ticket::TriggersSubscriptions
 
     render json: { approval: {
       id: approval.id,
@@ -309,50 +198,7 @@ class TicketApprovalsController < ApplicationController
 
     # No need to notify requester since they performed the action
 
-    # Trigger full ticket reload for real-time updates (like attribute bar does)
-    begin
-      # Ensure updated_at changes so receivers fetch (see TicketZoom.fetchMayBe)
-      @ticket.touch
-      
-      # Reload ticket to get fresh data
-      @ticket.reload
-      
-      # Custom approval event for widgets
-      Sessions.broadcast(
-        {
-          event: 'approval_updated',
-          data:  {
-            ticket_id:  @ticket.id,
-            approval_id: approval.id,
-            action:     'update',
-          },
-        },
-        'authenticated'
-      )
-
-      # Broadcast ticket update with fresh data
-      Sessions.broadcast(
-        {
-          event: 'Ticket:update',
-          data: { 
-            id: @ticket.id,
-            updated_at: @ticket.updated_at
-          }
-        },
-        'authenticated'
-      )
-      Sessions.broadcast(
-        {
-          event: 'Ticket:touch',
-          data: { 
-            id: @ticket.id,
-            updated_at: @ticket.updated_at
-          }
-        },
-        'authenticated'
-      )
-    rescue StandardError
-    end
+    # Real-time updates are handled automatically by Ticket::TriggersSubscriptions
 
     render json: { approval: {
       id: approval.id,
@@ -407,50 +253,7 @@ class TicketApprovalsController < ApplicationController
       
       approval.destroy!
       
-      # Trigger full ticket reload for real-time updates (like attribute bar does)
-      begin
-        # Ensure updated_at changes so receivers fetch (see TicketZoom.fetchMayBe)
-        @ticket.touch
-        
-        # Reload ticket to get fresh data
-        @ticket.reload
-        
-        # Custom approval event for widgets
-        Sessions.broadcast(
-          {
-            event: 'approval_deleted',
-            data:  {
-              ticket_id:  @ticket.id,
-              approval_id: approval.id,
-              action:     'delete',
-            },
-          },
-          'authenticated'
-        )
-
-        # Broadcast ticket update with fresh data
-        Sessions.broadcast(
-          {
-            event: 'Ticket:update',
-            data: { 
-              id: @ticket.id,
-              updated_at: @ticket.updated_at
-            }
-          },
-          'authenticated'
-        )
-        Sessions.broadcast(
-          {
-            event: 'Ticket:touch',
-            data: { 
-              id: @ticket.id,
-              updated_at: @ticket.updated_at
-            }
-          },
-          'authenticated'
-        )
-      rescue StandardError
-      end
+      # Real-time updates are handled automatically by Ticket::TriggersSubscriptions
       
       render json: { success: true, approval: approval_data }
     rescue ActiveRecord::RecordNotDestroyed => e

@@ -70,15 +70,7 @@ class TicketSharesController < ApplicationController
       created_by_id: current_user.id,
     ) rescue nil
 
-    # Real-time updates
-    begin
-      @ticket.touch
-      @ticket.reload
-      Sessions.broadcast({ event: 'Ticket:update', data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
-      Sessions.broadcast({ event: 'Ticket:touch',  data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
-      Sessions.broadcast({ event: 'TicketShare:create', data: { ticket_id: @ticket.id, share_id: share.id } }, 'authenticated')
-    rescue StandardError
-    end
+    # Real-time updates are handled automatically by Ticket::TriggersSubscriptions
 
     render json: { share: {
       id: share.id,
@@ -121,15 +113,7 @@ class TicketSharesController < ApplicationController
       return
     end
 
-    # Real-time updates
-    begin
-      @ticket.touch
-      @ticket.reload
-      Sessions.broadcast({ event: 'Ticket:update', data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
-      Sessions.broadcast({ event: 'Ticket:touch',  data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
-      Sessions.broadcast({ event: 'TicketShare:update', data: { ticket_id: @ticket.id, share_id: share.id, action: 'revoke' } }, 'authenticated')
-    rescue StandardError
-    end
+    # Real-time updates are handled automatically by Ticket::TriggersSubscriptions
 
     render json: { share: {
       id: share.id,
@@ -170,15 +154,7 @@ class TicketSharesController < ApplicationController
     rescue StandardError
     end
 
-    # Real-time updates
-    begin
-      @ticket.touch
-      @ticket.reload
-      Sessions.broadcast({ event: 'Ticket:update', data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
-      Sessions.broadcast({ event: 'Ticket:touch',  data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
-      Sessions.broadcast({ event: 'TicketShare:update', data: { ticket_id: @ticket.id, share_id: share.id, action: 'update' } }, 'authenticated')
-    rescue StandardError
-    end
+    # Real-time updates are handled automatically by Ticket::TriggersSubscriptions
 
     render json: { share: {
       id: share.id,
@@ -203,15 +179,7 @@ class TicketSharesController < ApplicationController
     begin
       share.destroy!
 
-      # Real-time updates
-      begin
-        @ticket.touch
-        @ticket.reload
-        Sessions.broadcast({ event: 'Ticket:update', data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
-        Sessions.broadcast({ event: 'Ticket:touch',  data: { id: @ticket.id, updated_at: @ticket.updated_at } }, 'authenticated')
-        Sessions.broadcast({ event: 'TicketShare:destroy', data: { ticket_id: @ticket.id, share_id: share.id } }, 'authenticated')
-      rescue StandardError
-      end
+      # Real-time updates are handled automatically by Ticket::TriggersSubscriptions
 
       render json: { success: true }
     rescue ActiveRecord::RecordNotDestroyed => e
