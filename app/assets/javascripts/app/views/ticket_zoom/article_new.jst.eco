@@ -7,13 +7,7 @@
 <% end %>
 
         <% if !@can_comment: %>
-        <div class="alert alert--info" role="alert">
-          <% if @is_share_expired: %>
-            <%- @T('Your share access has expired. You can view but cannot comment or edit.') %>
-          <% else: %>
-            <%- @T('You have read-only access to this ticket. You can view but cannot comment or edit.') %>
-          <% end %>
-        </div>
+        <!-- Removed blue banner for cleaner disabled state -->
         <% end %>
 <form class="article-add <% if @article.internal: %>is-internal<% else: %>is-public<% end %> <% if !@can_comment: %>is-disabled<% end %>" data-type="<%= @article.type %>">
   <input type="hidden" name="type" value="<%= @article.type %>">
@@ -112,11 +106,11 @@
                 <%- @T('select attachment…') %>
               </label>
             </span>
-            <% else: %>
-            <span class="attachmentPlaceholder-inputHolder fileUpload disabled">
-              <%- @T('Attachments not allowed with read-only access') %>
-            </span>
-            <% end %>
+                <% else: %>
+                <span class="attachmentPlaceholder-inputHolder fileUpload disabled">
+                  <%- @T('Read-only access') %>
+                </span>
+                <% end %>
           </div>
           <div class="attachmentUpload hide">
             <div class="horizontal">
