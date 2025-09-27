@@ -85,6 +85,7 @@ class App.WidgetShares extends App.Controller
       share: share
       ticket_id: @ticket_id
       container: @el.closest('.content')
+      parentWidget: @
       callback: => @loadShares()
     )
 

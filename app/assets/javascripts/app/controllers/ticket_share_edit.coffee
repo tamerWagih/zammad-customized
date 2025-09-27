@@ -11,7 +11,7 @@ class App.TicketShareEdit extends App.ControllerModal
   content: ->
     permissions = @share?.permissions or []
     checked = (name) -> if permissions?.indexOf(name) >= 0 then 'checked' else ''
-    # Normalize expires_at to datetime-local value (YYYY-MM-DDTHH:MM)
+    # Normalize expires_at to date value (YYYY-MM-DD)
     expiresAt = ''
     if @share?.expires_at
       try
@@ -21,11 +21,13 @@ class App.TicketShareEdit extends App.ControllerModal
         y = dt.getFullYear()
         m = pad(dt.getMonth()+1)
         d = pad(dt.getDate())
-        hh = pad(dt.getHours())
-        mm = pad(dt.getMinutes())
-        expiresAt = "#{y}-#{m}-#{d}T#{hh}:#{mm}"
+        expiresAt = "#{y}-#{m}-#{d}"
       catch
-        expiresAt = @share.expires_at
+        # Try to extract date part from string if it's in datetime format
+        if @share.expires_at.match(/^\d{4}-\d{2}-\d{2}/)
+          expiresAt = @share.expires_at.match(/^\d{4}-\d{2}-\d{2}/)[0]
+        else
+          expiresAt = @share.expires_at
 
     """
     <div class="form-horizontal">
@@ -54,7 +56,7 @@ class App.TicketShareEdit extends App.ControllerModal
       <div class="form-group">
         <label class="control-label col-sm-3">#{__('Expires at')}</label>
         <div class="col-sm-9">
-          <input type="datetime-local" name="expires_at" class="form-control" value="#{expiresAt}">
+          <input type="date" name="expires_at" class="form-control" value="#{expiresAt}">
         </div>
       </div>
     </div>
@@ -62,7 +64,12 @@ class App.TicketShareEdit extends App.ControllerModal
 
   submit: (e) =>
     e.preventDefault()
+    e.stopPropagation()
+    e.stopImmediatePropagation()
     return if @_requestInFlight
+    return if @__submitInProgress
+    @__submitInProgress = true
+    
     form_data = @formParam(e.currentTarget)
 
     # Ensure permissions is always an array
@@ -79,17 +86,24 @@ class App.TicketShareEdit extends App.ControllerModal
       contentType: 'application/json'
       success: (data, status, xhr) =>
         @_requestInFlight = false
+        @__submitInProgress = false
         @submitSuccess(data, status, xhr)
       error: (xhr, status, error) =>
         @_requestInFlight = false
+        @__submitInProgress = false
         @submitError(xhr, status, error)
-      complete: => @_requestInFlight = false
+      complete: => 
+        @_requestInFlight = false
+        @__submitInProgress = false
     )
 
   submitSuccess: (data, status, xhr) =>
     @notify(type: 'success', msg: __('Share updated successfully'))
     # Update sender immediately like approvals
     App.Event.trigger('Ticket:update', { id: @ticket_id })
+    # Call parent widget for immediate updates if available
+    if @parentWidget and @parentWidget.shareSuccess
+      @parentWidget.shareSuccess(data)
     @close()
     @callback() if @callback
 
