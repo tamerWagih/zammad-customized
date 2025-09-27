@@ -1,4 +1,4 @@
-class AddRequesterPriorityToTicketApprovals < ActiveRecord::Migration[7.0]
+class AddRequesterPriorityToTicketApprovals < ActiveRecord::Migration[7.2]
   def change
     change_table :ticket_approvals do |t|
       t.references :requester, null: false, foreign_key: { to_table: :users }

@@ -1,4 +1,4 @@
-class AddSharedByStatusExpiryToTicketShares < ActiveRecord::Migration[7.0]
+class AddSharedByStatusExpiryToTicketShares < ActiveRecord::Migration[7.2]
   def change
     change_table :ticket_shares do |t|
       t.references :shared_by, null: false, foreign_key: { to_table: :users }

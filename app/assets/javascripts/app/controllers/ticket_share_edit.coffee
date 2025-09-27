@@ -99,7 +99,7 @@ class App.TicketShareEdit extends App.ControllerModal
     )
     
     # Call parent widget's success handler for immediate update
-    if @parentWidget && @parentWidget.shareSuccess
+x    if @parentWidget && @parentWidget.shareSuccess
       @parentWidget.shareSuccess(data, status, xhr)
     else
       # Fallback to callback

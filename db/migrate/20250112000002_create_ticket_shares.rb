@@ -1,4 +1,4 @@
-class CreateTicketShares < ActiveRecord::Migration[7.0]
+class CreateTicketShares < ActiveRecord::Migration[7.2]
   def change
     create_table :ticket_shares do |t|
       t.references :ticket, null: false, foreign_key: true
