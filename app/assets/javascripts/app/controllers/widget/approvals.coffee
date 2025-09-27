@@ -27,6 +27,23 @@ class App.WidgetApprovals extends App.Controller
         @loadApprovals()
       , 800, 'approval-reload-notify'
     )
+    
+    # Listen for real-time updates from other users with debounce
+    @controllerBind('TicketApproval:create', (data) =>
+      @delay =>
+        @loadApprovals()
+      , 500, 'approval-reload'
+    )
+    @controllerBind('TicketApproval:update', (data) =>
+      @delay =>
+        @loadApprovals()
+      , 500, 'approval-reload'
+    )
+    @controllerBind('TicketApproval:destroy', (data) =>
+      @delay =>
+        @loadApprovals()
+      , 500, 'approval-reload'
+    )
 
   loadApprovals: =>
     return if @isLoadingApprovals
