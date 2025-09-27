@@ -31,10 +31,26 @@ class SidebarApprovals extends App.Controller
       parentVC: @
       callback: @refreshApprovals
     )
+    
+    # Load approvals data for isReceiver check
+    @loadApprovalsForCheck()
 
   refreshApprovals: =>
     if @elSidebar
       @showPanel(@elSidebar)
+
+  loadApprovalsForCheck: =>
+    # Load approvals data for isReceiver check
+    @ajax(
+      id: 'load_approvals_for_check'
+      type: 'GET'
+      url: "#{@apiPath}/tickets/#{@ticket.id}/approvals"
+      processData: true
+      success: (data, status, xhr) =>
+        @approvals = data?.approvals || []
+      error: (xhr, status, error) =>
+        @approvals = []
+    )
 
   requestApproval: =>
     # Create approval request modal
@@ -57,16 +73,23 @@ class SidebarApprovals extends App.Controller
     ))
 
   isReceiver: =>
-    # Check if current user is specifically shared with this ticket
+    # Check if current user is specifically requested for approval on this ticket
     current_user = App.User.current()
     return false unless current_user
     
-    # Check if user has share permissions for this specific ticket (indicating they are a receiver)
+    # Method 1: Check if user has share permissions (indicating they are a receiver)
     share_permissions = @ticket?.share_permissions
     if share_permissions && (share_permissions.read || share_permissions.comment || share_permissions.edit)
       return true
     
-    # If no share permissions, they are not a receiver
+    # Method 2: Check if user is an approver for this ticket
+    # We need to check if there are any pending approval requests for this user
+    if @approvals && @approvals.length > 0
+      for approval in @approvals
+        if approval.status == 'pending' && approval.approver_id == current_user.id
+          return true
+    
+    # If neither shared nor approver, they are not a receiver
     return false
 
 App.Config.set('450-Approvals', SidebarApprovals, 'TicketZoomSidebar')
