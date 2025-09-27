@@ -13,8 +13,8 @@ class SidebarApprovals extends App.Controller
       sidebarActions: []
     }
 
-    # Only allow requesting approval if user is not a receiver of this ticket
-    unless @isReceiver()
+    # Only allow requesting approval if user is owner or has share access
+    if @canShareOrApprove()
       @item.sidebarActions.push(
         title: __('Request Approval')
         name: 'approval-request'
@@ -72,24 +72,21 @@ class SidebarApprovals extends App.Controller
       counterPossible: false
     ))
 
-  isReceiver: =>
-    # Check if current user is specifically requested for approval on this ticket
+  canShareOrApprove: =>
+    # Check if current user can share or request approval
     current_user = App.User.current()
     return false unless current_user
     
-    # Method 1: Check if user has share permissions (indicating they are a receiver)
+    # Owner can always share and request approval
+    if @ticket?.owner_id && String(@ticket.owner_id) == String(current_user.id)
+      return true
+    
+    # Users with share access (read/comment/edit) can share and request approval
     share_permissions = @ticket?.share_permissions
     if share_permissions && (share_permissions.read || share_permissions.comment || share_permissions.edit)
       return true
     
-    # Method 2: Check if user is an approver for this ticket
-    # We need to check if there are any pending approval requests for this user
-    if @approvals && @approvals.length > 0
-      for approval in @approvals
-        if approval.status == 'pending' && approval.approver_id == current_user.id
-          return true
-    
-    # If neither shared nor approver, they are not a receiver
+    # Everyone else cannot share or request approval
     return false
 
 App.Config.set('450-Approvals', SidebarApprovals, 'TicketZoomSidebar')

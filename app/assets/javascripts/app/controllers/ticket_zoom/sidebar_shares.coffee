@@ -13,8 +13,8 @@ class SidebarShares extends App.Controller
       sidebarActions: []
     }
 
-    # Only allow sharing if user is not a receiver of this ticket
-    unless @isReceiver()
+    # Only allow sharing if user is owner or has share access
+    if @canShareOrApprove()
       @item.sidebarActions.push(
         title: __('Share Ticket')
         name: 'share-create'
@@ -56,17 +56,21 @@ class SidebarShares extends App.Controller
       counterPossible: false
     ))
 
-  isReceiver: =>
-    # Check if current user is specifically shared with this ticket
+  canShareOrApprove: =>
+    # Check if current user can share or request approval
     current_user = App.User.current()
     return false unless current_user
     
-    # Check if user has share permissions for this specific ticket (indicating they are a receiver)
+    # Owner can always share and request approval
+    if @ticket?.owner_id && String(@ticket.owner_id) == String(current_user.id)
+      return true
+    
+    # Users with share access (read/comment/edit) can share and request approval
     share_permissions = @ticket?.share_permissions
     if share_permissions && (share_permissions.read || share_permissions.comment || share_permissions.edit)
       return true
     
-    # If no share permissions, they are not a receiver
+    # Everyone else cannot share or request approval
     return false
 
 App.Config.set('451-Shares', SidebarShares, 'TicketZoomSidebar')
