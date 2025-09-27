@@ -59,9 +59,16 @@ class TicketsController < ApplicationController
       result = ticket.attributes_with_association_names
       begin
         result[:share_permissions] = ticket.share_permissions_for(current_user) if ticket.respond_to?(:share_permissions_for)
+        
+        # Add share expiry date if user has a share
+        if ticket.respond_to?(:shares) && current_user
+          user_share = ticket.shares.active_current.find_by(shared_with: current_user)
+          result[:share_expires_at] = user_share&.expires_at
+        end
       rescue StandardError => e
         Rails.logger.warn "Failed to get share permissions for ticket #{ticket.id}: #{e.message}"
         result[:share_permissions] = { read: false, comment: false, edit: false }
+        result[:share_expires_at] = nil
       end
       render json: result, status: :ok
       return
@@ -78,13 +85,20 @@ class TicketsController < ApplicationController
       return
     end
 
-    # Add share_permissions to the ticket JSON (with error handling)
+    # Add share_permissions and share_expires_at to the ticket JSON (with error handling)
     ticket_json = ticket.as_json
     begin
       ticket_json[:share_permissions] = ticket.share_permissions_for(current_user) if ticket.respond_to?(:share_permissions_for)
+      
+      # Add share expiry date if user has a share
+      if ticket.respond_to?(:shares) && current_user
+        user_share = ticket.shares.active_current.find_by(shared_with: current_user)
+        ticket_json[:share_expires_at] = user_share&.expires_at
+      end
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for ticket #{ticket.id}: #{e.message}"
       ticket_json[:share_permissions] = { read: false, comment: false, edit: false }
+      ticket_json[:share_expires_at] = nil
     end
     render json: ticket_json
   end

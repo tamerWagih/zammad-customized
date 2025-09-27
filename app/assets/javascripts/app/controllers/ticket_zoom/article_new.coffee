@@ -191,6 +191,16 @@ class App.TicketZoomArticleNew extends App.Controller
     current_user = App.User.current()
     share_permissions = ticket?.share_permissions || {}
     
+    # Check if share is expired (if expires_at is provided)
+    is_share_expired = false
+    if ticket?.share_expires_at
+      try
+        expires_date = new Date(ticket.share_expires_at)
+        current_date = new Date()
+        is_share_expired = expires_date <= current_date
+      catch
+        is_share_expired = false
+    
     # Determine what the user can do based on permissions
     can_comment = false
     can_edit = false
@@ -199,6 +209,10 @@ class App.TicketZoomArticleNew extends App.Controller
     if ticket?.owner_id && String(ticket.owner_id) == String(current_user?.id)
       can_comment = true
       can_edit = true
+    else if is_share_expired
+      # Expired share - read-only access
+      can_comment = false
+      can_edit = false
     else if share_permissions.edit
       # Edit permission includes comment and edit
       can_comment = true
@@ -225,6 +239,7 @@ class App.TicketZoomArticleNew extends App.Controller
       internalSelector: @internalSelector
       can_comment:      can_comment
       can_edit:         can_edit
+      is_share_expired: is_share_expired
     )
     @setArticleTypePre(@type)
     @setArticleTypePost(@type)

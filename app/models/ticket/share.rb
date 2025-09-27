@@ -19,6 +19,7 @@ class Ticket::Share < ApplicationModel
   scope :with_permission, ->(permission) { where("permissions ? '#{permission}'") }
   scope :readable, -> { with_permission('read') }
   scope :editable, -> { with_permission('edit') }
+  scope :active_current, -> { where(status: 'active').where('expires_at IS NULL OR expires_at > ?', Time.current) }
 
   def has_permission?(permission)
     permissions.include?(permission)

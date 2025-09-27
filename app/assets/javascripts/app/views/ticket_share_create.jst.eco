@@ -66,7 +66,7 @@
       <%- @T('Expires') %>
     </label>
     <div class="col-sm-9">
-      <input type="date" name="expires_at" class="form-control">
+      <input type="date" name="expires_at" class="form-control" min="<%= new Date().toISOString().split('T')[0] %>">
       <small class="help-block">
         <%- @T('Optional: Set when this share should expire') %>
       </small>

@@ -61,7 +61,7 @@ class App.TicketShareEdit extends App.ControllerModal
       <div class="form-group">
         <label class="control-label col-sm-3">#{__('Expires at')}</label>
         <div class="col-sm-9">
-          <input type="date" name="expires_at" class="form-control" value="#{expiresAt}">
+          <input type="date" name="expires_at" class="form-control" value="#{expiresAt}" min="#{new Date().toISOString().split('T')[0]}">
         </div>
       </div>
     </div>
