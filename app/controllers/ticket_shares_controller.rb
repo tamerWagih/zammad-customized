@@ -30,14 +30,15 @@ class TicketSharesController < ApplicationController
       return
     end
 
-    share = @ticket.shares.create!(
-      shared_with: shared_with,
-      shared_by: current_user,
-      permissions: (params[:permissions] || ['read']).map(&:to_s),
-      message: params[:message],
-      expires_at: params[:expires_at],
-      status: 'active'
-    )
+    # Use permitted parameters
+    attrs = share_params.to_h
+    attrs[:shared_with] = shared_with
+    attrs[:shared_by] = current_user
+    attrs[:permissions] = Array(attrs[:permissions]).map(&:to_s) if attrs[:permissions].present?
+    attrs[:permissions] ||= ['read']  # Default to read if no permissions specified
+    attrs[:status] = 'active'
+
+    share = @ticket.shares.create!(attrs)
 
     # Notify the shared user with a link to the ticket (ensures click opens ticket)
     OnlineNotification.add(
@@ -212,6 +213,6 @@ class TicketSharesController < ApplicationController
   end
 
   def share_params
-    params.permit(:message, :expires_at, permissions: [])
+    params.permit(:shared_with_id, :message, :expires_at, permissions: [])
   end
 end

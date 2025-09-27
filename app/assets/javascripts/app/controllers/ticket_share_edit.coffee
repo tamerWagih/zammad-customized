@@ -64,48 +64,38 @@ class App.TicketShareEdit extends App.ControllerModal
 
   submit: (e) =>
     e.preventDefault()
-    e.stopPropagation()
-    e.stopImmediatePropagation()
-    return if @_requestInFlight
-    return if @__submitInProgress
-    @__submitInProgress = true
     
     form_data = @formParam(e.currentTarget)
-
-    # Ensure permissions is always an array
-    if form_data.permissions and typeof form_data.permissions is 'string'
-      form_data.permissions = [form_data.permissions]
-
-    @_requestInFlight = true
+    
+    # Send flat form data like approval edit does
     @ajax(
       id: 'update_share'
       type: 'PATCH'
       url: "#{@apiPath}/tickets/#{@ticket_id}/shares/#{@share.id}"
-      data: JSON.stringify(form_data)
-      processData: false
-      contentType: 'application/json'
-      success: (data, status, xhr) =>
-        @_requestInFlight = false
-        @__submitInProgress = false
-        @submitSuccess(data, status, xhr)
-      error: (xhr, status, error) =>
-        @_requestInFlight = false
-        @__submitInProgress = false
-        @submitError(xhr, status, error)
-      complete: => 
-        @_requestInFlight = false
-        @__submitInProgress = false
+      data: form_data
+      processData: true
+      contentType: 'application/x-www-form-urlencoded; charset=UTF-8'
+      success: @submitSuccess
+      error: @submitError
     )
 
   submitSuccess: (data, status, xhr) =>
-    @notify(type: 'success', msg: __('Share updated successfully'))
-    # Update sender immediately like approvals
+    @notify(
+      type: 'success'
+      msg:  __('Share updated successfully')
+    )
+    
+    # Trigger the same success pattern as approval edit for immediate updates
     App.Event.trigger('Ticket:update', { id: @ticket_id })
-    # Call parent widget for immediate updates if available
-    if @parentWidget and @parentWidget.shareSuccess
-      @parentWidget.shareSuccess(data)
+    
+    # Call parent widget's success handler for immediate update
+    if @parentWidget && @parentWidget.shareSuccess
+      @parentWidget.shareSuccess(data, status, xhr)
+    else
+      # Fallback to callback
+      @callback() if @callback
+    
     @close()
-    @callback() if @callback
 
   submitError: (xhr, status, error) =>
     error_msg = __('Failed to update share')
@@ -113,6 +103,11 @@ class App.TicketShareEdit extends App.ControllerModal
       response = JSON.parse(xhr.responseText)
       error_msg = response.error if response?.error
     catch
-    @notify(type: 'error', msg: error_msg)
+      error_msg = xhr.responseText || error_msg
+    
+    @notify(
+      type: 'error'
+      msg: error_msg
+    )
 
 
