@@ -92,10 +92,19 @@ class TicketsController < ApplicationController
       Rails.logger.info "DEBUG: Ticket responds to shares: #{ticket.respond_to?(:shares)}"
       Rails.logger.info "DEBUG: Ticket responds to share_permissions_for: #{ticket.respond_to?(:share_permissions_for)}"
       
-      if ticket.respond_to?(:shares) && current_user
-        user_share = ticket.shares.active_current.find_by(shared_with: current_user)
-        Rails.logger.info "DEBUG: Found user share: #{user_share.inspect}"
-        ticket_json[:share_expires_at] = user_share&.expires_at
+      # Check all shares for this ticket
+      if ticket.respond_to?(:shares)
+        all_shares = ticket.shares
+        Rails.logger.info "DEBUG: All shares for ticket #{ticket.id}: #{all_shares.count}"
+        all_shares.each do |share|
+          Rails.logger.info "DEBUG: Share #{share.id}: shared_with=#{share.shared_with_id}, permissions=#{share.permissions}, status=#{share.status}, expires_at=#{share.expires_at}"
+        end
+        
+        if current_user
+          user_share = ticket.shares.active_current.find_by(shared_with: current_user)
+          Rails.logger.info "DEBUG: Found user share: #{user_share.inspect}"
+          ticket_json[:share_expires_at] = user_share&.expires_at
+        end
       end
       
       ticket_json[:share_permissions] = ticket.share_permissions_for(current_user) if ticket.respond_to?(:share_permissions_for)

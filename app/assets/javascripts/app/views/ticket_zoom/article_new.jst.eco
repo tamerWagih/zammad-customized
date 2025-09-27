@@ -106,11 +106,11 @@
                 <%- @T('select attachment…') %>
               </label>
             </span>
-                <% else: %>
-                <span class="attachmentPlaceholder-inputHolder fileUpload disabled">
-                  <%- @T('Read-only access') %>
-                </span>
-                <% end %>
+            <% else: %>
+            <span class="attachmentPlaceholder-inputHolder fileUpload disabled">
+              <%- @T('select attachment…') %>
+            </span>
+            <% end %>
           </div>
           <div class="attachmentUpload hide">
             <div class="horizontal">
