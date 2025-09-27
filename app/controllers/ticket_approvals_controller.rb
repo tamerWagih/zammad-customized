@@ -118,6 +118,12 @@ class TicketApprovalsController < ApplicationController
     end
 
     approval.approve!
+    
+    # Update ticket state to approved
+    approved_state = Ticket::State.find_by(name: 'approved')
+    if approved_state
+      @ticket.update!(state: approved_state)
+    end
 
     # Notify requester about decision
     begin
@@ -190,6 +196,12 @@ class TicketApprovalsController < ApplicationController
     end
 
     approval.reject!
+    
+    # Update ticket state to rejected
+    rejected_state = Ticket::State.find_by(name: 'rejected')
+    if rejected_state
+      @ticket.update!(state: rejected_state)
+    end
 
     # Notify requester about decision
     begin
