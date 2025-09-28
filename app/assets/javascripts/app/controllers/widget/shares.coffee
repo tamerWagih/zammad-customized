@@ -12,6 +12,12 @@ class App.WidgetShares extends App.Controller
     @loadShares()
     @renderActions()
     
+    # Also refresh on generic ticket updates/touches
+    @controllerBind('Ticket:update Ticket:touch', (data) =>
+      return if String(data.id) isnt String(@ticket_id)
+      @delay (=> @loadShares()), 400, 'share-reload-ticket'
+    )
+    
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketShare:create', (data) =>
       @delay =>

@@ -20,7 +20,11 @@ class App.WidgetApprovals extends App.Controller
       , 500, 'approval-reload'
     )
     
-    # Custom approval events removed - using standard Ticket:update events instead
+    # Also refresh on generic ticket updates/touches
+    @controllerBind('Ticket:update Ticket:touch', (data) =>
+      return if String(data.id) isnt String(@ticket_id)
+      @delay (=> @loadApprovals()), 400, 'approval-reload-ticket'
+    )
     
     # Listen for notification events to refresh approvals
     @controllerBind('OnlineNotification::changed', =>
@@ -157,6 +161,29 @@ class App.WidgetApprovals extends App.Controller
         callback: => 
           @loadApprovals()
         parentWidget: @
+      )
+    else
+      # Fallback: reload approvals then reopen
+      @ajax(
+        id: 'reload_approval_for_edit'
+        type: 'GET'
+        url: "#{@apiPath}/tickets/#{@ticket_id}/approvals"
+        processData: true
+        success: (data, status, xhr) =>
+          @approvals = data?.approvals || []
+          approval = @approvals.find (a) -> a.id.toString() == approval_id.toString()
+          if approval
+            new App.TicketApprovalEdit(
+              approval: approval
+              ticket_id: @ticket_id
+              container: @el.closest('.content')
+              callback: => @loadApprovals()
+              parentWidget: @
+            )
+          else
+            @notify(type: 'error', msg: __('Approval data not found. Please refresh and try again.'))
+        error: (xhr, status, error) =>
+          @notify(type: 'error', msg: __('Approval data not found. Please refresh and try again.'))
       )
 
   deleteApproval: (e) =>
