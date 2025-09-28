@@ -1,4 +1,8 @@
 class SidebarApprovals extends App.Controller
+  constructor: ->
+    super
+    @last_can_share = null
+
   sidebarItem: =>
     
     return if @ticket.currentView() isnt 'agent'
@@ -34,6 +38,24 @@ class SidebarApprovals extends App.Controller
     
     # Load approvals data for isReceiver check
     @loadApprovalsForCheck()
+
+  # Standard reload method called by sidebar system
+  reload: (args) =>
+    if @widget && @widget.reload
+      @widget.reload(args)
+    else if @elSidebar
+      @showPanel(@elSidebar)
+    
+    # Check if ticket assignment changed and trigger sidebar re-render
+    @checkAndUpdateActions()
+
+  checkAndUpdateActions: =>
+    # Check if the ability to share/approve has changed
+    current_can_share = @canShareOrApprove()
+    if @last_can_share isnt current_can_share
+      @last_can_share = current_can_share
+      # Trigger sidebar re-render to update actions
+      App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: @taskKey })
 
   refreshApprovals: =>
     if @elSidebar

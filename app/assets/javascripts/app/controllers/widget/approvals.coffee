@@ -45,6 +45,10 @@ class App.WidgetApprovals extends App.Controller
       , 500, 'approval-reload'
     )
 
+  # Standard reload method called by sidebar system
+  reload: (args) =>
+    @loadApprovals()
+
   loadApprovals: =>
     return if @isLoadingApprovals
     

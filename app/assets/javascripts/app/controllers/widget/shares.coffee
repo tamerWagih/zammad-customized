@@ -28,6 +28,10 @@ class App.WidgetShares extends App.Controller
       , 500, 'share-reload'
     )
 
+  # Standard reload method called by sidebar system
+  reload: (args) =>
+    @loadShares()
+
   loadShares: =>
     return if @isLoadingShares
     
