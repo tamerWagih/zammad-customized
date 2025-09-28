@@ -8,16 +8,7 @@ class App.TicketShareEdit extends App.ControllerModal
   events:
     'submit form': 'submit'
 
-  constructor: ->
-    super
-    # Handle both direct parameters and params object
-    if @params?.share
-      @share = @params.share
-      @ticket_id = @params.ticket_id
-    else
-      # Parameters passed directly
-      @share = arguments[0]?.share
-      @ticket_id = arguments[0]?.ticket_id
+  # Rely on App.ControllerModal to assign passed options directly
 
   content: ->
     permissions = @share?.permissions or []
