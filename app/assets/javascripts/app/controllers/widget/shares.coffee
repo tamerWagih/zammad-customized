@@ -8,6 +8,7 @@ class App.WidgetShares extends App.Controller
   constructor: ->
     super
     @lastShares = []  # Initialize to prevent undefined errors
+    @loadRetryCount = 0
     @loadShares()
     @renderActions()
     
@@ -43,11 +44,17 @@ class App.WidgetShares extends App.Controller
       processData: true
       success:     @renderShares
       error:       @renderError
-      complete:    => @isLoadingShares = false
+      complete:    (xhr, status) =>
+        @isLoadingShares = false
+        if status is 'abort'
+          if (@loadRetryCount ? 0) < 3
+            @loadRetryCount = (@loadRetryCount ? 0) + 1
+            @delay => @loadShares(), 200, 'share-retry'
     )
 
   renderShares: (data, status, xhr) =>
     @lastShares = data?.shares || []
+    @loadRetryCount = 0
     @render(@lastShares)
 
   renderError: (xhr, status, error) =>

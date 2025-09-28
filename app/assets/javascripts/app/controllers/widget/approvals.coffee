@@ -8,6 +8,7 @@ class App.WidgetApprovals extends App.Controller
 
   constructor: ->
     super
+    @loadRetryCount = 0
     @loadApprovals()
     @renderActions()
     
@@ -60,11 +61,17 @@ class App.WidgetApprovals extends App.Controller
       processData: true
       success:     @renderApprovals
       error:       @renderError
-      complete:    => @isLoadingApprovals = false
+      complete:    (xhr, status) =>
+        @isLoadingApprovals = false
+        if status is 'abort'
+          if (@loadRetryCount ? 0) < 3
+            @loadRetryCount = (@loadRetryCount ? 0) + 1
+            @delay => @loadApprovals(), 200, 'approval-retry'
     )
 
   renderApprovals: (data, status, xhr) =>
     @approvals = data?.approvals || []
+    @loadRetryCount = 0
     @render(@approvals)
 
   renderError: (xhr, status, error) =>
