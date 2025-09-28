@@ -49,7 +49,7 @@ class App.WidgetShares extends App.Controller
         if status is 'abort'
           if (@loadRetryCount ? 0) < 3
             @loadRetryCount = (@loadRetryCount ? 0) + 1
-            @delay => @loadShares(), 200, 'share-retry'
+            @delay (=> @loadShares()), 200, 'share-retry'
     )
 
   renderShares: (data, status, xhr) =>

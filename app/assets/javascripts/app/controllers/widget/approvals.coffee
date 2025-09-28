@@ -66,7 +66,7 @@ class App.WidgetApprovals extends App.Controller
         if status is 'abort'
           if (@loadRetryCount ? 0) < 3
             @loadRetryCount = (@loadRetryCount ? 0) + 1
-            @delay => @loadApprovals(), 200, 'approval-retry'
+            @delay (=> @loadApprovals()), 200, 'approval-retry'
     )
 
   renderApprovals: (data, status, xhr) =>
