@@ -35,11 +35,6 @@ class App.WidgetShares extends App.Controller
   loadShares: =>
     return if @isLoadingShares
     
-    # Debug: Check if ticket_id is available
-    unless @ticket_id
-      console.error('WidgetShares: ticket_id is not set')
-      return
-    
     @isLoadingShares = true
     @ajax(
       id:          'load_shares'
@@ -56,14 +51,6 @@ class App.WidgetShares extends App.Controller
     @render(@lastShares)
 
   renderError: (xhr, status, error) =>
-    # Debug: Log the error details
-    console.error('WidgetShares: Error loading shares', {
-      status: status,
-      error: error,
-      xhr: xhr,
-      ticket_id: @ticket_id
-    })
-    
     error_message = 'Unable to load shares'
     if xhr?.responseJSON?.error
       error_message = xhr.responseJSON.error
@@ -99,10 +86,6 @@ class App.WidgetShares extends App.Controller
     e.preventDefault()
     e.stopPropagation()
     e.stopImmediatePropagation()
-    
-    # Prevent multiple modals by checking if one is already open
-    return if @__editModalOpen
-    @__editModalOpen = true
     @setCurrentAction('edit')
     
     share_id = $(e.currentTarget).data('share-id')
@@ -129,7 +112,6 @@ class App.WidgetShares extends App.Controller
               parentWidget: @
               callback: => 
                 @loadShares()
-                @__editModalOpen = false  # Reset flag when modal closes
             )
           else
             # Still not found, show error
@@ -137,13 +119,11 @@ class App.WidgetShares extends App.Controller
               type: 'error'
               msg: __('Share data not found. Please refresh and try again.')
             )
-            @__editModalOpen = false
         error: (xhr, status, error) =>
           @notify(
             type: 'error'
             msg: __('Share data not found. Please refresh and try again.')
           )
-          @__editModalOpen = false
       )
       return
 
@@ -154,13 +134,7 @@ class App.WidgetShares extends App.Controller
       parentWidget: @
       callback: => 
         @loadShares()
-        @__editModalOpen = false  # Reset flag when modal closes
     )
-
-    # Reset flag if modal creation fails
-    @delay =>
-      @__editModalOpen = false
-    , 1000
 
   deleteShare: (e) =>
     e.preventDefault()

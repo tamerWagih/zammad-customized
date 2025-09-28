@@ -52,11 +52,6 @@ class App.WidgetApprovals extends App.Controller
   loadApprovals: =>
     return if @isLoadingApprovals
     
-    # Debug: Check if ticket_id is available
-    unless @ticket_id
-      console.error('WidgetApprovals: ticket_id is not set')
-      return
-    
     @isLoadingApprovals = true
     @ajax(
       id:          'load_approvals'
@@ -73,14 +68,6 @@ class App.WidgetApprovals extends App.Controller
     @render(@approvals)
 
   renderError: (xhr, status, error) =>
-    # Debug: Log the error details
-    console.error('WidgetApprovals: Error loading approvals', {
-      status: status,
-      error: error,
-      xhr: xhr,
-      ticket_id: @ticket_id
-    })
-    
     error_message = 'Unable to load approvals'
     if xhr?.responseJSON?.error
       error_message = xhr.responseJSON.error
@@ -144,10 +131,6 @@ class App.WidgetApprovals extends App.Controller
     e.preventDefault()
     e.stopPropagation()
     e.stopImmediatePropagation()
-    
-    # Prevent multiple modals by checking if one is already open
-    return if @__editModalOpen
-    @__editModalOpen = true
     @setCurrentAction('edit')
     
     approval_id = $(e.currentTarget).data('approval-id')
@@ -156,20 +139,14 @@ class App.WidgetApprovals extends App.Controller
     approval = @approvals?.find (a) -> a.id.toString() == approval_id.toString()
     if approval
       # Create edit modal with current data
-      modal = new App.TicketApprovalEdit(
+      new App.TicketApprovalEdit(
         approval: approval
         ticket_id: @ticket_id
         container: @el.closest('.content')
         callback: => 
           @loadApprovals()
-          @__editModalOpen = false  # Reset flag when modal closes
         parentWidget: @
       )
-      
-      # Reset flag if modal creation fails
-      @delay =>
-        @__editModalOpen = false
-      , 1000
 
   deleteApproval: (e) =>
     e.preventDefault()
