@@ -131,8 +131,11 @@ class App.WidgetApprovals extends App.Controller
     e.preventDefault()
     e.stopPropagation()
     e.stopImmediatePropagation()
+    
+    # Prevent multiple modals by checking if one is already open
     return if @__editModalOpen
     @__editModalOpen = true
+    @setCurrentAction('edit')
     
     approval_id = $(e.currentTarget).data('approval-id')
     
@@ -140,18 +143,20 @@ class App.WidgetApprovals extends App.Controller
     approval = @approvals?.find (a) -> a.id.toString() == approval_id.toString()
     if approval
       # Create edit modal with current data
-      new App.TicketApprovalEdit(
+      modal = new App.TicketApprovalEdit(
         approval: approval
         ticket_id: @ticket_id
         container: @el.closest('.content')
-        callback: => @loadApprovals()
+        callback: => 
+          @loadApprovals()
+          @__editModalOpen = false  # Reset flag when modal closes
         parentWidget: @
       )
-    
-    # Reset flag after modal is created
-    @delay =>
-      @__editModalOpen = false
-    , 100
+      
+      # Reset flag if modal creation fails
+      @delay =>
+        @__editModalOpen = false
+      , 1000
 
   deleteApproval: (e) =>
     e.preventDefault()
@@ -196,8 +201,9 @@ class App.WidgetApprovals extends App.Controller
       @notify(type: 'success', msg: __('Approval request rejected successfully'))
     else if action is 'delete'
       @notify(type: 'success', msg: __('Approval request deleted successfully'))
-    else
-      @notify(type: 'success', msg: __('Approval updated successfully'))
+    else if action is 'edit'
+      @notify(type: 'success', msg: __('Approval request updated successfully'))
+    # Don't show generic success message for edit actions to avoid duplicates
     
     # Reload approvals from backend immediately
     @loadApprovals()

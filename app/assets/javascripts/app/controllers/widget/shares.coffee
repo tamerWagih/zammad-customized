@@ -80,8 +80,12 @@ class App.WidgetShares extends App.Controller
     e.preventDefault()
     e.stopPropagation()
     e.stopImmediatePropagation()
+    
+    # Prevent multiple modals by checking if one is already open
     return if @__editModalOpen
     @__editModalOpen = true
+    @setCurrentAction('edit')
+    
     share_id = $(e.currentTarget).data('share-id')
     # Find current share data from last load
     share = (@lastShares or []).find (s) -> String(s.id) == String(share_id)
@@ -104,7 +108,9 @@ class App.WidgetShares extends App.Controller
               ticket_id: @ticket_id
               container: @el.closest('.content')
               parentWidget: @
-              callback: => @loadShares()
+              callback: => 
+                @loadShares()
+                @__editModalOpen = false  # Reset flag when modal closes
             )
           else
             # Still not found, show error
@@ -112,7 +118,7 @@ class App.WidgetShares extends App.Controller
               type: 'error'
               msg: __('Share data not found. Please refresh and try again.')
             )
-          @__editModalOpen = false
+            @__editModalOpen = false
         error: (xhr, status, error) =>
           @notify(
             type: 'error'
@@ -127,12 +133,15 @@ class App.WidgetShares extends App.Controller
       ticket_id: @ticket_id
       container: @el.closest('.content')
       parentWidget: @
-      callback: => @loadShares()
+      callback: => 
+        @loadShares()
+        @__editModalOpen = false  # Reset flag when modal closes
     )
 
+    # Reset flag if modal creation fails
     @delay =>
       @__editModalOpen = false
-    , 100
+    , 1000
 
   deleteShare: (e) =>
     e.preventDefault()
@@ -195,8 +204,9 @@ class App.WidgetShares extends App.Controller
       @notify(type: 'success', msg: __('Share revoked successfully'))
     else if action is 'delete'
       @notify(type: 'success', msg: __('Share deleted successfully'))
-    else
+    else if action is 'edit'
       @notify(type: 'success', msg: __('Share updated successfully'))
+    # Don't show generic success message for edit actions to avoid duplicates
     
     # Reload shares from backend
     @loadShares()
