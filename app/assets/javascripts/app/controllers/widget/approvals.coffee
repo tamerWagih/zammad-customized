@@ -52,6 +52,11 @@ class App.WidgetApprovals extends App.Controller
   loadApprovals: =>
     return if @isLoadingApprovals
     
+    # Debug: Check if ticket_id is available
+    unless @ticket_id
+      console.error('WidgetApprovals: ticket_id is not set')
+      return
+    
     @isLoadingApprovals = true
     @ajax(
       id:          'load_approvals'
@@ -68,6 +73,14 @@ class App.WidgetApprovals extends App.Controller
     @render(@approvals)
 
   renderError: (xhr, status, error) =>
+    # Debug: Log the error details
+    console.error('WidgetApprovals: Error loading approvals', {
+      status: status,
+      error: error,
+      xhr: xhr,
+      ticket_id: @ticket_id
+    })
+    
     error_message = 'Unable to load approvals'
     if xhr?.responseJSON?.error
       error_message = xhr.responseJSON.error

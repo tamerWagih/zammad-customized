@@ -35,6 +35,11 @@ class App.WidgetShares extends App.Controller
   loadShares: =>
     return if @isLoadingShares
     
+    # Debug: Check if ticket_id is available
+    unless @ticket_id
+      console.error('WidgetShares: ticket_id is not set')
+      return
+    
     @isLoadingShares = true
     @ajax(
       id:          'load_shares'
@@ -51,7 +56,21 @@ class App.WidgetShares extends App.Controller
     @render(@lastShares)
 
   renderError: (xhr, status, error) =>
-    @html '<div class="sidebar-block"><div class="alert alert-danger">Unable to load shares</div></div>'
+    # Debug: Log the error details
+    console.error('WidgetShares: Error loading shares', {
+      status: status,
+      error: error,
+      xhr: xhr,
+      ticket_id: @ticket_id
+    })
+    
+    error_message = 'Unable to load shares'
+    if xhr?.responseJSON?.error
+      error_message = xhr.responseJSON.error
+    else if xhr?.statusText
+      error_message = "Unable to load shares: #{xhr.statusText}"
+    
+    @html "<div class='sidebar-block'><div class='alert alert-danger'>#{error_message}</div></div>"
 
   render: (shares) =>
     # Render the full template with real data
