@@ -10,8 +10,14 @@ class App.TicketShareEdit extends App.ControllerModal
 
   constructor: ->
     super
-    @share = @params.share
-    @ticket_id = @params.ticket_id
+    # Handle both direct parameters and params object
+    if @params?.share
+      @share = @params.share
+      @ticket_id = @params.ticket_id
+    else
+      # Parameters passed directly
+      @share = arguments[0]?.share
+      @ticket_id = arguments[0]?.ticket_id
 
   content: ->
     permissions = @share?.permissions or []

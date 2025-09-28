@@ -8,6 +8,17 @@ class App.TicketApprovalEdit extends App.ControllerModal
   events:
     'submit form': 'submit'
 
+  constructor: ->
+    super
+    # Handle both direct parameters and params object
+    if @params?.approval
+      @approval = @params.approval
+      @ticket_id = @params.ticket_id
+    else
+      # Parameters passed directly
+      @approval = arguments[0]?.approval
+      @ticket_id = arguments[0]?.ticket_id
+
   content: ->
     # Return simple edit form
     """
