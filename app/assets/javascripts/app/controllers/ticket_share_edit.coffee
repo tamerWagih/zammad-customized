@@ -93,10 +93,8 @@ class App.TicketShareEdit extends App.ControllerModal
     )
 
   submitSuccess: (data, status, xhr) =>
-    @notify(
-      type: 'success'
-      msg:  __('Share updated successfully')
-    )
+    # Don't show notification here to avoid double messages
+    # The parent widget will handle the success notification
     
     # Call parent widget's success handler for immediate update
     if @parentWidget && @parentWidget.shareSuccess

@@ -129,6 +129,11 @@ class App.WidgetApprovals extends App.Controller
 
   editApproval: (e) =>
     e.preventDefault()
+    e.stopPropagation()
+    e.stopImmediatePropagation()
+    return if @__editModalOpen
+    @__editModalOpen = true
+    
     approval_id = $(e.currentTarget).data('approval-id')
     
     # Find the approval data
@@ -142,6 +147,11 @@ class App.WidgetApprovals extends App.Controller
         callback: => @loadApprovals()
         parentWidget: @
       )
+    
+    # Reset flag after modal is created
+    @delay =>
+      @__editModalOpen = false
+    , 100
 
   deleteApproval: (e) =>
     e.preventDefault()
