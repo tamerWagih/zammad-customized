@@ -9,7 +9,7 @@ class App.WidgetApprovals extends App.Controller
   constructor: ->
     super
     @loadRetryCount = 0
-    @loadApprovals()
+    @delay (=> @loadApprovals()), 150, 'approval-initial'
     @renderActions()
     
     # Listen for ticket updates to refresh approvals
@@ -33,6 +33,11 @@ class App.WidgetApprovals extends App.Controller
       , 800, 'approval-reload-notify'
     )
     
+    # Also reload when the sidebar is re-rendered
+    @controllerBind('ui::ticket::sidebarRerender', (args) =>
+      @delay (=> @loadApprovals()), 150, 'approval-sidebar-rerender'
+    )
+
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketApproval:create', (data) =>
       @delay =>

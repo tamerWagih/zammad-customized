@@ -9,7 +9,7 @@ class App.WidgetShares extends App.Controller
     super
     @lastShares = []  # Initialize to prevent undefined errors
     @loadRetryCount = 0
-    @loadShares()
+    @delay (=> @loadShares()), 150, 'share-initial'
     @renderActions()
     
     # Also refresh on generic ticket updates/touches
@@ -18,6 +18,11 @@ class App.WidgetShares extends App.Controller
       @delay (=> @loadShares()), 400, 'share-reload-ticket'
     )
     
+    # Also reload when the sidebar is re-rendered
+    @controllerBind('ui::ticket::sidebarRerender', (args) =>
+      @delay (=> @loadShares()), 150, 'share-sidebar-rerender'
+    )
+
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketShare:create', (data) =>
       @delay =>
