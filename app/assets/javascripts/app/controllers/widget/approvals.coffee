@@ -68,6 +68,10 @@ class App.WidgetApprovals extends App.Controller
     @render(@approvals)
 
   renderError: (xhr, status, error) =>
+    # Ignore aborted requests caused by view re-renders/navigation
+    if status is 'abort' or error is 'abort'
+      return
+    
     error_message = 'Unable to load approvals'
     if xhr?.responseJSON?.error
       error_message = xhr.responseJSON.error
