@@ -207,6 +207,9 @@ class App.TicketZoom extends App.Controller
 
     App.Event.trigger('ui::ticket::all::loaded', data)
 
+    # Enforce read-only UI for shared read-only or expired shares
+    @enforceSharePermissionsUI()
+
   meta: =>
 
     # default attributes
@@ -1306,6 +1309,37 @@ class App.TicketZoom extends App.Controller
   hideCopyTicketNumberTooltip: =>
     return if !@tooltipCopied
     @tooltipCopied.tooltip('hide')
+
+  # Disable editing capabilities when user has only read permission or share expired
+  enforceSharePermissionsUI: =>
+    ticket = @ticket
+    current_user = App.User.current()
+    can_edit = false
+    if ticket?.owner_id && String(ticket.owner_id) is String(current_user?.id)
+      can_edit = true
+    else
+      is_expired = false
+      if ticket?.share_expires_at
+        try
+          is_expired = new Date(ticket.share_expires_at) <= new Date()
+        catch
+          is_expired = false
+      share_permissions = ticket?.share_permissions || {}
+      if share_permissions.edit && !is_expired
+        can_edit = true
+
+    if !can_edit
+      # Disable Update and form interactions
+      @$('.js-submit').prop('disabled', true).addClass('is-disabled')
+      @$('.js-reset').prop('disabled', true).addClass('is-disabled')
+      # Disable all interactive controls inside sidebar panels
+      @$('.tabsSidebar .content input, .tabsSidebar .content select, .tabsSidebar .content textarea, .tabsSidebar .content button').prop('disabled', true)
+      # Prevent richtext editing if present
+      @$('.articleNewEdit-body').attr('contenteditable', 'false')
+    else
+      @$('.js-submit').prop('disabled', false).removeClass('is-disabled')
+      @$('.js-reset').prop('disabled', false).removeClass('is-disabled')
+      @$('.tabsSidebar .content input, .tabsSidebar .content select, .tabsSidebar .content textarea, .tabsSidebar .content button').prop('disabled', false)
 
 class TicketZoomRouter extends App.ControllerPermanent
   @requiredPermission: ['ticket.agent', 'ticket.customer']

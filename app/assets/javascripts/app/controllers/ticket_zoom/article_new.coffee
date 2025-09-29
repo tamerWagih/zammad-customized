@@ -234,6 +234,15 @@ class App.TicketZoomArticleNew extends App.Controller
       can_edit:         can_edit
       is_share_expired: is_share_expired
     )
+
+    # Enforce read-only UI if not allowed to comment/edit
+    unless can_comment
+      formEl = @$('.article-add')
+      formEl.addClass('is-disabled')
+      # Disable inputs and contenteditable
+      formEl.find('input, select, textarea, button').prop('disabled', true)
+      @$('.articleNewEdit-body').attr('contenteditable', 'false')
+
     @setArticleTypePre(@type)
     @setArticleTypePost(@type)
 
