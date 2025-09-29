@@ -210,6 +210,9 @@ class App.TicketZoom extends App.Controller
     # Enforce read-only UI for shared read-only or expired shares
     @enforceSharePermissionsUI()
 
+    # Re-apply after any sidebar rerender
+    @controllerBind('ui::ticket::sidebarRerender', => @enforceSharePermissionsUI())
+
   meta: =>
 
     # default attributes
@@ -1329,16 +1332,20 @@ class App.TicketZoom extends App.Controller
         can_edit = true
 
     if !can_edit
-      # Disable Update and form interactions
-      @$('.js-submit').prop('disabled', true).addClass('is-disabled')
-      @$('.js-reset').prop('disabled', true).addClass('is-disabled')
-      # Disable all interactive controls inside sidebar panels
+      # Disable Update and attribute form inputs/buttons
+      @$('.js-submit').prop('disabled', true)
+      @$('.js-reset').prop('disabled', true)
+      @$('.edit input, .edit select, .edit textarea, .edit button').prop('disabled', true)
+      # Disable all interactive controls inside sidebar panels (but allow tab switching)
       @$('.tabsSidebar .content input, .tabsSidebar .content select, .tabsSidebar .content textarea, .tabsSidebar .content button').prop('disabled', true)
+      # Explicitly disable action buttons inside each sidebar tab section
+      @$('.tabsSidebar .content .btn, .tabsSidebar .content .js-approve, .tabsSidebar .content .js-reject, .tabsSidebar .content .js-edit-approval, .tabsSidebar .content .js-delete-approval, .tabsSidebar .content .js-request-approval, .tabsSidebar .content .js-edit-share, .tabsSidebar .content .js-revoke-share, .tabsSidebar .content .js-delete-share, .tabsSidebar .content .js-add-checklist, .tabsSidebar .content .js-add-subscriber').prop('disabled', true)
       # Prevent richtext editing if present
       @$('.articleNewEdit-body').attr('contenteditable', 'false')
     else
-      @$('.js-submit').prop('disabled', false).removeClass('is-disabled')
-      @$('.js-reset').prop('disabled', false).removeClass('is-disabled')
+      @$('.js-submit').prop('disabled', false)
+      @$('.js-reset').prop('disabled', false)
+      @$('.edit input, .edit select, .edit textarea, .edit button').prop('disabled', false)
       @$('.tabsSidebar .content input, .tabsSidebar .content select, .tabsSidebar .content textarea, .tabsSidebar .content button').prop('disabled', false)
 
 class TicketZoomRouter extends App.ControllerPermanent

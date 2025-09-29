@@ -238,8 +238,7 @@ class App.TicketZoomArticleNew extends App.Controller
     # Enforce read-only UI if not allowed to comment/edit
     unless can_comment
       formEl = @$('.article-add')
-      formEl.addClass('is-disabled')
-      # Disable inputs and contenteditable
+      # Disable inputs and contenteditable (no visual overlay)
       formEl.find('input, select, textarea, button').prop('disabled', true)
       @$('.articleNewEdit-body').attr('contenteditable', 'false')
 
