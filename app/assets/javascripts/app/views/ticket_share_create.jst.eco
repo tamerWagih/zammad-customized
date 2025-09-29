@@ -39,14 +39,8 @@
       </div>
       <div class="checkbox">
         <label>
-          <input type="checkbox" name="permissions[]" value="comment">
-          <%- @T('Comment') %>
-        </label>
-      </div>
-      <div class="checkbox">
-        <label>
           <input type="checkbox" name="permissions[]" value="edit">
-          <%- @T('Edit') %>
+          <%- @T('Full access') %>
         </label>
       </div>
     </div>

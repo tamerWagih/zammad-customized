@@ -39,12 +39,9 @@ class App.TicketShareEdit extends App.ControllerModal
           <label class="checkbox-inline">
             <input type="checkbox" name="permissions[]" value="read" #{checked('read')}> #{__('Read')}
           </label>
-          <label class="checkbox-inline">
-            <input type="checkbox" name="permissions[]" value="comment" #{checked('comment')}> #{__('Comment')}
-          </label>
-          <label class="checkbox-inline">
-            <input type="checkbox" name="permissions[]" value="edit" #{checked('edit')}> #{__('Edit')}
-          </label>
+        <label class="checkbox-inline">
+          <input type="checkbox" name="permissions[]" value="edit" #{checked('edit')}> #{__('Full access')}
+        </label>
         </div>
       </div>
 

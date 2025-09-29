@@ -87,10 +87,16 @@ class SidebarShares extends App.Controller
     if @ticket?.owner_id && String(@ticket.owner_id) == String(current_user.id)
       return true
     
-    # TODO: Allow users with edit access to share and request approval later
-    # share_permissions = @ticket?.share_permissions
-    # if share_permissions && share_permissions.edit
-    #   return true
+    # Allow users with full access permission from share, if not expired
+    share_permissions = @ticket?.share_permissions
+    is_expired = false
+    if @ticket?.share_expires_at
+      try
+        is_expired = new Date(@ticket.share_expires_at) <= new Date()
+      catch
+        is_expired = false
+    if share_permissions && share_permissions.edit && !is_expired
+      return true
     
     # Everyone else cannot share or request approval
     return false

@@ -203,38 +203,25 @@ class App.TicketZoomArticleNew extends App.Controller
         is_share_expired = false
     
     # Determine what the user can do based on permissions
-    # TEMPORARILY DISABLED - Allow everyone to comment and edit for now
-    can_comment = true  # Always allow commenting for now
-    can_edit = true     # Always allow editing for now
+    can_comment = false
+    can_edit = false
     
-    # TODO: Uncomment this logic later when share permissions are ready
-    # can_comment = false
-    # can_edit = false
-    # 
-    # # Owner can always comment and edit
-    # if ticket?.owner_id && String(ticket.owner_id) == String(current_user?.id)
-    #   can_comment = true
-    #   can_edit = true
-    # else if is_share_expired
-    #   # Expired share - read-only access
-    #   can_comment = false
-    #   can_edit = false
-    # else if share_permissions.edit
-    #   # Edit permission includes comment and edit
-    #   can_comment = true
-    #   can_edit = true
-    # else if share_permissions.comment
-    #   # Comment permission includes comment only
-    #   can_comment = true
-    #   can_edit = false
-    # else if share_permissions.read
-    #   # Read permission is read-only
-    #   can_comment = false
-    #   can_edit = false
-    # else
-    #   # No share permissions - read-only access
-    #   can_comment = false
-    #   can_edit = false
+    # Owner can always comment and edit
+    if ticket?.owner_id && String(ticket.owner_id) == String(current_user?.id)
+      can_comment = true
+      can_edit = true
+    else if is_share_expired
+      # Expired share - read-only access
+      can_comment = false
+      can_edit = false
+    else if share_permissions.edit
+      # Full access includes comment and edit
+      can_comment = true
+      can_edit = true
+    else if share_permissions.read
+      # Read-only
+      can_comment = false
+      can_edit = false
 
     @html App.view('ticket_zoom/article_new')(
       ticket:           ticket
