@@ -99,6 +99,8 @@ class Ticket < ApplicationModel
   has_many      :articles, -> { reorder(:created_at, :id) }, class_name: 'Ticket::Article', after_add: :cache_update, after_remove: :cache_update, dependent: :destroy, inverse_of: :ticket
   has_many      :ticket_time_accounting, class_name: 'Ticket::TimeAccounting', dependent: :destroy, inverse_of: :ticket
   has_many      :mentions,               as: :mentionable, dependent: :destroy
+  has_many      :approvals,              class_name: 'Ticket::Approval', dependent: :destroy
+  has_many      :shares,                 class_name: 'Ticket::Share', dependent: :destroy
   has_one       :shared_draft,           class_name: 'Ticket::SharedDraftZoom', inverse_of: :ticket, dependent: :destroy
   belongs_to    :state,                  class_name: 'Ticket::State', optional: true
   belongs_to    :priority,               class_name: 'Ticket::Priority', optional: true
@@ -728,5 +730,60 @@ returns a hex color code
     # else set the owner of the ticket to the default user as unassigned
     self.owner_id = 1
     true
+  end
+
+  # Check share permissions for a given user
+  def share_permissions_for(user)
+    return { read: false, comment: false, edit: false } unless user
+    
+    # Check if shares table exists and association is available
+    return { read: false, comment: false, edit: false } unless respond_to?(:shares)
+    
+    begin
+      share = shares.active_current.find_by(shared_with: user)
+      return { read: false, comment: false, edit: false } unless share
+      
+      permissions = share.permissions || []
+      {
+        read: permissions.include?('read'),
+        comment: permissions.include?('comment'),
+        edit: permissions.include?('edit')
+      }
+    rescue StandardError => e
+      Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
+      { read: false, comment: false, edit: false }
+    end
+  end
+
+  # Check if user can share with read permission
+  def can_share_read?(user)
+    share_permissions_for(user)[:read]
+  end
+
+  # Check if user can share with comment permission
+  def can_share_comment?(user)
+    share_permissions_for(user)[:comment]
+  end
+
+  # Check if user can share with edit permission
+  def can_share_edit?(user)
+    share_permissions_for(user)[:edit]
+  end
+
+  # Check if user has any share access
+  def has_share_access?(user)
+    perms = share_permissions_for(user)
+    perms[:read] || perms[:comment] || perms[:edit]
+  end
+
+  # Revoke expired shares
+  def revoke_expired_shares!
+    return unless respond_to?(:shares)
+    
+    begin
+      shares.where('expires_at < ?', Time.current).update_all(status: 'revoked')
+    rescue StandardError => e
+      Rails.logger.warn "Failed to revoke expired shares for ticket #{id}: #{e.message}"
+    end
   end
 end

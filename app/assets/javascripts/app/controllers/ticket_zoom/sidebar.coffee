@@ -65,8 +65,13 @@ class App.TicketZoomSidebar extends App.ControllerObserver
     if @sidebar
       @sidebar.releaseController()
 
-    @sidebar = new App.Sidebar(
-      el:           @$('.tabsSidebar')
-      sidebarState: @sidebarState
-      items:        @sidebarItems
-    )
+    tabsSidebarEl = @$('.tabsSidebar')
+    
+    try
+      @sidebar = new App.Sidebar(
+        el:           tabsSidebarEl
+        sidebarState: @sidebarState
+        items:        @sidebarItems
+      )
+    catch error
+      console.error('Error creating App.Sidebar:', error)

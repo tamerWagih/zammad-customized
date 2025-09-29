@@ -34,9 +34,12 @@ class App.Sidebar extends App.Controller
   render: =>
     itemsLocal = []
     for item in @items
-      itemLocal = item.sidebarItem()
-      if itemLocal
-        itemsLocal.push itemLocal
+      try
+        itemLocal = item.sidebarItem()
+        if itemLocal
+          itemsLocal.push itemLocal
+      catch error
+        console.error('Error calling sidebarItem on', item.constructor.name, ':', error)
 
     # container
     localEl = $(App.view('generic/sidebar_tabs')(
@@ -68,6 +71,7 @@ class App.Sidebar extends App.Controller
 
     @actionsRows ||= {}
     @actionsRows[name]?.releaseController()
+    
     return if _.isEmpty(sidebarActions)
 
     @actionsRows[name] = new SidebarActionRow(
@@ -171,3 +175,13 @@ class SidebarActionRow extends App.Controller
             e.preventDefault()
             item.callback()
         )
+
+    # When there is exactly one action, also bind the primary split button to the same callback
+    if @items?.length is 1
+      mainItem = @items[0]
+      @$('.btn--split--first, .btn.btn--primary').first().off('click').on(
+        'click'
+        (e) =>
+          e.preventDefault()
+          mainItem.callback()
+      )

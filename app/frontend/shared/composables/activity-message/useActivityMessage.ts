@@ -18,6 +18,7 @@ export const useActivityMessage = (
     log.error(`Object missing ${activity.value.objectName}.`)
   }
 
+  
   const message = builder.value?.messageText(
     activity.value.typeName,
     activity.value.createdBy ? userDisplayName(activity.value.createdBy) : '',

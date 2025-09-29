@@ -21,6 +21,8 @@ export const pluginFiles = Object.entries(pluginModules)
   })
   .sort(([, p1], [, p2]) => p1.order - p2.order)
 
+// Plugin files loaded and sorted by order
+
 export const useTicketSidebarPlugins = (screen: TicketSidebarScreenType) => {
   const { hasPermission } = useSessionStore()
 

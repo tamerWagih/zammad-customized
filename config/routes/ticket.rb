@@ -69,4 +69,19 @@ Zammad::Application.routes.draw do
   match api_path + '/ticket_article_plain/:id',                               to: 'ticket_articles#article_plain',                             via: :get
   match api_path + '/ticket_articles/:id/retry_security_process',             to: 'ticket_articles#retry_security_process',                    via: :post
   match api_path + '/ticket_articles/:id/retry_whatsapp_attachment_download', to: 'ticket_articles#retry_whatsapp_attachment_download',        via: :post
+
+  # ticket approvals
+  match api_path + '/tickets/:ticket_id/approvals',                           to: 'ticket_approvals#index',                                   via: :get
+  match api_path + '/tickets/:ticket_id/approvals',                           to: 'ticket_approvals#create',                                  via: :post
+  match api_path + '/tickets/:ticket_id/approvals/:id/approve',               to: 'ticket_approvals#approve',                                 via: :post
+  match api_path + '/tickets/:ticket_id/approvals/:id/reject',                to: 'ticket_approvals#reject',                                  via: :post
+  match api_path + '/tickets/:ticket_id/approvals/:id',                       to: 'ticket_approvals#update',                                  via: :patch
+  match api_path + '/tickets/:ticket_id/approvals/:id',                       to: 'ticket_approvals#destroy',                                 via: :delete
+
+  # ticket shares
+  match api_path + '/tickets/:ticket_id/shares',                              to: 'ticket_shares#index',                                      via: :get
+  match api_path + '/tickets/:ticket_id/shares',                              to: 'ticket_shares#create',                                     via: :post
+  match api_path + '/tickets/:ticket_id/shares/:id/revoke',                   to: 'ticket_shares#revoke',                                     via: :post
+  match api_path + '/tickets/:ticket_id/shares/:id',                          to: 'ticket_shares#update',                                     via: :patch
+  match api_path + '/tickets/:ticket_id/shares/:id',                          to: 'ticket_shares#destroy',                                    via: :delete
 end

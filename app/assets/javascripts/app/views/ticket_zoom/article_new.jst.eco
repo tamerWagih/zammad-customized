@@ -5,7 +5,11 @@
 <% end %>
 </div>
 <% end %>
-<form class="article-add <% if @article.internal: %>is-internal<% else: %>is-public<% end %>" data-type="<%= @article.type %>">
+
+        <% if !@can_comment: %>
+        <!-- Removed blue banner for cleaner disabled state -->
+        <% end %>
+<form class="article-add <% if @article.internal: %>is-internal<% else: %>is-public<% end %> <% if !@can_comment: %>is-disabled<% end %>" data-type="<%= @article.type %>">
   <input type="hidden" name="type" value="<%= @article.type %>">
   <input type="hidden" name="internal" value="<%= @article.internal %>">
   <input type="hidden" name="form_id" value="<%= @form_id %>">
@@ -84,7 +88,7 @@
 
       <div class="textBubble js-writeArea">
         <div class="bubble-arrow"></div>
-        <div class="js-textarea richtext-content articleNewEdit-body" dir="auto" contenteditable="true" data-name="body"><%- @article.body %></div>
+        <div class="js-textarea richtext-content articleNewEdit-body" dir="auto" contenteditable="<% if @can_comment: %>true<% else: %>false<% end %>" data-name="body"><%- @article.body %></div>
         <!-- .textBubble grows with textarea (and expanding clone) -->
         <div class="textBubble-footer js-textSizeLimit">
           <div class="textBubble-signatur"><span class="js-signature"></span></div>
@@ -94,6 +98,7 @@
         <div class="article-attachment">
           <div class="attachmentPlaceholder">
             <span class="attachmentPlaceholder-hint"><%- @T('Enter Note or') %></span>
+            <% if @can_comment: %>
             <span class="attachmentPlaceholder-inputHolder fileUpload">
               <% uid =  _.uniqueId('fileUpload_') %>
               <input multiple="multiple" type="file" name="file" id="<%- uid %>">
@@ -101,6 +106,11 @@
                 <%- @T('select attachment…') %>
               </label>
             </span>
+            <% else: %>
+            <span class="attachmentPlaceholder-inputHolder fileUpload disabled">
+              <%- @T('select attachment…') %>
+            </span>
+            <% end %>
           </div>
           <div class="attachmentUpload hide">
             <div class="horizontal">

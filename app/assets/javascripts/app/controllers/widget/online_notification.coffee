@@ -226,6 +226,7 @@ class App.OnlineNotificationContentWidget extends App.CollectionController
         if !item.seen
           if @container.fetchedData
             item = @prepareForObjectListItem(item)
+            
             if item.objectNative && item.objectNative.activityMessage
               title = item.objectNative.activityMessage(item)
             else
