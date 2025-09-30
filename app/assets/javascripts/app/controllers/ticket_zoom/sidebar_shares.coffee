@@ -44,9 +44,14 @@ class SidebarShares extends App.Controller
     
     # Ensure widget loads data when panel is shown
     @delay =>
-      if @widget && @widget.reload
+      if @widget
         console.log 'Reloading shares widget'
         @widget.reload()
+        # Also trigger ensureDataLoaded after a longer delay
+        @delay =>
+          if @widget && @widget.ensureDataLoaded
+            @widget.ensureDataLoaded()
+        , 500, 'share-ensure-data'
     , 200, 'share-panel-show'
 
   # Standard reload method called by sidebar system

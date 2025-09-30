@@ -143,9 +143,9 @@ class App.TicketZoom extends App.Controller
       newTicketRaw = data.assets.Ticket[@ticket_id]
 
     view       = @ticket?.currentView()
-    readable   = @ticket?.userGroupAccess?('read') || false
-    changeable = @ticket?.userGroupAccess?('change') || false
-    fullable   = @ticket?.userGroupAccess?('full') || false
+    readable   = @ticket?.userGroupAccess?('read') || @ticket?.groupAccess?('read') || false
+    changeable = @ticket?.userGroupAccess?('change') || @ticket?.groupAccess?('change') || false
+    fullable   = @ticket?.userGroupAccess?('full') || @ticket?.groupAccess?('full') || false
     formMeta   = data.form_meta
 
     # on the following states we want to rerender the ticket:
@@ -192,9 +192,9 @@ class App.TicketZoom extends App.Controller
     @ticket         = App.Ticket.fullLocal(@ticket_id)
     @ticket.article = undefined
     @view           = @ticket.currentView()
-    @readable       = @ticket?.userGroupAccess?('read') || false
-    @changeable     = @ticket?.userGroupAccess?('change') || false
-    @fullable       = @ticket?.userGroupAccess?('full') || false
+    @readable       = @ticket?.userGroupAccess?('read') || @ticket?.groupAccess?('read') || false
+    @changeable     = @ticket?.userGroupAccess?('change') || @ticket?.groupAccess?('change') || false
+    @fullable       = @ticket?.userGroupAccess?('full') || @ticket?.groupAccess?('full') || false
     @formMeta       = data.form_meta
 
     # render page
@@ -1380,16 +1380,21 @@ class App.TicketZoom extends App.Controller
       @$('.js-openDropdownMacro').prop('disabled', true)
       @$('.js-submitDropdown .btn--split--last').prop('disabled', true)
       
+      # Disable ticket actions (Create Task, etc.)
+      @$('.ticket-actions .btn').prop('disabled', true)
+
+      # Disable Customer and Organization dropdowns in read-only mode
+      @$('.js-customer').prop('disabled', true)
+      @$('.js-organization').prop('disabled', true)
+
       # Disable most interactive controls inside sidebar panels (but allow tab switching and dropdowns)
       @$('.tabsSidebar .content input, .tabsSidebar .content textarea').prop('disabled', true)
       # Keep dropdowns enabled - don't disable select elements
-      
+
       # Disable specific sidebar tab actions
       # Ticket tab: subscribe button (but keep dropdowns enabled)
       @$('.js-subscribe input[name="subscribe"]').prop('disabled', true)
       @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', true)
-      
-      # Note: Customer and Organization dropdowns are kept enabled as per requirements
       
       # Checklist tab: add empty checklist
       @$('.js-add-empty').prop('disabled', true)
@@ -1411,10 +1416,12 @@ class App.TicketZoom extends App.Controller
       @$('.dropdown--actions .btn').prop('disabled', false)
       @$('.js-openDropdownMacro').prop('disabled', false)
       @$('.js-submitDropdown .btn--split--last').prop('disabled', false)
+      @$('.ticket-actions .btn').prop('disabled', false)
+      @$('.js-customer').prop('disabled', false)
+      @$('.js-organization').prop('disabled', false)
       @$('.tabsSidebar .content input, .tabsSidebar .content textarea').prop('disabled', false)
       @$('.js-subscribe input[name="subscribe"]').prop('disabled', false)
       @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', false)
-      # Customer and Organization dropdowns are always enabled
       @$('.js-add-empty').prop('disabled', false)
       @$('.checklist-item-add-button').prop('disabled', false)
 

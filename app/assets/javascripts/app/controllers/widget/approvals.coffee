@@ -42,19 +42,22 @@ class App.WidgetApprovals extends App.Controller
 
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketApproval:create', (data) =>
-      console.log 'Received TicketApproval:create event', data
+      console.log 'Received TicketApproval:create event for ticket', data?.approval?.ticket_id
+      return unless data?.approval?.ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadApprovals()
       , 500, 'approval-reload'
     )
     @controllerBind('TicketApproval:update', (data) =>
-      console.log 'Received TicketApproval:update event', data
+      console.log 'Received TicketApproval:update event for ticket', data?.approval?.ticket_id
+      return unless data?.approval?.ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadApprovals()
       , 500, 'approval-reload'
     )
     @controllerBind('TicketApproval:destroy', (data) =>
-      console.log 'Received TicketApproval:destroy event', data
+      console.log 'Received TicketApproval:destroy event for ticket', data?.approval?.ticket_id
+      return unless data?.approval?.ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadApprovals()
       , 500, 'approval-reload'
@@ -78,7 +81,7 @@ class App.WidgetApprovals extends App.Controller
 
   loadApprovals: =>
     return if @isLoadingApprovals
-    
+
     console.log 'Loading approvals for ticket:', @ticket_id
     @isLoadingApprovals = true
     @ajax(
@@ -87,7 +90,9 @@ class App.WidgetApprovals extends App.Controller
       url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals"
       processData: true
       success:     @renderApprovals
-      error:       @renderError
+      error:       (xhr, status, error) =>
+        console.error 'Failed to load approvals:', status, error
+        @renderError(xhr, status, error)
       complete:    (xhr, status) =>
         @isLoadingApprovals = false
         console.log 'Approvals load complete, status:', status

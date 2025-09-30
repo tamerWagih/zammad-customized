@@ -27,19 +27,22 @@ class App.WidgetShares extends App.Controller
 
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketShare:create', (data) =>
-      console.log 'Received TicketShare:create event', data
+      console.log 'Received TicketShare:create event for ticket', data?.share?.ticket_id
+      return unless data?.share?.ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadShares()
       , 500, 'share-reload'
     )
     @controllerBind('TicketShare:update', (data) =>
-      console.log 'Received TicketShare:update event', data
+      console.log 'Received TicketShare:update event for ticket', data?.share?.ticket_id
+      return unless data?.share?.ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadShares()
       , 500, 'share-reload'
     )
     @controllerBind('TicketShare:destroy', (data) =>
-      console.log 'Received TicketShare:destroy event', data
+      console.log 'Received TicketShare:destroy event for ticket', data?.share?.ticket_id
+      return unless data?.share?.ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadShares()
       , 500, 'share-reload'
@@ -63,7 +66,7 @@ class App.WidgetShares extends App.Controller
 
   loadShares: =>
     return if @isLoadingShares
-    
+
     console.log 'Loading shares for ticket:', @ticket_id
     @isLoadingShares = true
     @ajax(
@@ -72,7 +75,9 @@ class App.WidgetShares extends App.Controller
       url:         "#{@apiPath}/tickets/#{@ticket_id}/shares"
       processData: true
       success:     @renderShares
-      error:       @renderError
+      error:       (xhr, status, error) =>
+        console.error 'Failed to load shares:', status, error
+        @renderError(xhr, status, error)
       complete:    (xhr, status) =>
         @isLoadingShares = false
         console.log 'Shares load complete, status:', status
