@@ -143,9 +143,9 @@ class App.TicketZoom extends App.Controller
       newTicketRaw = data.assets.Ticket[@ticket_id]
 
     view       = @ticket?.currentView()
-    readable   = @ticket?.userGroupAccess('read')
-    changeable = @ticket?.userGroupAccess('change')
-    fullable   = @ticket?.userGroupAccess('full')
+    readable   = @ticket?.userGroupAccess?('read') || false
+    changeable = @ticket?.userGroupAccess?('change') || false
+    fullable   = @ticket?.userGroupAccess?('full') || false
     formMeta   = data.form_meta
 
     # on the following states we want to rerender the ticket:
@@ -192,9 +192,9 @@ class App.TicketZoom extends App.Controller
     @ticket         = App.Ticket.fullLocal(@ticket_id)
     @ticket.article = undefined
     @view           = @ticket.currentView()
-    @readable       = @ticket.userGroupAccess('read')
-    @changeable     = @ticket.userGroupAccess('change')
-    @fullable       = @ticket.userGroupAccess('full')
+    @readable       = @ticket?.userGroupAccess?('read') || false
+    @changeable     = @ticket?.userGroupAccess?('change') || false
+    @fullable       = @ticket?.userGroupAccess?('full') || false
     @formMeta       = data.form_meta
 
     # render page
@@ -1347,11 +1347,13 @@ class App.TicketZoom extends App.Controller
           console.log 'Share expiry check:', ticket.share_expires_at, 'is_expired:', is_expired
         catch
           is_expired = false
+      
       share_permissions = ticket?.share_permissions || {}
-      console.log 'Share permissions:', share_permissions
+      console.log 'Share permissions object:', share_permissions
+      console.log 'Share permissions type:', typeof share_permissions
       
       # If user is not owner, they can only edit if they have edit permission AND not expired
-      if share_permissions.edit && !is_expired
+      if share_permissions && share_permissions.edit && !is_expired
         can_edit = true
         console.log 'User has edit permission and not expired - can edit'
       else
