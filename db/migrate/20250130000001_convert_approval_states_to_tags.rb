@@ -2,74 +2,78 @@
 
 class ConvertApprovalStatesToTags < ActiveRecord::Migration[7.2]
   def up
-    # First, add tags to tickets that are currently in approved/rejected states
-    execute <<-SQL
-      UPDATE tickets 
-      SET tags = CASE 
-        WHEN state_id = 7 THEN COALESCE(tags, '') || CASE WHEN tags IS NULL OR tags = '' THEN 'approved' ELSE ',approved' END
-        WHEN state_id = 8 THEN COALESCE(tags, '') || CASE WHEN tags IS NULL OR tags = '' THEN 'rejected' ELSE ',rejected' END
-        ELSE tags
-      END
-      WHERE state_id IN (7, 8);
-    SQL
+    # Get IDs for 'approved' (7) and 'rejected' (8) states
+    approved_state_id = 7
+    rejected_state_id = 8
+
+    # Convert existing tickets with 'approved' state to 'approved' tag
+    Ticket.where(state_id: approved_state_id).find_each do |ticket|
+      ticket.tag_add('approved', 1) # Using user ID 1 (system user) for migration
+    end
+
+    # Convert existing tickets with 'rejected' state to 'rejected' tag
+    Ticket.where(state_id: rejected_state_id).find_each do |ticket|
+      ticket.tag_add('rejected', 1) # Using user ID 1 (system user) for migration
+    end
 
     # Update overviews to use tag-based filtering instead of state-based
-    execute <<-SQL
-      UPDATE overviews 
-      SET condition = '{"ticket.tags": {"operator": "contains", "value": "approved"}}'
-      WHERE id = 100 AND name = 'Approved Tickets';
-    SQL
+    # Overview 100: 'Approved Tickets'
+    Overview.where(id: 100, name: 'Approved Tickets').update_all(
+      condition: { 'ticket.tags' => { 'operator' => 'contains', 'value' => 'approved' } }.to_json
+    )
 
-    execute <<-SQL
-      UPDATE overviews 
-      SET condition = '{"ticket.tags": {"operator": "contains", "value": "rejected"}}'
-      WHERE id = 101 AND name = 'Rejected Tickets';
-    SQL
+    # Overview 101: 'Rejected Tickets'
+    Overview.where(id: 101, name: 'Rejected Tickets').update_all(
+      condition: { 'ticket.tags' => { 'operator' => 'contains', 'value' => 'rejected' } }.to_json
+    )
 
-    # Remove the approval/rejection states
-    execute <<-SQL
-      DELETE FROM ticket_states WHERE name IN ('approved', 'rejected');
-    SQL
+    # Remove the 'approved' and 'rejected' ticket states
+    Ticket::State.where(name: ['approved', 'rejected']).destroy_all
   end
 
   def down
     # Recreate the approval/rejection states
-    execute <<-SQL
-      INSERT INTO ticket_states (id, name, state_type_id, ignore_escalation, created_by_id, updated_by_id, created_at, updated_at)
-      VALUES (7, 'approved', 5, true, 1, 1, NOW(), NOW())
-      ON CONFLICT (id) DO NOTHING;
-    SQL
+    Ticket::StateType.find_or_create_by(name: 'closed') do |type|
+      type.created_by_id = 1
+      type.updated_by_id = 1
+    end
     
-    execute <<-SQL
-      INSERT INTO ticket_states (id, name, state_type_id, ignore_escalation, created_by_id, updated_by_id, created_at, updated_at)
-      VALUES (8, 'rejected', 5, true, 1, 1, NOW(), NOW())
-      ON CONFLICT (id) DO NOTHING;
-    SQL
+    state_type = Ticket::StateType.find_by(name: 'closed')
+    
+    Ticket::State.find_or_create_by(name: 'approved') do |state|
+      state.state_type_id = state_type.id
+      state.ignore_escalation = true
+      state.created_by_id = 1
+      state.updated_by_id = 1
+    end
+    
+    Ticket::State.find_or_create_by(name: 'rejected') do |state|
+      state.state_type_id = state_type.id
+      state.ignore_escalation = true
+      state.created_by_id = 1
+      state.updated_by_id = 1
+    end
 
     # Revert overviews to state-based filtering
-    execute <<-SQL
-      UPDATE overviews 
-      SET condition = '{"ticket.state_id": {"operator": "is", "value": [7]}}'
-      WHERE id = 100 AND name = 'Approved Tickets';
-    SQL
+    approved_state = Ticket::State.find_by(name: 'approved')
+    rejected_state = Ticket::State.find_by(name: 'rejected')
 
-    execute <<-SQL
-      UPDATE overviews 
-      SET condition = '{"ticket.state_id": {"operator": "is", "value": [8]}}'
-      WHERE id = 101 AND name = 'Rejected Tickets';
-    SQL
+    if approved_state
+      Overview.where(id: 100, name: 'Approved Tickets').update_all(
+        condition: { 'ticket.state_id' => { 'operator' => 'is', 'value' => [approved_state.id] } }.to_json
+      )
+    end
 
-    # Remove tags and set states back
-    execute <<-SQL
-      UPDATE tickets 
-      SET state_id = 7, tags = TRIM(BOTH ',' FROM REPLACE(REPLACE(tags, ',approved', ''), 'approved', ''))
-      WHERE tags LIKE '%approved%';
-    SQL
+    if rejected_state
+      Overview.where(id: 101, name: 'Rejected Tickets').update_all(
+        condition: { 'ticket.state_id' => { 'operator' => 'is', 'value' => [rejected_state.id] } }.to_json
+      )
+    end
 
-    execute <<-SQL
-      UPDATE tickets 
-      SET state_id = 8, tags = TRIM(BOTH ',' FROM REPLACE(REPLACE(tags, ',rejected', ''), 'rejected', ''))
-      WHERE tags LIKE '%rejected%';
-    SQL
+    # Remove 'approved' and 'rejected' tags from all tickets
+    Ticket.find_each do |ticket|
+      ticket.tag_remove('approved', 1) if ticket.tag_list.include?('approved')
+      ticket.tag_remove('rejected', 1) if ticket.tag_list.include?('rejected')
+    end
   end
 end
