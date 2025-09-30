@@ -5,15 +5,25 @@ class ConvertApprovalStatesToTags < ActiveRecord::Migration[7.2]
     # Get IDs for 'approved' (7) and 'rejected' (8) states
     approved_state_id = 7
     rejected_state_id = 8
+    
+    # Get a default 'closed' state to move tickets to
+    default_closed_state = Ticket::State.find_by(name: 'closed')
+    unless default_closed_state
+      raise 'Cannot find default "closed" state. Migration aborted.'
+    end
 
     # Convert existing tickets with 'approved' state to 'approved' tag
     Ticket.where(state_id: approved_state_id).find_each do |ticket|
       ticket.tag_add('approved', 1) # Using user ID 1 (system user) for migration
+      # Move ticket to 'closed' state before deleting the 'approved' state
+      ticket.update_column(:state_id, default_closed_state.id)
     end
 
     # Convert existing tickets with 'rejected' state to 'rejected' tag
     Ticket.where(state_id: rejected_state_id).find_each do |ticket|
       ticket.tag_add('rejected', 1) # Using user ID 1 (system user) for migration
+      # Move ticket to 'closed' state before deleting the 'rejected' state
+      ticket.update_column(:state_id, default_closed_state.id)
     end
 
     # Update overviews to use tag-based filtering instead of state-based
