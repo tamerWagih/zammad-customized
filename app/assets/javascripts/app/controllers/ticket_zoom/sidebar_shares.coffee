@@ -29,6 +29,12 @@ class SidebarShares extends App.Controller
 
   showPanel: (el) =>
     @elSidebar = el
+    console.log 'Showing shares panel for ticket:', @ticket?.id
+    
+    # Destroy existing widget if any
+    if @widget
+      @widget.destroy?()
+    
     @widget = new App.WidgetShares(
       el:       @elSidebar
       ticket_id: @ticket.id
@@ -39,8 +45,9 @@ class SidebarShares extends App.Controller
     # Ensure widget loads data when panel is shown
     @delay =>
       if @widget && @widget.reload
+        console.log 'Reloading shares widget'
         @widget.reload()
-    , 100, 'share-panel-show'
+    , 200, 'share-panel-show'
 
   # Standard reload method called by sidebar system
   reload: (args) =>

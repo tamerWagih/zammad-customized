@@ -9,7 +9,9 @@ class App.WidgetShares extends App.Controller
     super
     @lastShares = []  # Initialize to prevent undefined errors
     @loadRetryCount = 0
-    @delay (=> @loadShares()), 500, 'share-initial'
+    @isLoadingShares = false
+    @shares = []
+    @delay (=> @loadShares()), 100, 'share-initial'
     @renderActions()
     
     # Also refresh on generic ticket updates/touches
@@ -25,28 +27,44 @@ class App.WidgetShares extends App.Controller
 
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketShare:create', (data) =>
+      console.log 'Received TicketShare:create event', data
       @delay =>
         @loadShares()
       , 500, 'share-reload'
     )
     @controllerBind('TicketShare:update', (data) =>
+      console.log 'Received TicketShare:update event', data
       @delay =>
         @loadShares()
       , 500, 'share-reload'
     )
     @controllerBind('TicketShare:destroy', (data) =>
+      console.log 'Received TicketShare:destroy event', data
       @delay =>
         @loadShares()
       , 500, 'share-reload'
     )
+    
+    # Periodic check to ensure data is loaded (fallback for missed events)
+    @delay =>
+      @ensureDataLoaded()
+    , 2000, 'share-data-check'
 
   # Standard reload method called by sidebar system
   reload: (args) =>
+    console.log 'Shares widget reload called'
     @loadShares()
+    
+  # Fallback mechanism to ensure data loads
+  ensureDataLoaded: =>
+    if !@lastShares || @lastShares.length is 0
+      console.log 'Shares data missing, forcing reload'
+      @loadShares()
 
   loadShares: =>
     return if @isLoadingShares
     
+    console.log 'Loading shares for ticket:', @ticket_id
     @isLoadingShares = true
     @ajax(
       id:          'load_shares'
@@ -57,7 +75,9 @@ class App.WidgetShares extends App.Controller
       error:       @renderError
       complete:    (xhr, status) =>
         @isLoadingShares = false
+        console.log 'Shares load complete, status:', status
         if status is 'abort'
+          console.log 'Shares load aborted, retry count:', @loadRetryCount
           if (@loadRetryCount ? 0) < 3
             @loadRetryCount = (@loadRetryCount ? 0) + 1
             @delay (=> @loadShares()), 200, 'share-retry'

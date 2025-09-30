@@ -29,6 +29,12 @@ class SidebarApprovals extends App.Controller
 
   showPanel: (el) =>
     @elSidebar = el
+    console.log 'Showing approvals panel for ticket:', @ticket?.id
+    
+    # Destroy existing widget if any
+    if @widget
+      @widget.destroy?()
+    
     @widget = new App.WidgetApprovals(
       el:       @elSidebar
       ticket_id: @ticket.id
@@ -42,8 +48,9 @@ class SidebarApprovals extends App.Controller
     # Ensure widget loads data when panel is shown
     @delay =>
       if @widget && @widget.reload
+        console.log 'Reloading approvals widget'
         @widget.reload()
-    , 100, 'approval-panel-show'
+    , 200, 'approval-panel-show'
 
   # Standard reload method called by sidebar system
   reload: (args) =>

@@ -39,7 +39,7 @@ module Ticket::Approval::TriggersSubscriptions
   def trigger_approval_subscription(action)
     # Custom approval subscription event
     # This will trigger frontend listeners for TicketApproval events
-    Sessions.broadcast("TicketApproval:#{action}", { 
+    event_data = { 
       approval: {
         id: id,
         ticket_id: ticket_id,
@@ -51,6 +51,9 @@ module Ticket::Approval::TriggersSubscriptions
         created_at: created_at,
         updated_at: updated_at
       }
-    })
+    }
+    
+    Rails.logger.info "Broadcasting TicketApproval:#{action} event: #{event_data.inspect}"
+    Sessions.broadcast("TicketApproval:#{action}", event_data)
   end
 end
