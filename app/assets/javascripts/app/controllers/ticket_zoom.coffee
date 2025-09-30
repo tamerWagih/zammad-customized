@@ -1348,33 +1348,83 @@ class App.TicketZoom extends App.Controller
           is_expired = false
       share_permissions = ticket?.share_permissions || {}
       console.log 'Share permissions:', share_permissions
+      
+      # User can edit if they have edit permission AND not expired
+      # User is read-only if they have ONLY read permission OR if expired
       if share_permissions.edit && !is_expired
         can_edit = true
         console.log 'User has edit permission and not expired - can edit'
+      else if share_permissions.read && !is_expired
+        can_edit = false
+        console.log 'User has only read permission and not expired - read only'
+      else if is_expired
+        can_edit = false
+        console.log 'Share is expired - read only'
       else
-        console.log 'User does not have edit permission or expired - read only'
+        can_edit = false
+        console.log 'No share permissions or expired - read only'
 
     console.log 'Final can_edit:', can_edit
 
     if !can_edit
       console.log 'Enforcing read-only mode...'
-      # Disable Update and attribute form inputs/buttons
+      
+      # Disable Update button and its dropdown
       @$('.js-submit').prop('disabled', true)
       @$('.js-reset').prop('disabled', true)
+      
+      # Disable attribute bar elements
       @$('.edit input, .edit select, .edit textarea, .edit button').prop('disabled', true)
+      
+      # Disable "Stay on tab" dropdown
+      @$('.js-secondaryAction[data-type="stayOnTab"]').prop('disabled', true)
+      @$('.dropdown--actions .btn').prop('disabled', true)
+      
+      # Disable update button dropdown (drag up)
+      @$('.js-openDropdownMacro').prop('disabled', true)
+      @$('.js-submitDropdown .btn--split--last').prop('disabled', true)
+      
       # Disable all interactive controls inside sidebar panels (but allow tab switching)
       @$('.tabsSidebar .content input, .tabsSidebar .content select, .tabsSidebar .content textarea, .tabsSidebar .content button').prop('disabled', true)
+      
+      # Disable specific sidebar tab actions
+      # Ticket tab: subscribe button
+      @$('.js-subscribe input[name="subscribe"]').prop('disabled', true)
+      @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', true)
+      
+      # Customer tab: dropdown (if exists)
+      @$('.customer .dropdown-toggle').prop('disabled', true)
+      
+      # Organization tab: dropdown (if exists)
+      @$('.organization .dropdown-toggle').prop('disabled', true)
+      
+      # Checklist tab: add empty checklist
+      @$('.js-add-empty').prop('disabled', true)
+      @$('.checklist-item-add-button').prop('disabled', true)
+      
       # Explicitly disable action buttons inside each sidebar tab section
-      @$('.tabsSidebar .content .btn, .tabsSidebar .content .js-approve, .tabsSidebar .content .js-reject, .tabsSidebar .content .js-edit-approval, .tabsSidebar .content .js-delete-approval, .tabsSidebar .content .js-request-approval, .tabsSidebar .content .js-edit-share, .tabsSidebar .content .js-revoke-share, .tabsSidebar .content .js-delete-share, .tabsSidebar .content .js-add-checklist, .tabsSidebar .content .js-add-subscriber').prop('disabled', true)
+      @$('.tabsSidebar .content .btn, .tabsSidebar .content .js-approve, .tabsSidebar .content .js-reject, .tabsSidebar .content .js-edit-approval, .tabsSidebar .content .js-delete-approval, .tabsSidebar .content .js-request-approval, .tabsSidebar .content .js-edit-share, .tabsSidebar .content .js-revoke-share, .tabsSidebar .content .js-delete-share, .tabsSidebar .content .js-add-subscriber').prop('disabled', true)
+      
       # Prevent richtext editing if present
       @$('.articleNewEdit-body').attr('contenteditable', 'false')
+      
       console.log 'Read-only mode enforced'
     else
       console.log 'Enabling edit mode...'
       @$('.js-submit').prop('disabled', false)
       @$('.js-reset').prop('disabled', false)
       @$('.edit input, .edit select, .edit textarea, .edit button').prop('disabled', false)
+      @$('.js-secondaryAction[data-type="stayOnTab"]').prop('disabled', false)
+      @$('.dropdown--actions .btn').prop('disabled', false)
+      @$('.js-openDropdownMacro').prop('disabled', false)
+      @$('.js-submitDropdown .btn--split--last').prop('disabled', false)
       @$('.tabsSidebar .content input, .tabsSidebar .content select, .tabsSidebar .content textarea, .tabsSidebar .content button').prop('disabled', false)
+      @$('.js-subscribe input[name="subscribe"]').prop('disabled', false)
+      @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', false)
+      @$('.customer .dropdown-toggle').prop('disabled', false)
+      @$('.organization .dropdown-toggle').prop('disabled', false)
+      @$('.js-add-empty').prop('disabled', false)
+      @$('.checklist-item-add-button').prop('disabled', false)
 
 class TicketZoomRouter extends App.ControllerPermanent
   @requiredPermission: ['ticket.agent', 'ticket.customer']

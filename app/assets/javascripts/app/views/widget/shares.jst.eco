@@ -21,8 +21,17 @@
         <div class="share-permissions">
           <% if share.permissions and share.permissions.length > 0: %>
             <% for permission in share.permissions: %>
+              <% 
+                display_permission = permission
+                if permission is 'edit'
+                  display_permission = 'Full access'
+                else if permission is 'read'
+                  display_permission = 'Read'
+                else if permission is 'comment'
+                  display_permission = 'Comment'
+              %>
               <span class="label label-primary">
-                <%- @T(permission.charAt(0).toUpperCase() + permission.slice(1)) %>
+                <%- @T(display_permission) %>
               </span>
             <% end %>
           <% else: %>
