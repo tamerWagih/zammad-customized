@@ -19,12 +19,12 @@ class ConvertApprovalStatesToTags < ActiveRecord::Migration[7.2]
     # Update overviews to use tag-based filtering instead of state-based
     # Overview 100: 'Approved Tickets'
     Overview.where(id: 100, name: 'Approved Tickets').update_all(
-      condition: { 'ticket.tags' => { 'operator' => 'contains', 'value' => 'approved' } }.to_json
+      condition: { 'ticket.tags' => { 'operator' => 'contains one', 'value' => 'approved' } }.to_json
     )
 
     # Overview 101: 'Rejected Tickets'
     Overview.where(id: 101, name: 'Rejected Tickets').update_all(
-      condition: { 'ticket.tags' => { 'operator' => 'contains', 'value' => 'rejected' } }.to_json
+      condition: { 'ticket.tags' => { 'operator' => 'contains one', 'value' => 'rejected' } }.to_json
     )
 
     # Remove the 'approved' and 'rejected' ticket states
