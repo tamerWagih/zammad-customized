@@ -1378,8 +1378,9 @@ class App.TicketZoom extends App.Controller
       @$('.js-openDropdownMacro').prop('disabled', true)
       @$('.js-submitDropdown .btn--split--last').prop('disabled', true)
       
-      # Disable all interactive controls inside sidebar panels (but allow tab switching)
-      @$('.tabsSidebar .content input, .tabsSidebar .content select, .tabsSidebar .content textarea, .tabsSidebar .content button').prop('disabled', true)
+      # Disable most interactive controls inside sidebar panels (but allow tab switching and dropdowns)
+      @$('.tabsSidebar .content input, .tabsSidebar .content textarea').prop('disabled', true)
+      # Keep dropdowns enabled - don't disable select elements
       
       # Disable specific sidebar tab actions
       # Ticket tab: subscribe button (but keep dropdowns enabled)
@@ -1408,7 +1409,7 @@ class App.TicketZoom extends App.Controller
       @$('.dropdown--actions .btn').prop('disabled', false)
       @$('.js-openDropdownMacro').prop('disabled', false)
       @$('.js-submitDropdown .btn--split--last').prop('disabled', false)
-      @$('.tabsSidebar .content input, .tabsSidebar .content select, .tabsSidebar .content textarea, .tabsSidebar .content button').prop('disabled', false)
+      @$('.tabsSidebar .content input, .tabsSidebar .content textarea').prop('disabled', false)
       @$('.js-subscribe input[name="subscribe"]').prop('disabled', false)
       @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', false)
       # Customer and Organization dropdowns are always enabled
