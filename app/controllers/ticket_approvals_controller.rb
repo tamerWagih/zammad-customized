@@ -82,11 +82,9 @@ class TicketApprovalsController < ApplicationController
 
     approval.approve!
     
-    # Update ticket state to approved
-    approved_state = Ticket::State.find_by(name: 'approved')
-    if approved_state
-      @ticket.update!(state: approved_state)
-    end
+    # Remove rejected tag if present and add approved tag
+    @ticket.tag_remove('rejected', current_user.id) if @ticket.tag_list.include?('rejected')
+    @ticket.tag_add('approved', current_user.id)
 
     # Notify requester about decision
     begin
@@ -123,11 +121,9 @@ class TicketApprovalsController < ApplicationController
 
     approval.reject!
     
-    # Update ticket state to rejected
-    rejected_state = Ticket::State.find_by(name: 'rejected')
-    if rejected_state
-      @ticket.update!(state: rejected_state)
-    end
+    # Remove approved tag if present and add rejected tag
+    @ticket.tag_remove('approved', current_user.id) if @ticket.tag_list.include?('approved')
+    @ticket.tag_add('rejected', current_user.id)
 
     # Notify requester about decision
     begin
@@ -250,6 +246,13 @@ class TicketApprovalsController < ApplicationController
         approver: approval.approver&.fullname,
         created_at: approval.created_at,
       }
+      
+      # If this was an approved/rejected approval, remove the corresponding tag
+      if approval.status == 'approved'
+        @ticket.tag_remove('approved', current_user.id) if @ticket.tag_list.include?('approved')
+      elsif approval.status == 'rejected'
+        @ticket.tag_remove('rejected', current_user.id) if @ticket.tag_list.include?('rejected')
+      end
       
       approval.destroy!
       
