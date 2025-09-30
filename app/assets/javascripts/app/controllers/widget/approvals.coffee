@@ -69,7 +69,7 @@ class App.WidgetApprovals extends App.Controller
   reload: (args) =>
     console.log 'Approvals widget reload called'
     @loadApprovals()
-    
+
   # Fallback mechanism to ensure data loads
   ensureDataLoaded: =>
     if !@approvals || @approvals.length is 0

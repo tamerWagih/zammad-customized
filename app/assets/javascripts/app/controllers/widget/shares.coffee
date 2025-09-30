@@ -54,7 +54,7 @@ class App.WidgetShares extends App.Controller
   reload: (args) =>
     console.log 'Shares widget reload called'
     @loadShares()
-    
+
   # Fallback mechanism to ensure data loads
   ensureDataLoaded: =>
     if !@lastShares || @lastShares.length is 0
