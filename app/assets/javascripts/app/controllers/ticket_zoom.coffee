@@ -208,10 +208,17 @@ class App.TicketZoom extends App.Controller
     App.Event.trigger('ui::ticket::all::loaded', data)
 
     # Enforce read-only UI for shared read-only or expired shares
-    @enforceSharePermissionsUI()
+    # Add delay to ensure DOM is fully rendered
+    @delay =>
+      @enforceSharePermissionsUI()
+    , 100, 'enforce-share-permissions'
 
     # Re-apply after any sidebar rerender
-    @controllerBind('ui::ticket::sidebarRerender', => @enforceSharePermissionsUI())
+    @controllerBind('ui::ticket::sidebarRerender', => 
+      @delay =>
+        @enforceSharePermissionsUI()
+      , 100, 'enforce-share-permissions-rerender'
+    )
 
   meta: =>
 
@@ -1318,20 +1325,39 @@ class App.TicketZoom extends App.Controller
     ticket = @ticket
     current_user = App.User.current()
     can_edit = false
+    
+    # Debug logging
+    console.log '=== Share Permissions Debug ==='
+    console.log 'Ticket:', ticket
+    console.log 'Current User:', current_user
+    console.log 'Ticket Owner ID:', ticket?.owner_id
+    console.log 'Current User ID:', current_user?.id
+    console.log 'Share Permissions:', ticket?.share_permissions
+    console.log 'Share Expires At:', ticket?.share_expires_at
+    
     if ticket?.owner_id && String(ticket.owner_id) is String(current_user?.id)
       can_edit = true
+      console.log 'User is owner - can edit'
     else
       is_expired = false
       if ticket?.share_expires_at
         try
           is_expired = new Date(ticket.share_expires_at) <= new Date()
+          console.log 'Share expiry check:', ticket.share_expires_at, 'is_expired:', is_expired
         catch
           is_expired = false
       share_permissions = ticket?.share_permissions || {}
+      console.log 'Share permissions:', share_permissions
       if share_permissions.edit && !is_expired
         can_edit = true
+        console.log 'User has edit permission and not expired - can edit'
+      else
+        console.log 'User does not have edit permission or expired - read only'
+
+    console.log 'Final can_edit:', can_edit
 
     if !can_edit
+      console.log 'Enforcing read-only mode...'
       # Disable Update and attribute form inputs/buttons
       @$('.js-submit').prop('disabled', true)
       @$('.js-reset').prop('disabled', true)
@@ -1342,7 +1368,9 @@ class App.TicketZoom extends App.Controller
       @$('.tabsSidebar .content .btn, .tabsSidebar .content .js-approve, .tabsSidebar .content .js-reject, .tabsSidebar .content .js-edit-approval, .tabsSidebar .content .js-delete-approval, .tabsSidebar .content .js-request-approval, .tabsSidebar .content .js-edit-share, .tabsSidebar .content .js-revoke-share, .tabsSidebar .content .js-delete-share, .tabsSidebar .content .js-add-checklist, .tabsSidebar .content .js-add-subscriber').prop('disabled', true)
       # Prevent richtext editing if present
       @$('.articleNewEdit-body').attr('contenteditable', 'false')
+      console.log 'Read-only mode enforced'
     else
+      console.log 'Enabling edit mode...'
       @$('.js-submit').prop('disabled', false)
       @$('.js-reset').prop('disabled', false)
       @$('.edit input, .edit select, .edit textarea, .edit button').prop('disabled', false)
