@@ -18,14 +18,20 @@ class ConvertApprovalStatesToTags < ActiveRecord::Migration[7.2]
 
     # Update overviews to use tag-based filtering instead of state-based
     # Overview 100: 'Approved Tickets'
-    Overview.where(id: 100, name: 'Approved Tickets').update_all(
-      condition: { 'ticket.tags' => { 'operator' => 'contains one', 'value' => 'approved' } }.to_json
-    )
+    approved_overview = Overview.find_by(id: 100, name: 'Approved Tickets')
+    if approved_overview
+      approved_overview.update!(
+        condition: { 'ticket.tags' => { 'operator' => 'contains one', 'value' => 'approved' } }
+      )
+    end
 
     # Overview 101: 'Rejected Tickets'
-    Overview.where(id: 101, name: 'Rejected Tickets').update_all(
-      condition: { 'ticket.tags' => { 'operator' => 'contains one', 'value' => 'rejected' } }.to_json
-    )
+    rejected_overview = Overview.find_by(id: 101, name: 'Rejected Tickets')
+    if rejected_overview
+      rejected_overview.update!(
+        condition: { 'ticket.tags' => { 'operator' => 'contains one', 'value' => 'rejected' } }
+      )
+    end
 
     # Remove the 'approved' and 'rejected' ticket states
     Ticket::State.where(name: ['approved', 'rejected']).destroy_all
@@ -59,15 +65,21 @@ class ConvertApprovalStatesToTags < ActiveRecord::Migration[7.2]
     rejected_state = Ticket::State.find_by(name: 'rejected')
 
     if approved_state
-      Overview.where(id: 100, name: 'Approved Tickets').update_all(
-        condition: { 'ticket.state_id' => { 'operator' => 'is', 'value' => [approved_state.id] } }.to_json
-      )
+      approved_overview = Overview.find_by(id: 100, name: 'Approved Tickets')
+      if approved_overview
+        approved_overview.update!(
+          condition: { 'ticket.state_id' => { 'operator' => 'is', 'value' => [approved_state.id] } }
+        )
+      end
     end
 
     if rejected_state
-      Overview.where(id: 101, name: 'Rejected Tickets').update_all(
-        condition: { 'ticket.state_id' => { 'operator' => 'is', 'value' => [rejected_state.id] } }.to_json
-      )
+      rejected_overview = Overview.find_by(id: 101, name: 'Rejected Tickets')
+      if rejected_overview
+        rejected_overview.update!(
+          condition: { 'ticket.state_id' => { 'operator' => 'is', 'value' => [rejected_state.id] } }
+        )
+      end
     end
 
     # Remove 'approved' and 'rejected' tags from all tickets
