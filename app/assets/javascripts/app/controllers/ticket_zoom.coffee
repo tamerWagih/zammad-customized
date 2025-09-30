@@ -1339,6 +1339,7 @@ class App.TicketZoom extends App.Controller
       can_edit = true
       console.log 'User is owner - can edit'
     else
+      # User is not owner - check share permissions
       is_expired = false
       if ticket?.share_expires_at
         try
@@ -1349,20 +1350,13 @@ class App.TicketZoom extends App.Controller
       share_permissions = ticket?.share_permissions || {}
       console.log 'Share permissions:', share_permissions
       
-      # User can edit if they have edit permission AND not expired
-      # User is read-only if they have ONLY read permission OR if expired
+      # If user is not owner, they can only edit if they have edit permission AND not expired
       if share_permissions.edit && !is_expired
         can_edit = true
         console.log 'User has edit permission and not expired - can edit'
-      else if share_permissions.read && !is_expired
-        can_edit = false
-        console.log 'User has only read permission and not expired - read only'
-      else if is_expired
-        can_edit = false
-        console.log 'Share is expired - read only'
       else
         can_edit = false
-        console.log 'No share permissions or expired - read only'
+        console.log 'User is not owner and does not have edit permission or expired - read only'
 
     console.log 'Final can_edit:', can_edit
 
@@ -1388,15 +1382,11 @@ class App.TicketZoom extends App.Controller
       @$('.tabsSidebar .content input, .tabsSidebar .content select, .tabsSidebar .content textarea, .tabsSidebar .content button').prop('disabled', true)
       
       # Disable specific sidebar tab actions
-      # Ticket tab: subscribe button
+      # Ticket tab: subscribe button (but keep dropdowns enabled)
       @$('.js-subscribe input[name="subscribe"]').prop('disabled', true)
       @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', true)
       
-      # Customer tab: dropdown (if exists)
-      @$('.customer .dropdown-toggle').prop('disabled', true)
-      
-      # Organization tab: dropdown (if exists)
-      @$('.organization .dropdown-toggle').prop('disabled', true)
+      # Note: Customer and Organization dropdowns are kept enabled as per requirements
       
       # Checklist tab: add empty checklist
       @$('.js-add-empty').prop('disabled', true)
@@ -1421,8 +1411,7 @@ class App.TicketZoom extends App.Controller
       @$('.tabsSidebar .content input, .tabsSidebar .content select, .tabsSidebar .content textarea, .tabsSidebar .content button').prop('disabled', false)
       @$('.js-subscribe input[name="subscribe"]').prop('disabled', false)
       @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', false)
-      @$('.customer .dropdown-toggle').prop('disabled', false)
-      @$('.organization .dropdown-toggle').prop('disabled', false)
+      # Customer and Organization dropdowns are always enabled
       @$('.js-add-empty').prop('disabled', false)
       @$('.checklist-item-add-button').prop('disabled', false)
 

@@ -9,7 +9,7 @@ class App.WidgetShares extends App.Controller
     super
     @lastShares = []  # Initialize to prevent undefined errors
     @loadRetryCount = 0
-    @delay (=> @loadShares()), 150, 'share-initial'
+    @delay (=> @loadShares()), 500, 'share-initial'
     @renderActions()
     
     # Also refresh on generic ticket updates/touches

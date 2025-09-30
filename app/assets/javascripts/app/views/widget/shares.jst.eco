@@ -23,7 +23,7 @@
             <% for permission in share.permissions: %>
               <% display_permission = if permission is 'edit' then 'Full access' else if permission is 'read' then 'Read' else if permission is 'comment' then 'Comment' else permission %>
               <span class="label label-primary">
-                <%- @T(display_permission) %>
+                <%- display_permission %>
               </span>
             <% end %>
           <% else: %>

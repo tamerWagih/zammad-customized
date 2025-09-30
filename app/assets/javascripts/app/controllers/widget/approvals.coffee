@@ -9,7 +9,7 @@ class App.WidgetApprovals extends App.Controller
   constructor: ->
     super
     @loadRetryCount = 0
-    @delay (=> @loadApprovals()), 150, 'approval-initial'
+    @delay (=> @loadApprovals()), 500, 'approval-initial'
     @renderActions()
     
     # Listen for ticket updates to refresh approvals

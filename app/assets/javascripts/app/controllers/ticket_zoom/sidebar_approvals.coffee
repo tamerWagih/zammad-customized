@@ -38,6 +38,12 @@ class SidebarApprovals extends App.Controller
     
     # Load approvals data for isReceiver check
     @loadApprovalsForCheck()
+    
+    # Ensure widget loads data when panel is shown
+    @delay =>
+      if @widget && @widget.reload
+        @widget.reload()
+    , 100, 'approval-panel-show'
 
   # Standard reload method called by sidebar system
   reload: (args) =>

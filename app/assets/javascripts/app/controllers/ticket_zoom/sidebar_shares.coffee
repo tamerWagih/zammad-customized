@@ -35,6 +35,12 @@ class SidebarShares extends App.Controller
       parentVC: @
       callback: @refreshShares
     )
+    
+    # Ensure widget loads data when panel is shown
+    @delay =>
+      if @widget && @widget.reload
+        @widget.reload()
+    , 100, 'share-panel-show'
 
   # Standard reload method called by sidebar system
   reload: (args) =>
