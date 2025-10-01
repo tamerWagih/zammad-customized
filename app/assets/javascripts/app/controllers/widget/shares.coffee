@@ -36,7 +36,7 @@ class App.WidgetShares extends App.Controller
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketShare:create', (data) =>
       console.log 'Received TicketShare:create event for ticket', data?.share?.ticket_id
-      ticket_id = data?.share?.ticket_id || data?.ticket_id
+      ticket_id = data?.share?.ticket_id || data?.ticket_id || data?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadShares()
@@ -44,7 +44,7 @@ class App.WidgetShares extends App.Controller
     )
     @controllerBind('TicketShare:update', (data) =>
       console.log 'Received TicketShare:update event for ticket', data?.share?.ticket_id
-      ticket_id = data?.share?.ticket_id || data?.ticket_id
+      ticket_id = data?.share?.ticket_id || data?.ticket_id || data?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadShares()
@@ -52,7 +52,7 @@ class App.WidgetShares extends App.Controller
     )
     @controllerBind('TicketShare:destroy', (data) =>
       console.log 'Received TicketShare:destroy event for ticket', data?.share?.ticket_id
-      ticket_id = data?.share?.ticket_id || data?.ticket_id
+      ticket_id = data?.share?.ticket_id || data?.ticket_id || data?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadShares()

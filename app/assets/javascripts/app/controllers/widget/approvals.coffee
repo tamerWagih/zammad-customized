@@ -51,7 +51,8 @@ class App.WidgetApprovals extends App.Controller
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketApproval:create', (data) =>
       console.log 'Received TicketApproval:create event:', data
-      ticket_id = data?.approval?.ticket_id || data?.ticket_id
+      ticket_id = data?.approval?.ticket_id || data?.ticket_id || data?.id
+      console.log 'Extracted ticket_id:', ticket_id, 'widget ticket_id:', @ticket_id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadApprovals()
@@ -59,7 +60,7 @@ class App.WidgetApprovals extends App.Controller
     )
     @controllerBind('TicketApproval:update', (data) =>
       console.log 'Received TicketApproval:update event:', data
-      ticket_id = data?.approval?.ticket_id || data?.ticket_id
+      ticket_id = data?.approval?.ticket_id || data?.ticket_id || data?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadApprovals()
@@ -67,7 +68,7 @@ class App.WidgetApprovals extends App.Controller
     )
     @controllerBind('TicketApproval:destroy', (data) =>
       console.log 'Received TicketApproval:destroy event:', data
-      ticket_id = data?.approval?.ticket_id || data?.ticket_id
+      ticket_id = data?.approval?.ticket_id || data?.ticket_id || data?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadApprovals()

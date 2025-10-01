@@ -95,7 +95,7 @@ class SidebarApprovals extends App.Controller
     if @last_can_share isnt current_can_share
       @last_can_share = current_can_share
       # Trigger sidebar re-render to update actions
-      App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: @taskKey })
+      App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: @taskKey || @parentVC?.taskKey })
 
   refreshApprovals: =>
     if @elSidebar
