@@ -63,7 +63,8 @@ class App.TicketZoom extends App.Controller
 
     # listen to rerender sidebars
     @controllerBind('ui::ticket::sidebarRerender', (data) =>
-      return if data.taskKey isnt @taskKey
+      # Only filter by taskKey if it is provided in the event payload
+      return if data?.taskKey? and data.taskKey isnt @taskKey
       return if !@sidebarWidget
       @sidebarWidget.render(@formCurrent())
     )
@@ -1459,9 +1460,9 @@ class App.TicketZoom extends App.Controller
       # Disable ticket actions (Create Task, etc.)
       @$('.ticket-actions .btn').prop('disabled', true)
 
-      # Disable Customer and Organization dropdowns in read-only mode
-      @$('.js-customer').prop('disabled', true)
-      @$('.js-organization').prop('disabled', true)
+      # Keep Customer and Organization dropdowns enabled per requirements
+      @$('.js-customer').prop('disabled', false)
+      @$('.js-organization').prop('disabled', false)
 
       # Disable most interactive controls inside sidebar panels (but allow tab switching and dropdowns)
       @$('.tabsSidebar .content input, .tabsSidebar .content textarea').prop('disabled', true)

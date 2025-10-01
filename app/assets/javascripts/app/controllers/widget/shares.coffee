@@ -16,7 +16,7 @@ class App.WidgetShares extends App.Controller
     if @ticket_id
       @ticket = App.Ticket.fullLocal(@ticket_id)
 
-    @delay (=> @loadShares()), 100, 'share-initial'
+    @delay (=> @loadShares()), 500, 'share-initial'
     @renderActions()
     
     # Also refresh on generic ticket updates/touches

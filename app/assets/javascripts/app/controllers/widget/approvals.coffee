@@ -16,7 +16,7 @@ class App.WidgetApprovals extends App.Controller
     if @ticket_id
       @ticket = App.Ticket.fullLocal(@ticket_id)
 
-    @delay (=> @loadApprovals()), 100, 'approval-initial'
+    @delay (=> @loadApprovals()), 500, 'approval-initial'
     @renderActions()
     
     # Listen for ticket updates to refresh approvals
