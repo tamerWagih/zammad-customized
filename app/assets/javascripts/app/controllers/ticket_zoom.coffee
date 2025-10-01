@@ -214,10 +214,45 @@ class App.TicketZoom extends App.Controller
     , 100, 'enforce-share-permissions'
 
     # Re-apply after any sidebar rerender
-    @controllerBind('ui::ticket::sidebarRerender', => 
+    @controllerBind('ui::ticket::sidebarRerender', =>
       @delay =>
         @enforceSharePermissionsUI()
       , 100, 'enforce-share-permissions-rerender'
+    )
+
+    # Listen for real-time approval/share changes to update UI permissions
+    @controllerBind('TicketApproval:create TicketApproval:update TicketApproval:destroy', (data) =>
+      return unless data?.approval?.ticket_id?.toString() is @ticket_id?.toString()
+      console.log 'Approval changed, re-enforcing share permissions'
+      # Refresh ticket object with latest share permissions from server
+      @ajax(
+        id:    'ticket-share-refresh'
+        type:  'GET'
+        url:   "#{@apiPath}/tickets/#{@ticket_id}"
+        success: (ticketData) =>
+          # Update ticket object with fresh data
+          @ticket = new App.Ticket(ticketData)
+          @enforceSharePermissionsUI()
+        error: =>
+          console.error 'Failed to refresh ticket data for permissions'
+      )
+    )
+
+    @controllerBind('TicketShare:create TicketShare:update TicketShare:destroy', (data) =>
+      return unless data?.share?.ticket_id?.toString() is @ticket_id?.toString()
+      console.log 'Share changed, re-enforcing share permissions'
+      # Refresh ticket object with latest share permissions from server
+      @ajax(
+        id:    'ticket-share-refresh'
+        type:  'GET'
+        url:   "#{@apiPath}/tickets/#{@ticket_id}"
+        success: (ticketData) =>
+          # Update ticket object with fresh data
+          @ticket = new App.Ticket(ticketData)
+          @enforceSharePermissionsUI()
+        error: =>
+          console.error 'Failed to refresh ticket data for permissions'
+      )
     )
 
   meta: =>
