@@ -33,14 +33,14 @@
     <div class="col-sm-9">
       <div class="checkbox">
         <label>
-          <input type="checkbox" name="permissions[]" value="read" checked>
-          <%- @T('Read') %>
+          <input type="checkbox" name="permissions[]" value="edit" checked>
+          <%- @T('Full access') %>
         </label>
       </div>
       <div class="checkbox">
         <label>
-          <input type="checkbox" name="permissions[]" value="edit">
-          <%- @T('Full access') %>
+          <input type="checkbox" name="permissions[]" value="read">
+          <%- @T('Read') %>
         </label>
       </div>
     </div>
