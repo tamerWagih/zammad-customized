@@ -30,11 +30,15 @@ class SidebarApprovals extends App.Controller
   showPanel: (el) =>
     @elSidebar = el
     console.log 'Showing approvals panel for ticket:', @ticket?.id
-    
+
+    # Ensure ticket object is properly loaded
+    if @ticket_id && !@ticket
+      @ticket = App.Ticket.fullLocal(@ticket_id)
+
     # Destroy existing widget if any
     if @widget
       @widget.destroy?()
-    
+
     @widget = new App.WidgetApprovals(
       el:       @elSidebar
       ticket_id: @ticket.id

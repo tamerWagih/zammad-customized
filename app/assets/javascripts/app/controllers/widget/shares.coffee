@@ -11,12 +11,20 @@ class App.WidgetShares extends App.Controller
     @loadRetryCount = 0
     @isLoadingShares = false
     @shares = []
+
+    # Load ticket object for userGroupAccess method
+    if @ticket_id
+      @ticket = App.Ticket.fullLocal(@ticket_id)
+
     @delay (=> @loadShares()), 100, 'share-initial'
     @renderActions()
     
     # Also refresh on generic ticket updates/touches
     @controllerBind('Ticket:update Ticket:touch', (data) =>
       return if String(data.id) isnt String(@ticket_id)
+      # Refresh ticket object for updated permissions
+      if @ticket_id
+        @ticket = App.Ticket.fullLocal(@ticket_id)
       @delay (=> @loadShares()), 400, 'share-reload-ticket'
     )
     

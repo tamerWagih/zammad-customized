@@ -30,11 +30,15 @@ class SidebarShares extends App.Controller
   showPanel: (el) =>
     @elSidebar = el
     console.log 'Showing shares panel for ticket:', @ticket?.id
-    
+
+    # Ensure ticket object is properly loaded
+    if @ticket_id && !@ticket
+      @ticket = App.Ticket.fullLocal(@ticket_id)
+
     # Destroy existing widget if any
     if @widget
       @widget.destroy?()
-    
+
     @widget = new App.WidgetShares(
       el:       @elSidebar
       ticket_id: @ticket.id

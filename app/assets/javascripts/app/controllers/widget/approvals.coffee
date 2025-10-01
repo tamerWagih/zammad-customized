@@ -11,12 +11,20 @@ class App.WidgetApprovals extends App.Controller
     @loadRetryCount = 0
     @isLoadingApprovals = false
     @approvals = []
+
+    # Load ticket object for userGroupAccess method
+    if @ticket_id
+      @ticket = App.Ticket.fullLocal(@ticket_id)
+
     @delay (=> @loadApprovals()), 100, 'approval-initial'
     @renderActions()
     
     # Listen for ticket updates to refresh approvals
     @controllerBind('Ticket:update Ticket:touch', (data) =>
       return if data.id.toString() isnt @ticket_id.toString()
+      # Refresh ticket object for updated permissions
+      if @ticket_id
+        @ticket = App.Ticket.fullLocal(@ticket_id)
       @delay =>
         @loadApprovals()
       , 500, 'approval-reload'
