@@ -53,7 +53,6 @@ module Ticket::Share::TriggersSubscriptions
       }
     }
     
-    Rails.logger.info "Broadcasting TicketShare:#{action} event: #{event_data.inspect}"
     Sessions.broadcast("TicketShare:#{action}", event_data)
   end
 end

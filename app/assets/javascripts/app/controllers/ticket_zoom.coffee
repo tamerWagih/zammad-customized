@@ -230,7 +230,6 @@ class App.TicketZoom extends App.Controller
     @controllerBind('TicketApproval:create TicketApproval:update TicketApproval:destroy', (data) =>
       ticket_id = data?.approval?.ticket_id || data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
-      console.log 'Approval changed, re-enforcing share permissions'
       # Refresh ticket object with latest share permissions from server
       @ajax(
         id:    'ticket-share-refresh'
@@ -250,7 +249,6 @@ class App.TicketZoom extends App.Controller
     @controllerBind('TicketShare:create TicketShare:update TicketShare:destroy', (data) =>
       ticket_id = data?.share?.ticket_id || data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
-      console.log 'Share changed, re-enforcing share permissions'
       # Refresh ticket object with latest share permissions from server
       @ajax(
         id:    'ticket-share-refresh'
@@ -270,7 +268,6 @@ class App.TicketZoom extends App.Controller
     # Listen for general ticket actions that might affect permissions
     @controllerBind('ui::ticket::articleNew::change', (data) =>
       return unless data?.ticket_id?.toString() is @ticket_id?.toString()
-      console.log 'Article created/updated, refreshing permissions and sidebar'
       # Refresh ticket object and re-enforce permissions
       @ajax(
         id:    'ticket-article-refresh'
@@ -290,7 +287,6 @@ class App.TicketZoom extends App.Controller
     @controllerBind('Ticket:article:create Ticket:article:update', (data) =>
       ticket_id = data?.ticket_id || data?.article?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
-      console.log 'Ticket article action, triggering sidebar rerender'
       # Trigger sidebar rerender for approval/share widgets
       @delay =>
         App.Event.trigger('ui::ticket::sidebarRerender')
@@ -1403,44 +1399,31 @@ class App.TicketZoom extends App.Controller
     current_user = App.User.current()
     can_edit = false
     
-    # Debug logging
-    console.log '=== Share Permissions Debug ==='
-    console.log 'Ticket:', ticket
-    console.log 'Current User:', current_user
-    console.log 'Ticket Owner ID:', ticket?.owner_id
-    console.log 'Current User ID:', current_user?.id
-    console.log 'Share Permissions:', ticket?.share_permissions
-    console.log 'Share Expires At:', ticket?.share_expires_at
+    #
     
     if ticket?.owner_id && String(ticket.owner_id) is String(current_user?.id)
       can_edit = true
-      console.log 'User is owner - can edit'
     else
       # User is not owner - check share permissions
       is_expired = false
       if ticket?.share_expires_at
         try
           is_expired = new Date(ticket.share_expires_at) <= new Date()
-          console.log 'Share expiry check:', ticket.share_expires_at, 'is_expired:', is_expired
         catch
           is_expired = false
       
       share_permissions = ticket?.share_permissions || {}
-      console.log 'Share permissions object:', share_permissions
-      console.log 'Share permissions type:', typeof share_permissions
+      
       
       # If user is not owner, they can only edit if they have edit permission AND not expired
       if share_permissions && share_permissions.edit && !is_expired
         can_edit = true
-        console.log 'User has edit permission and not expired - can edit'
       else
         can_edit = false
-        console.log 'User is not owner and does not have edit permission or expired - read only'
-
-    console.log 'Final can_edit:', can_edit
+    
 
     if !can_edit
-      console.log 'Enforcing read-only mode...'
+      
       
       # Disable Update button and its dropdown
       @$('.js-submit').prop('disabled', true)
@@ -1483,9 +1466,7 @@ class App.TicketZoom extends App.Controller
       # Prevent richtext editing if present
       @$('.articleNewEdit-body').attr('contenteditable', 'false')
       
-      console.log 'Read-only mode enforced'
     else
-      console.log 'Enabling edit mode...'
       @$('.js-submit').prop('disabled', false)
       @$('.js-reset').prop('disabled', false)
       @$('.edit input, .edit select, .edit textarea, .edit button').prop('disabled', false)

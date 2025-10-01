@@ -35,7 +35,6 @@ class App.WidgetShares extends App.Controller
 
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketShare:create', (data) =>
-      console.log 'Received TicketShare:create event for ticket', data?.share?.ticket_id
       ticket_id = data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
@@ -43,7 +42,6 @@ class App.WidgetShares extends App.Controller
       , 500, 'share-reload'
     )
     @controllerBind('TicketShare:update', (data) =>
-      console.log 'Received TicketShare:update event for ticket', data?.share?.ticket_id
       ticket_id = data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
@@ -51,7 +49,6 @@ class App.WidgetShares extends App.Controller
       , 500, 'share-reload'
     )
     @controllerBind('TicketShare:destroy', (data) =>
-      console.log 'Received TicketShare:destroy event for ticket', data?.share?.ticket_id
       ticket_id = data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
@@ -66,19 +63,16 @@ class App.WidgetShares extends App.Controller
 
   # Standard reload method called by sidebar system
   reload: (args) =>
-    console.log 'Shares widget reload called'
     @loadShares()
 
   # Fallback mechanism to ensure data loads
   ensureDataLoaded: =>
     if !@lastShares || @lastShares.length is 0
-      console.log 'Shares data missing, forcing reload'
       @loadShares()
 
   loadShares: =>
     return if @isLoadingShares
 
-    console.log 'Loading shares for ticket:', @ticket_id
     @isLoadingShares = true
 
     # First ensure we have a proper ticket object with share permissions
@@ -111,9 +105,7 @@ class App.WidgetShares extends App.Controller
         @renderError(xhr, status, error)
       complete:    (xhr, status) =>
         @isLoadingShares = false
-        console.log 'Shares load complete, status:', status
         if status is 'abort'
-          console.log 'Shares load aborted, retry count:', @loadRetryCount
           if (@loadRetryCount ? 0) < 3
             @loadRetryCount = (@loadRetryCount ? 0) + 1
             @delay (=> @loadShares()), 500, 'share-retry'

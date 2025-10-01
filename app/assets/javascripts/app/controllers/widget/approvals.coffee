@@ -50,17 +50,14 @@ class App.WidgetApprovals extends App.Controller
 
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketApproval:create', (data) =>
-      console.log 'Received TicketApproval:create event:', data
       # Handle multiple possible event data structures
       ticket_id = data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
-      console.log 'Extracted ticket_id:', ticket_id, 'widget ticket_id:', @ticket_id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadApprovals()
       , 500, 'approval-reload'
     )
     @controllerBind('TicketApproval:update', (data) =>
-      console.log 'Received TicketApproval:update event:', data
       ticket_id = data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
@@ -68,7 +65,6 @@ class App.WidgetApprovals extends App.Controller
       , 500, 'approval-reload'
     )
     @controllerBind('TicketApproval:destroy', (data) =>
-      console.log 'Received TicketApproval:destroy event:', data
       ticket_id = data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
@@ -83,19 +79,16 @@ class App.WidgetApprovals extends App.Controller
 
   # Standard reload method called by sidebar system
   reload: (args) =>
-    console.log 'Approvals widget reload called'
     @loadApprovals()
 
   # Fallback mechanism to ensure data loads
   ensureDataLoaded: =>
     if !@approvals || @approvals.length is 0
-      console.log 'Approvals data missing, forcing reload'
       @loadApprovals()
 
   loadApprovals: =>
     return if @isLoadingApprovals
 
-    console.log 'Loading approvals for ticket:', @ticket_id
     @isLoadingApprovals = true
 
     # First ensure we have a proper ticket object with share permissions
@@ -128,9 +121,7 @@ class App.WidgetApprovals extends App.Controller
         @renderError(xhr, status, error)
       complete:    (xhr, status) =>
         @isLoadingApprovals = false
-        console.log 'Approvals load complete, status:', status
         if status is 'abort'
-          console.log 'Approvals load aborted, retry count:', @loadRetryCount
           if (@loadRetryCount ? 0) < 3
             @loadRetryCount = (@loadRetryCount ? 0) + 1
             @delay (=> @loadApprovals()), 500, 'approval-retry'

@@ -29,7 +29,6 @@ class SidebarApprovals extends App.Controller
 
   showPanel: (el) =>
     @elSidebar = el
-    console.log 'Showing approvals panel for ticket:', @ticket?.id
 
     # Ensure ticket object is properly loaded with share permissions
     if @ticket_id
@@ -70,7 +69,6 @@ class SidebarApprovals extends App.Controller
     # Ensure widget loads data when panel is shown
     @delay =>
       if @widget
-        console.log 'Reloading approvals widget'
         @widget.reload()
         # Also trigger ensureDataLoaded after a longer delay
         @delay =>

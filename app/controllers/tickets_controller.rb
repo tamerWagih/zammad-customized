@@ -88,26 +88,18 @@ class TicketsController < ApplicationController
     # Add share_permissions and share_expires_at to the ticket JSON (with error handling)
     ticket_json = ticket.as_json
     begin
-      Rails.logger.info "Getting share permissions for ticket #{ticket.id}, user #{current_user&.id}"
-      
       # Check all shares for this ticket
       if ticket.respond_to?(:shares)
-        Rails.logger.info "Ticket responds to shares method"
         if current_user
           user_share = ticket.shares.active_current.find_by(shared_with: current_user)
-          Rails.logger.info "User share found: #{user_share.inspect}"
           ticket_json[:share_expires_at] = user_share&.expires_at
         end
-      else
-        Rails.logger.info "Ticket does not respond to shares method"
       end
       
       if ticket.respond_to?(:share_permissions_for)
         share_perms = ticket.share_permissions_for(current_user)
-        Rails.logger.info "Share permissions result: #{share_perms.inspect}"
         ticket_json[:share_permissions] = share_perms
       else
-        Rails.logger.info "Ticket does not respond to share_permissions_for method"
         ticket_json[:share_permissions] = { read: false, comment: false, edit: false }
       end
       

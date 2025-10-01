@@ -53,7 +53,6 @@ module Ticket::Approval::TriggersSubscriptions
       }
     }
     
-    Rails.logger.info "Broadcasting TicketApproval:#{action} event: #{event_data.inspect}"
     Sessions.broadcast("TicketApproval:#{action}", event_data)
   end
 end
