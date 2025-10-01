@@ -213,6 +213,11 @@ class App.TicketZoom extends App.Controller
       @enforceSharePermissionsUI()
     , 100, 'enforce-share-permissions'
 
+    # Also trigger sidebar rerender to update approval/share widgets
+    @delay =>
+      App.Event.trigger('ui::ticket::sidebarRerender')
+    , 200, 'trigger-sidebar-rerender'
+
     # Re-apply after any sidebar rerender
     @controllerBind('ui::ticket::sidebarRerender', =>
       @delay =>
@@ -233,6 +238,8 @@ class App.TicketZoom extends App.Controller
           # Update ticket object with fresh data
           @ticket = new App.Ticket(ticketData)
           @enforceSharePermissionsUI()
+          # Trigger sidebar rerender for approval/share widgets
+          App.Event.trigger('ui::ticket::sidebarRerender')
         error: =>
           console.error 'Failed to refresh ticket data for permissions'
       )
@@ -250,9 +257,40 @@ class App.TicketZoom extends App.Controller
           # Update ticket object with fresh data
           @ticket = new App.Ticket(ticketData)
           @enforceSharePermissionsUI()
+          # Trigger sidebar rerender for approval/share widgets
+          App.Event.trigger('ui::ticket::sidebarRerender')
         error: =>
           console.error 'Failed to refresh ticket data for permissions'
       )
+    )
+
+    # Listen for general ticket actions that might affect permissions
+    @controllerBind('ui::ticket::articleNew::change', (data) =>
+      return unless data?.ticket_id?.toString() is @ticket_id?.toString()
+      console.log 'Article created/updated, refreshing permissions and sidebar'
+      # Refresh ticket object and re-enforce permissions
+      @ajax(
+        id:    'ticket-article-refresh'
+        type:  'GET'
+        url:   "#{@apiPath}/tickets/#{@ticket_id}"
+        success: (ticketData) =>
+          @ticket = new App.Ticket(ticketData)
+          @enforceSharePermissionsUI()
+          # Trigger sidebar rerender
+          App.Event.trigger('ui::ticket::sidebarRerender')
+        error: =>
+          console.error 'Failed to refresh ticket data after article change'
+      )
+    )
+
+    # Listen for general ticket updates that might require sidebar refresh
+    @controllerBind('Ticket:article:create Ticket:article:update', (data) =>
+      return unless data?.ticket_id?.toString() is @ticket_id?.toString()
+      console.log 'Ticket article action, triggering sidebar rerender'
+      # Trigger sidebar rerender for approval/share widgets
+      @delay =>
+        App.Event.trigger('ui::ticket::sidebarRerender')
+      , 300, 'sidebar-rerender-article-action'
     )
 
   meta: =>
