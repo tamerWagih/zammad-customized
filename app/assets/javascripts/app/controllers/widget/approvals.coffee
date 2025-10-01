@@ -50,22 +50,25 @@ class App.WidgetApprovals extends App.Controller
 
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketApproval:create', (data) =>
-      console.log 'Received TicketApproval:create event for ticket', data?.approval?.ticket_id
-      return unless data?.approval?.ticket_id?.toString() is @ticket_id?.toString()
+      console.log 'Received TicketApproval:create event:', data
+      ticket_id = data?.approval?.ticket_id || data?.ticket_id
+      return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadApprovals()
       , 500, 'approval-reload'
     )
     @controllerBind('TicketApproval:update', (data) =>
-      console.log 'Received TicketApproval:update event for ticket', data?.approval?.ticket_id
-      return unless data?.approval?.ticket_id?.toString() is @ticket_id?.toString()
+      console.log 'Received TicketApproval:update event:', data
+      ticket_id = data?.approval?.ticket_id || data?.ticket_id
+      return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadApprovals()
       , 500, 'approval-reload'
     )
     @controllerBind('TicketApproval:destroy', (data) =>
-      console.log 'Received TicketApproval:destroy event for ticket', data?.approval?.ticket_id
-      return unless data?.approval?.ticket_id?.toString() is @ticket_id?.toString()
+      console.log 'Received TicketApproval:destroy event:', data
+      ticket_id = data?.approval?.ticket_id || data?.ticket_id
+      return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadApprovals()
       , 500, 'approval-reload'
@@ -92,6 +95,24 @@ class App.WidgetApprovals extends App.Controller
 
     console.log 'Loading approvals for ticket:', @ticket_id
     @isLoadingApprovals = true
+
+    # First ensure we have a proper ticket object with share permissions
+    if !@ticket || !@ticket.share_permissions
+      @ajax(
+        id:    'load_ticket_for_permissions'
+        type:  'GET'
+        url:   "#{@apiPath}/tickets/#{@ticket_id}"
+        success: (ticketData) =>
+          @ticket = new App.Ticket(ticketData)
+          @loadApprovalsFromAPI()
+        error: (xhr, status, error) =>
+          console.error 'Failed to load ticket for permissions:', status, error
+          @isLoadingApprovals = false
+      )
+    else
+      @loadApprovalsFromAPI()
+
+  loadApprovalsFromAPI: =>
     @ajax(
       id:          'load_approvals'
       type:        'GET'
@@ -108,8 +129,8 @@ class App.WidgetApprovals extends App.Controller
           console.log 'Approvals load aborted, retry count:', @loadRetryCount
           if (@loadRetryCount ? 0) < 3
             @loadRetryCount = (@loadRetryCount ? 0) + 1
-            @delay (=> @loadApprovals()), 200, 'approval-retry'
-    )
+            @delay (=> @loadApprovals()), 500, 'approval-retry'
+
 
   renderApprovals: (data, status, xhr) =>
     @approvals = data?.approvals || []

@@ -31,17 +31,35 @@ class SidebarShares extends App.Controller
     @elSidebar = el
     console.log 'Showing shares panel for ticket:', @ticket?.id
 
-    # Ensure ticket object is properly loaded
-    if @ticket_id && !@ticket
+    # Ensure ticket object is properly loaded with share permissions
+    if @ticket_id
       @ticket = App.Ticket.fullLocal(@ticket_id)
+      # If local cache doesn't have share permissions, fetch from server
+      if !@ticket?.share_permissions
+        @ajax(
+          id:    'load_ticket_for_sidebar'
+          type:  'GET'
+          url:   "#{@apiPath}/tickets/#{@ticket_id}"
+          success: (ticketData) =>
+            @ticket = new App.Ticket(ticketData)
+            @createSharesWidget()
+          error: (xhr, status, error) =>
+            console.error 'Failed to load ticket for sidebar:', status, error
+            @createSharesWidget()
+        )
+      else
+        @createSharesWidget()
+    else
+      @createSharesWidget()
 
+  createSharesWidget: =>
     # Destroy existing widget if any
     if @widget
       @widget.destroy?()
 
     @widget = new App.WidgetShares(
       el:       @elSidebar
-      ticket_id: @ticket.id
+      ticket_id: @ticket?.id || @ticket_id
       parentVC: @
       callback: @refreshShares
     )

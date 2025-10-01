@@ -36,21 +36,24 @@ class App.WidgetShares extends App.Controller
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketShare:create', (data) =>
       console.log 'Received TicketShare:create event for ticket', data?.share?.ticket_id
-      return unless data?.share?.ticket_id?.toString() is @ticket_id?.toString()
+      ticket_id = data?.share?.ticket_id || data?.ticket_id
+      return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadShares()
       , 500, 'share-reload'
     )
     @controllerBind('TicketShare:update', (data) =>
       console.log 'Received TicketShare:update event for ticket', data?.share?.ticket_id
-      return unless data?.share?.ticket_id?.toString() is @ticket_id?.toString()
+      ticket_id = data?.share?.ticket_id || data?.ticket_id
+      return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadShares()
       , 500, 'share-reload'
     )
     @controllerBind('TicketShare:destroy', (data) =>
       console.log 'Received TicketShare:destroy event for ticket', data?.share?.ticket_id
-      return unless data?.share?.ticket_id?.toString() is @ticket_id?.toString()
+      ticket_id = data?.share?.ticket_id || data?.ticket_id
+      return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
         @loadShares()
       , 500, 'share-reload'
@@ -77,6 +80,24 @@ class App.WidgetShares extends App.Controller
 
     console.log 'Loading shares for ticket:', @ticket_id
     @isLoadingShares = true
+
+    # First ensure we have a proper ticket object with share permissions
+    if !@ticket || !@ticket.share_permissions
+      @ajax(
+        id:    'load_ticket_for_permissions'
+        type:  'GET'
+        url:   "#{@apiPath}/tickets/#{@ticket_id}"
+        success: (ticketData) =>
+          @ticket = new App.Ticket(ticketData)
+          @loadSharesFromAPI()
+        error: (xhr, status, error) =>
+          console.error 'Failed to load ticket for permissions:', status, error
+          @isLoadingShares = false
+      )
+    else
+      @loadSharesFromAPI()
+
+  loadSharesFromAPI: =>
     @ajax(
       id:          'load_shares'
       type:        'GET'
@@ -93,8 +114,8 @@ class App.WidgetShares extends App.Controller
           console.log 'Shares load aborted, retry count:', @loadRetryCount
           if (@loadRetryCount ? 0) < 3
             @loadRetryCount = (@loadRetryCount ? 0) + 1
-            @delay (=> @loadShares()), 200, 'share-retry'
-    )
+            @delay (=> @loadShares()), 500, 'share-retry'
+
 
   renderShares: (data, status, xhr) =>
     @lastShares = data?.shares || []

@@ -227,7 +227,8 @@ class App.TicketZoom extends App.Controller
 
     # Listen for real-time approval/share changes to update UI permissions
     @controllerBind('TicketApproval:create TicketApproval:update TicketApproval:destroy', (data) =>
-      return unless data?.approval?.ticket_id?.toString() is @ticket_id?.toString()
+      ticket_id = data?.approval?.ticket_id || data?.ticket_id
+      return unless ticket_id?.toString() is @ticket_id?.toString()
       console.log 'Approval changed, re-enforcing share permissions'
       # Refresh ticket object with latest share permissions from server
       @ajax(
@@ -246,7 +247,8 @@ class App.TicketZoom extends App.Controller
     )
 
     @controllerBind('TicketShare:create TicketShare:update TicketShare:destroy', (data) =>
-      return unless data?.share?.ticket_id?.toString() is @ticket_id?.toString()
+      ticket_id = data?.share?.ticket_id || data?.ticket_id
+      return unless ticket_id?.toString() is @ticket_id?.toString()
       console.log 'Share changed, re-enforcing share permissions'
       # Refresh ticket object with latest share permissions from server
       @ajax(
@@ -285,7 +287,8 @@ class App.TicketZoom extends App.Controller
 
     # Listen for general ticket updates that might require sidebar refresh
     @controllerBind('Ticket:article:create Ticket:article:update', (data) =>
-      return unless data?.ticket_id?.toString() is @ticket_id?.toString()
+      ticket_id = data?.ticket_id || data?.article?.ticket_id
+      return unless ticket_id?.toString() is @ticket_id?.toString()
       console.log 'Ticket article action, triggering sidebar rerender'
       # Trigger sidebar rerender for approval/share widgets
       @delay =>
