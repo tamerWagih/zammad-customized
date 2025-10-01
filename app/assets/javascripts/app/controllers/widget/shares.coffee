@@ -115,7 +115,7 @@ class App.WidgetShares extends App.Controller
           if (@loadRetryCount ? 0) < 3
             @loadRetryCount = (@loadRetryCount ? 0) + 1
             @delay (=> @loadShares()), 500, 'share-retry'
-
+      )
 
   renderShares: (data, status, xhr) =>
     @lastShares = data?.shares || []
