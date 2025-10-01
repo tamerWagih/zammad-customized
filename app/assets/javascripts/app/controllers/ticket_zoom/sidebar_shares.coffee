@@ -92,7 +92,9 @@ class SidebarShares extends App.Controller
     if @last_can_share isnt current_can_share
       @last_can_share = current_can_share
       # Trigger sidebar re-render to update actions
-      App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: @taskKey || @parentVC?.taskKey })
+      # Get taskKey from parent controller
+      taskKey = @parentVC?.taskKey || @taskKey
+      App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: taskKey })
 
   refreshShares: =>
     if @elSidebar
