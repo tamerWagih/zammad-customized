@@ -7,13 +7,15 @@ class Ticket::Share < ApplicationModel
   include HasTags
   include Ticket::Share::TriggersSubscriptions
 
+  VALID_PERMISSIONS = %w[read comment edit].freeze
+
   belongs_to :ticket
   belongs_to :shared_with, class_name: 'User'
   belongs_to :shared_by, class_name: 'User'
 
   validates :ticket_id, presence: true
   validates :shared_with_id, presence: true
-  validates :shared_with_id, uniqueness: { scope: :ticket_id }
+  validates :shared_with_id, uniqueness: { scope: :ticket_id, conditions: -> { where(status: 'active') } }, if: :active_status?
   validates :permissions, presence: true
   validate :valid_permissions
 
@@ -42,17 +44,46 @@ class Ticket::Share < ApplicationModel
     update!(status: 'revoked')
   end
 
+  def shared_with_name
+    shared_with&.fullname
+  end
+
+  def shared_by_name
+    shared_by&.fullname
+  end
+
+  def as_json(options = {})
+    super({
+      only: %i[
+        id
+        ticket_id
+        shared_with_id
+        shared_by_id
+        permissions
+        message
+        status
+        created_at
+        updated_at
+        expires_at
+      ],
+      methods: %i[shared_with_name shared_by_name]
+    }.merge(options))
+  end
+
   private
 
+  def active_status?
+    status.blank? || status == 'active'
+  end
+
   def valid_permissions
-    valid_perms = %w[read comment edit]
-    invalid_perms = permissions - valid_perms
-    
+    invalid_perms = Array(permissions) - VALID_PERMISSIONS
+
     if invalid_perms.any?
       errors.add(:permissions, "contains invalid permissions: #{invalid_perms.join(', ')}")
     end
-    
-    if permissions.empty?
+
+    if Array(permissions).blank?
       errors.add(:permissions, 'must contain at least one permission')
     end
   end
@@ -60,26 +91,19 @@ class Ticket::Share < ApplicationModel
   def search_index_attribute_lookup(record)
     {
       ticket_id: record.ticket_id,
-      shared_with: record.shared_with.fullname,
-      permissions: record.permissions.join(', '),
-      message: record.message,
+      shared_with: record.shared_with&.fullname,
+      shared_by:   record.shared_by&.fullname,
+      permissions: Array(record.permissions).join(', '),
+      message:     record.message,
     }
-  end
-
-  def as_json(options = {})
-    super(only: %i[id message created_at expires_at status permissions], methods: %i[shared_with_name])
-  end
-
-  def shared_with_name
-    shared_with&.fullname
   end
 
   def activity_message
     case status
     when 'active'
-      "Ticket shared with #{shared_with&.fullname} (#{permissions.join(', ')})"
+      "Ticket shared with #{shared_with_name} (#{Array(permissions).join(', ')})"
     when 'revoked'
-      "Share revoked for #{shared_with&.fullname}"
+      "Share revoked for #{shared_with_name}"
     else
       "Share status changed to #{status}"
     end

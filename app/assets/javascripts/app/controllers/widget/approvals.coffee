@@ -30,11 +30,6 @@ class App.WidgetApprovals extends App.Controller
       , 500, 'approval-reload'
     )
     
-    # Also refresh on generic ticket updates/touches
-    @controllerBind('Ticket:update Ticket:touch', (data) =>
-      return if String(data.id) isnt String(@ticket_id)
-      @delay (=> @loadApprovals()), 400, 'approval-reload-ticket'
-    )
     
     # Listen for notification events to refresh approvals
     @controllerBind('OnlineNotification::changed', =>
