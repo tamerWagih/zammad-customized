@@ -27,6 +27,7 @@ export interface Props {
   disabled: boolean
   isTicketEditable: boolean
   isTicketAgent: boolean
+  isReadOnlyShareAccess?: boolean
   ticketId: string
   groupId?: string
   form?: FormRef
@@ -128,7 +129,7 @@ const actionItems = computed(() => {
     />
   </div>
 
-  <template v-if="isTicketEditable">
+  <template v-if="isTicketEditable && !isReadOnlyShareAccess">
     <CommonButton
       v-if="dirty"
       size="large"
@@ -158,5 +159,16 @@ const actionItems = computed(() => {
       custom-menu-button-label="Additional ticket edit actions"
       :actions="actionItems"
     />
+  </template>
+  
+  <!-- Read-only share access message -->
+  <template v-if="isReadOnlyShareAccess">
+    <div class="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+      </svg>
+      {{ $t('You have read-only access to this shared ticket') }}
+    </div>
   </template>
 </template>

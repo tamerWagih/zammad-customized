@@ -101,7 +101,8 @@ class TicketPolicy < ApplicationPolicy
   def share_access?(access)
     return false if !user
 
-    share = Ticket::Share.find_by(ticket_id: record.id, shared_with_id: user.id, status: 'active')
+    # Use active_current scope to check both status and expiration
+    share = Ticket::Share.active_current.find_by(ticket_id: record.id, shared_with_id: user.id)
     return false if !share
 
     case access.to_s

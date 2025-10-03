@@ -28,33 +28,45 @@
           </div>
           
           <div class="form-group">
-            <label>{{ $t('Permissions') }}</label>
+            <label>{{ $t('Access Level') }}</label>
             <div class="permissions-list">
               <label class="permission-item">
                 <input 
-                  type="checkbox" 
-                  v-model="form.permissions"
+                  type="radio" 
+                  v-model="form.accessLevel"
                   value="read"
+                  name="accessLevel"
                 >
-                {{ $t('Read') }}
+                <span class="permission-label">
+                  <strong>{{ $t('Read Only') }}</strong>
+                  <small>{{ $t('View ticket and comments only') }}</small>
+                </span>
               </label>
               <label class="permission-item">
                 <input 
-                  type="checkbox" 
-                  v-model="form.permissions"
-                  value="comment"
+                  type="radio" 
+                  v-model="form.accessLevel"
+                  value="full"
+                  name="accessLevel"
                 >
-                {{ $t('Comment') }}
-              </label>
-              <label class="permission-item">
-                <input 
-                  type="checkbox" 
-                  v-model="form.permissions"
-                  value="edit"
-                >
-                {{ $t('Edit') }}
+                <span class="permission-label">
+                  <strong>{{ $t('Full Access') }}</strong>
+                  <small>{{ $t('View, comment, and edit ticket') }}</small>
+                </span>
               </label>
             </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="expiresAt">{{ $t('Expires At (Optional)') }}</label>
+            <input 
+              id="expiresAt"
+              type="datetime-local"
+              v-model="form.expiresAt"
+              class="form-control"
+              :min="new Date().toISOString().slice(0, 16)"
+            >
+            <small class="form-text text-muted">{{ $t('Leave empty for no expiration') }}</small>
           </div>
           
           <div class="form-group">
@@ -78,7 +90,7 @@
             </button>
             <button 
               type="submit" 
-              :disabled="loading || form.permissions.length === 0"
+              :disabled="loading || !form.accessLevel"
               class="btn btn-primary"
             >
               {{ loading ? $t('Sharing...') : $t('Share Ticket') }}
@@ -109,7 +121,8 @@ const loading = ref(false)
 
 const form = reactive({
   sharedWithId: '',
-  permissions: [] as string[],
+  accessLevel: 'full' as string,
+  expiresAt: '',
   message: ''
 })
 
@@ -117,22 +130,27 @@ const { data: usersData, loading: usersLoading } = useUsers()
 const users = computed(() => usersData.value?.users || [])
 
 const submitShare = async () => {
-  if (!props.ticketId || !form.sharedWithId || form.permissions.length === 0) return
+  if (!props.ticketId || !form.sharedWithId || !form.accessLevel) return
   
   loading.value = true
   
   try {
+    // Convert access level to permissions array
+    const permissions = form.accessLevel === 'read' ? ['read'] : ['read', 'comment', 'edit']
+    
     // TODO: Implement share creation mutation
     console.log('Creating share:', {
       ticketId: props.ticketId,
       sharedWithId: form.sharedWithId,
-      permissions: form.permissions,
+      permissions: permissions,
+      expiresAt: form.expiresAt || null,
       message: form.message
     })
     
     // Reset form
     form.sharedWithId = ''
-    form.permissions = []
+    form.accessLevel = 'full'
+    form.expiresAt = ''
     form.message = ''
     
     emit('created')
@@ -251,8 +269,31 @@ const submitShare = async () => {
   cursor: pointer;
 }
 
-.permission-item input[type="checkbox"] {
+.permission-item input[type="radio"] {
   margin: 0;
+}
+
+.permission-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.permission-label strong {
+  font-weight: 600;
+  color: #374151;
+}
+
+.permission-label small {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.form-text {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+  display: block;
 }
 
 .form-actions {
