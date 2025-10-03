@@ -239,7 +239,7 @@ class App.Ticket extends App.Model
     return @isAccessibleByOwner(user)
 
   currentView: ->
-    return 'agent' if App.User.current()?.permission('ticket.agent') && @userGroupAccess?.('read')
+    return 'agent' if App.User.current()?.permission('ticket.agent') && @userGroupAccess && @userGroupAccess('read')
     return 'customer' if App.User.current()?.permission('ticket.customer')
     return
 

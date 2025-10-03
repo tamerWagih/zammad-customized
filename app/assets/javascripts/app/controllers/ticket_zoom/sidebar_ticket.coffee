@@ -69,7 +69,7 @@ class Edit extends App.Controller
     )
 
   isDisabledByFollowupRules: (attributes) =>
-    return false if @ticket?.userGroupAccess?('change')
+    return false if @ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')
 
     group           = App.Group.find(attributes.group_id)
     ticketStateType = App.TicketState.find(attributes.state_id).name

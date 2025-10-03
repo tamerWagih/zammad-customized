@@ -387,7 +387,7 @@ class App.SidebarChecklistShow extends App.Controller
 
     if object.ticket_id
       ticket = App.Ticket.find(object.ticket_id)
-      ticketAccess = if ticket then ticket?.userGroupAccess?('read') || false else false
+      ticketAccess = if ticket then (ticket.userGroupAccess && ticket.userGroupAccess('read')) || false else false
 
     displayValue = App.view('ticket_zoom/sidebar_checklist/show_row_display_value')(
       object: object
