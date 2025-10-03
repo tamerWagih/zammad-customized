@@ -8,9 +8,18 @@ class Service::Ticket::Approval::EmailNotifier
   def notify(approval:, action:)
     return unless approval.persisted?
 
-    # Send email to both parties
-    send_to_approver(approval, action)
-    send_to_requester(approval, action)
+    # Send email to both parties with error handling
+    begin
+      send_to_approver(approval, action)
+    rescue => e
+      Rails.logger.error "Failed to send approval notification email to approver: #{e.message}"
+    end
+
+    begin
+      send_to_requester(approval, action)
+    rescue => e
+      Rails.logger.error "Failed to send approval notification email to requester: #{e.message}"
+    end
   end
 
   private

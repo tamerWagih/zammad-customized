@@ -8,9 +8,18 @@ class Service::Ticket::Share::EmailNotifier
   def notify(share:, action:)
     return unless share.persisted?
 
-    # Send email to both parties
-    send_to_shared_user(share, action)
-    send_to_sharer(share, action)
+    # Send email to both parties with error handling
+    begin
+      send_to_shared_user(share, action)
+    rescue => e
+      Rails.logger.error "Failed to send share notification email to shared user: #{e.message}"
+    end
+
+    begin
+      send_to_sharer(share, action)
+    rescue => e
+      Rails.logger.error "Failed to send share notification email to sharer: #{e.message}"
+    end
   end
 
   private
