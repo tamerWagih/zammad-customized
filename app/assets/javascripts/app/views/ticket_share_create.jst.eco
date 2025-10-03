@@ -1,52 +1,48 @@
-<% var self = this;
-   var users = self.users || [];
-   var error = self.error || false;
-%>
-<% if (error) { %>
+<% if @error: %>
   <div class="alert alert-warning">
-    <%- self.T('Unable to load users. Please try again.') %>
+    <%- @T('Unable to load users. Please try again.') %>
   </div>
-<% } %>
+<% end %>
 
 <form class="form-horizontal">
   <div class="form-group">
     <label class="control-label col-sm-3">
-      <%- self.T('Share with') %>
+      <%- @T('Share with') %>
     </label>
     <div class="col-sm-9">
       <select name="shared_with_id" class="form-control" required>
         <option value="">
-          <%- self.T('Select a user to share with...') %>
+          <%- @T('Select a user to share with...') %>
         </option>
-        <% users.forEach(function(user) { %>
+        <% for user in @users: %>
           <option value="<%= user.id %>">
             <%- user.firstname %> <%- user.lastname %> (<%- user.email %>)
           </option>
-        <% }); %>
+        <% end %>
       </select>
       <small class="help-block">
-        <%- self.T('Only agents and admins are shown') %>
+        <%- @T('Only agents and admins are shown') %>
       </small>
     </div>
   </div>
 
   <div class="form-group">
     <label class="control-label col-sm-3">
-      <%- self.T('Access Level') %>
+      <%- @T('Access Level') %>
     </label>
     <div class="col-sm-9">
       <div class="radio">
         <label>
           <input type="radio" name="access_level" value="full" checked>
-          <strong><%- self.T('Full Access') %></strong>
-          <br><small class="text-muted"><%- self.T('View, comment, and edit ticket') %></small>
+          <strong><%- @T('Full Access') %></strong>
+          <br><small class="text-muted"><%- @T('View, comment, and edit ticket') %></small>
         </label>
       </div>
       <div class="radio">
         <label>
           <input type="radio" name="access_level" value="read">
-          <strong><%- self.T('Read Only') %></strong>
-          <br><small class="text-muted"><%- self.T('View ticket and comments only') %></small>
+          <strong><%- @T('Read Only') %></strong>
+          <br><small class="text-muted"><%- @T('View ticket and comments only') %></small>
         </label>
       </div>
     </div>
@@ -54,21 +50,21 @@
 
   <div class="form-group">
     <label class="control-label col-sm-3">
-      <%- self.T('Message') %>
+      <%- @T('Message') %>
     </label>
     <div class="col-sm-9">
-      <textarea name="message" class="form-control" rows="4" placeholder="<%- self.T('Optional message for the shared user...') %>"></textarea>
+      <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the shared user...') %>"></textarea>
     </div>
   </div>
 
   <div class="form-group">
     <label class="control-label col-sm-3">
-      <%- self.T('Expires At (Optional)') %>
+      <%- @T('Expires At (Optional)') %>
     </label>
     <div class="col-sm-9">
       <input type="datetime-local" name="expires_at" class="form-control" min="<%= new Date().toISOString().slice(0, 16) %>">
       <small class="help-block">
-        <%- self.T('Leave empty for no expiration') %>
+        <%- @T('Leave empty for no expiration') %>
       </small>
     </div>
   </div>
