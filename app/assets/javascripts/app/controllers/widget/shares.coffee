@@ -265,8 +265,12 @@ class App.WidgetShares extends App.Controller
     action = @getCurrentAction()
     if action is 'revoke'
       @notify(type: 'success', msg: __('Share revoked successfully'))
+      # Show notification to the shared user that their access has been revoked
+      @notifyToSharedUser(data, 'revoked')
     else if action is 'delete'
       @notify(type: 'success', msg: __('Share deleted successfully'))
+      # Show notification to the shared user that their access has been removed
+      @notifyToSharedUser(data, 'deleted')
     else if action is 'edit'
       @notify(type: 'success', msg: __('Share updated successfully'))
     # Don't show generic success message for edit actions to avoid duplicates
@@ -295,6 +299,37 @@ class App.WidgetShares extends App.Controller
   clearCurrentAction: =>
     @currentAction = null
 
+  # Notify the shared user about the action (for deletion/revocation)
+  notifyToSharedUser: (data, action) =>
+    # Find the share data that was just deleted/revoked
+    share_data = data?.share || data
+    return unless share_data
+
+    shared_user_id = share_data.shared_with_id || share_data.user_id
+    return unless shared_user_id
+
+    # Get current user to check if we're notifying ourselves
+    current_user = App.User.current()
+    return if current_user && String(current_user.id) == String(shared_user_id)
+
+    # Create a notification for the shared user
+    message = if action is 'deleted'
+      __('Your access to this ticket has been removed by %s').replace('%s', current_user?.fullname || __('another user'))
+    else if action is 'revoked'
+      __('Your access to this ticket has been revoked by %s').replace('%s', current_user?.fullname || __('another user'))
+    else
+      __('Your access to this ticket has been updated by %s').replace('%s', current_user?.fullname || __('another user'))
+
+    # Send notification to the shared user via WebSocket
+    App.WebSocket.send(
+      event: 'notification'
+      data:
+        user_id: shared_user_id
+        type: 'info'
+        message: message
+        ticket_id: @ticket_id
+        action: action
+    )
 
   refresh: =>
     if @callback

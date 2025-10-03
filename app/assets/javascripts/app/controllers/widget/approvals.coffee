@@ -283,6 +283,8 @@ class App.WidgetApprovals extends App.Controller
       @notify(type: 'success', msg: __('Approval request rejected successfully'))
     else if action is 'delete'
       @notify(type: 'success', msg: __('Approval request deleted successfully'))
+      # Show notification to the approver that their approval request has been deleted
+      @notifyToApprover(data, 'deleted')
     else if action is 'edit'
       @notify(type: 'success', msg: __('Approval request updated successfully'))
     # Don't show generic success message for edit actions to avoid duplicates
@@ -313,6 +315,35 @@ class App.WidgetApprovals extends App.Controller
   clearCurrentAction: =>
     @currentAction = null
 
+  # Notify the approver about the action (for deletion)
+  notifyToApprover: (data, action) =>
+    # Find the approval data that was just deleted
+    approval_data = data?.approval || data
+    return unless approval_data
+
+    approver_id = approval_data.approver_id || approval_data.user_id
+    return unless approver_id
+
+    # Get current user to check if we're notifying ourselves
+    current_user = App.User.current()
+    return if current_user && String(current_user.id) == String(approver_id)
+
+    # Create a notification for the approver
+    message = if action is 'deleted'
+      __('Your approval request for this ticket has been deleted by %s').replace('%s', current_user?.fullname || __('another user'))
+    else
+      __('Your approval request for this ticket has been updated by %s').replace('%s', current_user?.fullname || __('another user'))
+
+    # Send notification to the approver via WebSocket
+    App.WebSocket.send(
+      event: 'notification'
+      data:
+        user_id: approver_id
+        type: 'info'
+        message: message
+        ticket_id: @ticket_id
+        action: action
+    )
 
   refresh: =>
     if @callback
