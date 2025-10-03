@@ -14,7 +14,7 @@ class App.WidgetShares extends App.Controller
 
     # Load ticket object for userGroupAccess method
     if @ticket_id
-      @ticket = App.Ticket.fullLocal(@ticket_id)
+      @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
 
     @delay (=> @loadShares()), 500, 'share-initial'
     @renderActions()
@@ -24,7 +24,7 @@ class App.WidgetShares extends App.Controller
       return if String(data.id) isnt String(@ticket_id)
       # Refresh ticket object for updated permissions
       if @ticket_id
-        @ticket = App.Ticket.fullLocal(@ticket_id)
+        @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
       @delay (=> @loadShares()), 400, 'share-reload-ticket'
     )
     
@@ -92,7 +92,9 @@ class App.WidgetShares extends App.Controller
           @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
           @loadSharesFromAPI()
         error: (xhr, status, error) =>
-          console.error 'Failed to load ticket for permissions:', status, error
+          # Ignore aborted requests
+          unless status is 'abort'
+            console.error 'Failed to load ticket for permissions:', status, error
           @isLoadingShares = false
         complete: (xhr, status) =>
           @isLoadingShares = false
@@ -108,7 +110,9 @@ class App.WidgetShares extends App.Controller
       processData: true
       success:     @renderShares
       error:       (xhr, status, error) =>
-        console.error 'Failed to load shares:', status, error
+        # Ignore aborted requests
+        unless status is 'abort'
+          console.error 'Failed to load shares:', status, error
         @renderError(xhr, status, error)
       complete:    (xhr, status) =>
         @isLoadingShares = false

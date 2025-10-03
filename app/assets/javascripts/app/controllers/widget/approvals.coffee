@@ -14,7 +14,7 @@ class App.WidgetApprovals extends App.Controller
 
     # Load ticket object for userGroupAccess method
     if @ticket_id
-      @ticket = App.Ticket.fullLocal(@ticket_id)
+      @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
 
     @delay (=> @loadApprovals()), 500, 'approval-initial'
     @renderActions()
@@ -24,7 +24,7 @@ class App.WidgetApprovals extends App.Controller
       return if data.id.toString() isnt @ticket_id.toString()
       # Refresh ticket object for updated permissions
       if @ticket_id
-        @ticket = App.Ticket.fullLocal(@ticket_id)
+        @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
       @delay =>
         @loadApprovals()
       , 500, 'approval-reload'
@@ -97,7 +97,9 @@ class App.WidgetApprovals extends App.Controller
           @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
           @loadApprovalsFromAPI()
         error: (xhr, status, error) =>
-          console.error 'Failed to load ticket for permissions:', status, error
+          # Ignore aborted requests
+          unless status is 'abort'
+            console.error 'Failed to load ticket for permissions:', status, error
           @isLoadingApprovals = false
         complete: (xhr, status) =>
           @isLoadingApprovals = false
@@ -113,7 +115,9 @@ class App.WidgetApprovals extends App.Controller
       processData: true
       success:     @renderApprovals
       error:       (xhr, status, error) =>
-        console.error 'Failed to load approvals:', status, error
+        # Ignore aborted requests
+        unless status is 'abort'
+          console.error 'Failed to load approvals:', status, error
         @renderError(xhr, status, error)
       complete:    (xhr, status) =>
         @isLoadingApprovals = false
