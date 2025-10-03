@@ -7,6 +7,13 @@ class Service::Ticket::Share::Revoke < Service::BaseWithCurrentUser
 
     share.update!(status: 'revoked') unless share.status == 'revoked'
     share.reload
+
+    # Send email notifications
+    Service::Ticket::Share::EmailNotifier
+      .new(current_user: current_user)
+      .notify(share: share, action: :revoke)
+
+    share
   end
 
   private

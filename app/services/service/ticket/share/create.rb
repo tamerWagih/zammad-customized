@@ -14,7 +14,7 @@ class Service::Ticket::Share::Create < Service::BaseWithCurrentUser
             __('This ticket is already shared with %s. Please update the existing share instead.') % shared_user.fullname
     end
 
-    ticket.shares.create!(
+    share = ticket.shares.create!(
       shared_with: shared_user,
       shared_by:   current_user,
       permissions: normalized_permissions,
@@ -22,6 +22,13 @@ class Service::Ticket::Share::Create < Service::BaseWithCurrentUser
       expires_at:  normalize_expires_at(expires_at),
       status:      'active'
     )
+
+    # Send email notifications
+    Service::Ticket::Share::EmailNotifier
+      .new(current_user: current_user)
+      .notify(share: share, action: :create)
+
+    share
   end
 
   private

@@ -23,6 +23,15 @@ class Service::Ticket::Share::Update < Service::BaseWithCurrentUser
 
     share.update!(updates) if updates.any?
     share.reload
+
+    # Send email notifications if updates were made
+    if updates.any?
+      Service::Ticket::Share::EmailNotifier
+        .new(current_user: current_user)
+        .notify(share: share, action: :update)
+    end
+
+    share
   end
 
   private

@@ -6,6 +6,12 @@ class Service::Ticket::Approval::Destroy < Service::BaseWithCurrentUser
     ensure_requester_or_admin!(approval)
 
     serialized = serialize_approval(approval)
+    
+    # Send email notifications before destroying
+    Service::Ticket::Approval::EmailNotifier
+      .new(current_user: current_user)
+      .notify(approval: approval, action: :delete)
+    
     approval.destroy!
 
     serialized

@@ -14,13 +14,20 @@ class Service::Ticket::Approval::Create < Service::BaseWithCurrentUser
             __('An approval request has already been sent to %s. Please update the existing request.') % approver.fullname
     end
 
-    ticket.approvals.create!(
+    approval = ticket.approvals.create!(
       approver:  approver,
       requester: current_user,
       message:   message,
       priority:  normalized_priority,
       status:    'pending'
     )
+
+    # Send email notifications
+    Service::Ticket::Approval::EmailNotifier
+      .new(current_user: current_user)
+      .notify(approval: approval, action: :create)
+
+    approval
   end
 
   private
