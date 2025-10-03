@@ -184,6 +184,19 @@ class TicketSharesController < ApplicationController
         expires_at: share.expires_at,
       }
       
+      # Notify the shared user before deleting
+      Notification.create!(
+        user_id: share.shared_with_id,
+        title: 'Ticket Share Deleted',
+        message: "Your access to ticket ##{@ticket.number} has been removed by #{current_user.fullname}.",
+        type: 'ticket_share_deleted',
+        meta: {
+          ticket_id: @ticket.id,
+          ticket_number: @ticket.number,
+          deleted_by: current_user.fullname
+        }
+      )
+
       share.destroy!
 
       # Real-time updates are handled automatically by Ticket::Share::TriggersSubscriptions

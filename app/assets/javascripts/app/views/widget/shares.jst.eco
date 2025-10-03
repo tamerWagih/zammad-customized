@@ -20,16 +20,11 @@
       <div class="share-content">
         <div class="share-permissions">
           <% if share.permissions and share.permissions.length > 0: %>
-            <% for permission in share.permissions: %>
-              <% if permission is 'edit': %>
-                <span class="label label-primary">Full access</span>
-              <% else if permission is 'read': %>
-                <span class="label label-primary">Read</span>
-              <% else if permission is 'comment': %>
-                <span class="label label-primary">Comment</span>
-              <% else: %>
-                <span class="label label-primary"><%- permission %></span>
-              <% end %>
+            <% has_edit = share.permissions.indexOf('edit') >= 0 %>
+            <% if has_edit: %>
+              <span class="label label-primary">Full Access</span>
+            <% else: %>
+              <span class="label label-primary">Read Only</span>
             <% end %>
           <% else: %>
             <span class="label label-default">No permissions</span>

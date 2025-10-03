@@ -1398,6 +1398,8 @@ class App.TicketZoom extends App.Controller
     ticket = @ticket
     current_user = App.User.current()
     can_edit = false
+    is_read_only_share = false
+    is_expired_share = false
     
     # Check if user is owner
     if ticket?.owner_id && String(ticket.owner_id) is String(current_user?.id)
@@ -1412,6 +1414,11 @@ class App.TicketZoom extends App.Controller
           is_expired = false
       
       share_permissions = ticket?.share_permissions || {}
+      is_expired_share = is_expired
+      
+      # Check if this is a read-only share (has read but not edit permission)
+      if share_permissions && share_permissions.read && !share_permissions.edit
+        is_read_only_share = true
       
       # If user is not owner, they can only edit if they have edit permission AND not expired
       if share_permissions && share_permissions.edit && !is_expired
@@ -1419,9 +1426,13 @@ class App.TicketZoom extends App.Controller
       else
         can_edit = false
 
-    if !can_edit
+    # Disable UI for read-only or expired shares
+    if !can_edit || is_read_only_share || is_expired_share
       # Show read-only message in bottom bar
-      @showReadOnlyMessage()
+      if is_expired_share
+        @showExpiredMessage()
+      else if is_read_only_share
+        @showReadOnlyMessage()
       
       # Disable Update button and its dropdown
       @$('.js-submit').prop('disabled', true)
@@ -1445,28 +1456,22 @@ class App.TicketZoom extends App.Controller
       @$('.js-customer').prop('disabled', false)
       @$('.js-organization').prop('disabled', false)
 
-      # Disable most interactive controls inside sidebar panels (but allow tab switching and dropdowns)
-      @$('.tabsSidebar .content input, .tabsSidebar .content textarea').prop('disabled', true)
-      # Keep dropdowns enabled - don't disable select elements
-
-      # Disable specific sidebar tab actions
-      # Ticket tab: subscribe button (but keep dropdowns enabled)
-      @$('.js-subscribe input[name="subscribe"]').prop('disabled', true)
-      @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', true)
+      # Disable ALL sidebar actions and dropdowns for read-only/expired users
+      @$('.tabsSidebar .content input, .tabsSidebar .content textarea, .tabsSidebar .content select').prop('disabled', true)
       
-      # Checklist tab: add empty checklist
-      @$('.js-add-empty').prop('disabled', true)
-      @$('.checklist-item-add-button').prop('disabled', true)
-      
-      # Explicitly disable action buttons inside each sidebar tab section
+      # Disable ALL action buttons in sidebar
       @$('.tabsSidebar .content .btn, .tabsSidebar .content .js-approve, .tabsSidebar .content .js-reject, .tabsSidebar .content .js-edit-approval, .tabsSidebar .content .js-delete-approval, .tabsSidebar .content .js-request-approval, .tabsSidebar .content .js-edit-share, .tabsSidebar .content .js-revoke-share, .tabsSidebar .content .js-delete-share, .tabsSidebar .content .js-add-subscriber').prop('disabled', true)
+      
+      # Disable article input field
+      @$('.article-new input, .article-new textarea, .article-new select').prop('disabled', true)
       
       # Prevent richtext editing if present
       @$('.articleNewEdit-body').attr('contenteditable', 'false')
       
     else
-      # Hide read-only message
+      # Hide read-only/expired messages
       @hideReadOnlyMessage()
+      @hideExpiredMessage()
       
       @$('.js-submit').prop('disabled', false)
       @$('.js-reset').prop('disabled', false)
@@ -1478,11 +1483,9 @@ class App.TicketZoom extends App.Controller
       @$('.ticket-actions .btn').prop('disabled', false)
       @$('.js-customer').prop('disabled', false)
       @$('.js-organization').prop('disabled', false)
-      @$('.tabsSidebar .content input, .tabsSidebar .content textarea').prop('disabled', false)
-      @$('.js-subscribe input[name="subscribe"]').prop('disabled', false)
-      @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', false)
-      @$('.js-add-empty').prop('disabled', false)
-      @$('.checklist-item-add-button').prop('disabled', false)
+      @$('.tabsSidebar .content input, .tabsSidebar .content textarea, .tabsSidebar .content select').prop('disabled', false)
+      @$('.tabsSidebar .content .btn, .tabsSidebar .content .js-approve, .tabsSidebar .content .js-reject, .tabsSidebar .content .js-edit-approval, .tabsSidebar .content .js-delete-approval, .tabsSidebar .content .js-request-approval, .tabsSidebar .content .js-edit-share, .tabsSidebar .content .js-revoke-share, .tabsSidebar .content .js-delete-share, .tabsSidebar .content .js-add-subscriber').prop('disabled', false)
+      @$('.article-new input, .article-new textarea, .article-new select').prop('disabled', false)
 
   # Show read-only message in the bottom bar
   showReadOnlyMessage: =>
@@ -1522,6 +1525,45 @@ class App.TicketZoom extends App.Controller
   # Hide read-only message
   hideReadOnlyMessage: =>
     @$('.read-only-share-message').remove()
+
+  # Show expired message in the bottom bar
+  showExpiredMessage: =>
+    # Remove existing messages if any
+    @hideReadOnlyMessage()
+    @hideExpiredMessage()
+    
+    # Create expired message
+    expiredMessage = $("""
+      <div class="expired-share-message" style="
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 4px;
+        color: #721c24;
+        font-size: 14px;
+        margin: 8px 0;
+      ">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+        </svg>
+        #{__('This shared ticket has expired and you have read-only access')}
+      </div>
+    """)
+    
+    # Insert before the submit buttons
+    submitContainer = @$('.js-submit').closest('.attributeBar-actions')
+    if submitContainer.length
+      submitContainer.before(expiredMessage)
+    else
+      # Fallback: insert at the end of the attribute bar
+      @$('.attributeBar').append(expiredMessage)
+
+  # Hide expired message
+  hideExpiredMessage: =>
+    @$('.expired-share-message').remove()
 
 class TicketZoomRouter extends App.ControllerPermanent
   @requiredPermission: ['ticket.agent', 'ticket.customer']

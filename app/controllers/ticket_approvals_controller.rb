@@ -254,6 +254,22 @@ class TicketApprovalsController < ApplicationController
         @ticket.tag_remove('rejected', current_user.id) if @ticket.tag_list.include?('rejected')
       end
       
+      # Notify the approver before deleting (if different from current user)
+      if approval.approver_id != current_user.id
+        Notification.create!(
+          user_id: approval.approver_id,
+          title: 'Approval Request Deleted',
+          message: "The approval request for ticket ##{@ticket.number} has been deleted by #{current_user.fullname}.",
+          type: 'ticket_approval_deleted',
+          meta: {
+            ticket_id: @ticket.id,
+            ticket_number: @ticket.number,
+            deleted_by: current_user.fullname,
+            approval_id: approval.id
+          }
+        )
+      end
+      
       approval.destroy!
       
       # Real-time updates are handled automatically by Ticket::Approval::TriggersSubscriptions
