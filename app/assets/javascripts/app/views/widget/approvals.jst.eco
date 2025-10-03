@@ -1,4 +1,3 @@
-
 <% var self = this;
    var approvals = self.approvals || [];
    var currentUserId = self.current_user_id != null ? String(self.current_user_id) : null;
