@@ -1,51 +1,44 @@
-<% var self = this;
-   var shares = self.shares || [];
-   var currentUserId = self.current_user_id != null ? String(self.current_user_id) : null;
-%>
-<% if (shares.length > 0) { %>
-  <% shares.forEach(function(share) {
-       var sharedById = share.shared_by_id != null ? String(share.shared_by_id) : null;
-       var perms = share.permissions || [];
-       var hasFullAccess = perms.length <= 3 && perms.indexOf('edit') !== -1 && perms.indexOf('read') !== -1 && perms.indexOf('comment') !== -1;
-       var statusClass = share.status === 'active' ? 'info' : 'default';
-  %>
+<% if @shares && @shares.length > 0: %>
+  <% for share in @shares: %>
     <div class="sidebar-block">
       <div class="share-header">
         <div class="share-user">
-          <% if (sharedById === currentUserId) { %>
-            <strong><%- self.T('Shared with') %> <%- share.user %></strong>
-          <% } else { %>
-            <strong><%- self.T('Shared with you') %></strong>
-          <% } %>
+          <% if share.shared_by_id is @current_user_id: %>
+            <strong><%- @T('Shared with') %> <%- share.user %></strong>
+          <% else: %>
+            <strong><%- @T('Shared with you') %></strong>
+          <% end %>
         </div>
         <div class="share-status">
-          <span class="label label-<%= statusClass %>">
-            <%- self.T(share.status.charAt(0).toUpperCase() + share.status.slice(1)) %>
+          <span class="label label-<%= share.status is 'active' and 'info' or 'default' %>">
+            <%- @T(share.status.charAt(0).toUpperCase() + share.status.slice(1)) %>
           </span>
         </div>
       </div>
 
       <div class="share-content">
         <div class="share-permissions">
-          <% if (perms.length > 0) { %>
-            <% if (hasFullAccess) { %>
-              <span class="label label-primary"><%- self.T('Full Access') %></span>
-            <% } else { %>
-              <% perms.forEach(function(permission) { %>
-                <% if (permission === 'edit') { %>
-                  <span class="label label-primary"><%- self.T('Edit') %></span>
-                <% } else if (permission === 'read') { %>
-                  <span class="label label-primary"><%- self.T('Read') %></span>
-                <% } else if (permission === 'comment') { %>
-                  <span class="label label-primary"><%- self.T('Comment') %></span>
-                <% } else { %>
+          <% perms = share.permissions || [] %>
+          <% if perms.length > 0: %>
+            <% hasFullAccess = perms.length is 3 and perms.indexOf('edit') >= 0 and perms.indexOf('read') >= 0 and perms.indexOf('comment') >= 0 %>
+            <% if hasFullAccess: %>
+              <span class="label label-primary"><%- @T('Full Access') %></span>
+            <% else: %>
+              <% for permission in perms: %>
+                <% if permission is 'edit': %>
+                  <span class="label label-primary"><%- @T('Edit') %></span>
+                <% else if permission is 'read': %>
+                  <span class="label label-primary"><%- @T('Read') %></span>
+                <% else if permission is 'comment': %>
+                  <span class="label label-primary"><%- @T('Comment') %></span>
+                <% else: %>
                   <span class="label label-primary"><%- permission %></span>
-                <% } %>
-              <% }); %>
-            <% } %>
-          <% } else { %>
-            <span class="label label-default"><%- self.T('No permissions') %></span>
-          <% } %>
+                <% end %>
+              <% end %>
+            <% end %>
+          <% else: %>
+            <span class="label label-default"><%- @T('No permissions') %></span>
+          <% end %>
         </div>
 
         <div class="share-message">
@@ -54,44 +47,42 @@
 
         <div class="share-meta">
           <div class="share-date">
-            <%- self.T('Shared') %> <%- new Date(share.created_at).toLocaleDateString() %>
-            <% if (share.expires_at) { %>
-              (<%- self.T('Expires') %> <%- new Date(share.expires_at).toLocaleDateString() %>)
-            <% } %>
+            <%- @T('Shared') %> <%- new Date(share.created_at).toLocaleDateString() %>
+            <% if share.expires_at: %>
+              (<%- @T('Expires') %> <%- new Date(share.expires_at).toLocaleDateString() %>)
+            <% end %>
           </div>
         </div>
 
-        <% if (sharedById === currentUserId) { %>
+        <% if share.shared_by_id is @current_user_id: %>
           <div class="share-actions btn-group btn-group-sm" role="group">
-            <% if (share.status === 'active') { %>
+            <% if share.status is 'active': %>
               <button class="btn btn-outline-primary js-edit-share" data-share-id="<%= share.id %>">
-                <i class="icon-edit"></i> <%- self.T('Edit') %>
+                <i class="icon-edit"></i> <%- @T('Edit') %>
               </button>
               <button class="btn btn-outline-warning js-revoke-share" data-share-id="<%= share.id %>">
-                <i class="icon-block"></i> <%- self.T('Revoke') %>
+                <i class="icon-block"></i> <%- @T('Revoke') %>
               </button>
-            <% } %>
+            <% end %>
             <button class="btn btn-outline-danger js-delete-share" data-share-id="<%= share.id %>">
-              <i class="icon-trash"></i> <%- self.T('Delete') %>
+              <i class="icon-trash"></i> <%- @T('Delete') %>
             </button>
           </div>
-        <% } else { %>
+        <% else: %>
           <div class="share-info">
             <small class="text-muted">
-              <%- self.T('Shared with you by') %> <%- share.shared_by_name %>
+              <%- @T('Shared with you by') %> <%- share.shared_by_name %>
             </small>
           </div>
-        <% } %>
+        <% end %>
       </div>
     </div>
-  <% }); %>
-<% } else { %>
+  <% end %>
+<% else: %>
   <div class="sidebar-block">
     <div class="shares-empty">
-      <p><%- self.T('No shares for this ticket yet.') %></p>
-      <small class="text-muted"><%- self.T('Use the "Share Ticket" button to share this ticket with other users.') %></small>
+      <p><%- @T('No shares for this ticket yet.') %></p>
+      <small class="text-muted"><%- @T('Use the "Share Ticket" button to share this ticket with other users.') %></small>
     </div>
   </div>
-<% } %>
-
-
+<% end %>
