@@ -1441,16 +1441,15 @@ class App.TicketZoom extends App.Controller
       # Disable ticket actions (Create Task, etc.)
       @$('.ticket-actions .btn').prop('disabled', true)
 
-      # Keep Customer and Organization dropdowns enabled per requirements
-      @$('.js-customer').prop('disabled', false)
-      @$('.js-organization').prop('disabled', false)
+      # Disable customer and organization selectors in read-only mode
+      @$('.js-customer').prop('disabled', true)
+      @$('.js-organization').prop('disabled', true)
 
-      # Disable most interactive controls inside sidebar panels (but allow tab switching and dropdowns)
-      @$('.tabsSidebar .content input, .tabsSidebar .content textarea').prop('disabled', true)
-      # Keep dropdowns enabled - don't disable select elements
+      # Disable most interactive controls inside sidebar panels
+      @$('.tabsSidebar .content input, .tabsSidebar .content textarea, .tabsSidebar .content select').prop('disabled', true)
 
       # Disable specific sidebar tab actions
-      # Ticket tab: subscribe button (but keep dropdowns enabled)
+      # Ticket tab: subscribe button
       @$('.js-subscribe input[name="subscribe"]').prop('disabled', true)
       @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', true)
       
@@ -1479,10 +1478,12 @@ class App.TicketZoom extends App.Controller
       @$('.js-customer').prop('disabled', false)
       @$('.js-organization').prop('disabled', false)
       @$('.tabsSidebar .content input, .tabsSidebar .content textarea').prop('disabled', false)
+      @$('.tabsSidebar .content select').prop('disabled', false)
       @$('.js-subscribe input[name="subscribe"]').prop('disabled', false)
       @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', false)
       @$('.js-add-empty').prop('disabled', false)
       @$('.checklist-item-add-button').prop('disabled', false)
+      @$('.tabsSidebar .content .btn, .tabsSidebar .content button, .tabsSidebar .content .js-create, .tabsSidebar .content .js-add').prop('disabled', false)
 
   # Show read-only message in the bottom bar
   showReadOnlyMessage: =>

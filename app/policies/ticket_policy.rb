@@ -81,8 +81,10 @@ class TicketPolicy < ApplicationPolicy
   end
 
   def access?(access)
+    share_decision = share_access?(access)
+    return share_decision unless share_decision.nil?
+
     return true if agent_access?(access)
-    return true if share_access?(access)
 
     customer_access?
   end
@@ -99,11 +101,10 @@ class TicketPolicy < ApplicationPolicy
   # - 'change'-> edit
   # - 'create'-> comment (e.g., add notes)
   def share_access?(access)
-    return false if !user
+    return nil if !user
 
-    # Use active_current scope to check both status and expiration
     share = Ticket::Share.active_current.find_by(ticket_id: record.id, shared_with_id: user.id)
-    return false if !share
+    return nil if !share
 
     case access.to_s
     when 'read'
@@ -113,7 +114,7 @@ class TicketPolicy < ApplicationPolicy
     when 'create'
       share.can_comment?
     else
-      false
+      nil
     end
   end
 
