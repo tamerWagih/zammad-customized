@@ -1,57 +1,61 @@
-<% if @error: %>
+<% var self = this;
+   var approvers = self.approvers || [];
+   var error = self.error || false;
+%>
+<% if (error) { %>
   <div class="alert alert-warning">
-    <%- @T('Unable to load approvers. Please try again.') %>
+    <%- self.T('Unable to load approvers. Please try again.') %>
   </div>
-<% end %>
+<% } %>
 
 <form class="form-horizontal">
   <div class="form-group">
     <label class="control-label col-sm-3">
-      <%- @T('Approver') %>
+      <%- self.T('Approver') %>
     </label>
     <div class="col-sm-9">
       <select name="approver_id" class="form-control" required>
         <option value="">
-          <%- @T('Select an approver...') %>
+          <%- self.T('Select an approver...') %>
         </option>
-        <% for approver in @approvers: %>
+        <% approvers.forEach(function(approver) { %>
           <option value="<%= approver.id %>">
             <%- approver.firstname %> <%- approver.lastname %> (<%- approver.email %>)
           </option>
-        <% end %>
+        <% }); %>
       </select>
       <small class="help-block">
-        <%- @T('Only agents and admins are shown') %>
+        <%- self.T('Only agents and admins are shown') %>
       </small>
     </div>
   </div>
 
   <div class="form-group">
     <label class="control-label col-sm-3">
-      <%- @T('Message') %>
+      <%- self.T('Message') %>
     </label>
     <div class="col-sm-9">
-      <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the approver...') %>"></textarea>
+      <textarea name="message" class="form-control" rows="4" placeholder="<%- self.T('Optional message for the approver...') %>"></textarea>
     </div>
   </div>
 
   <div class="form-group">
     <label class="control-label col-sm-3">
-      <%- @T('Priority') %>
+      <%- self.T('Priority') %>
     </label>
     <div class="col-sm-9">
       <select name="priority" class="form-control">
         <option value="low">
-          <%- @T('Low') %>
+          <%- self.T('Low') %>
         </option>
         <option value="normal" selected>
-          <%- @T('Normal') %>
+          <%- self.T('Normal') %>
         </option>
         <option value="high">
-          <%- @T('High') %>
+          <%- self.T('High') %>
         </option>
         <option value="urgent">
-          <%- @T('Urgent') %>
+          <%- self.T('Urgent') %>
         </option>
       </select>
     </div>
