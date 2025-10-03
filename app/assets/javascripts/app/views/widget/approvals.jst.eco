@@ -1,20 +1,29 @@
 
-<% if @approvals && @approvals.length > 0: %>
-  <% for approval in @approvals: %>
+<% var self = this;
+   var approvals = self.approvals || [];
+   var currentUserId = self.current_user_id != null ? String(self.current_user_id) : null;
+%>
+<% if (approvals.length > 0) { %>
+  <% approvals.forEach(function(approval) {
+       var requesterId = approval.requester_id != null ? String(approval.requester_id) : null;
+       var approverId = approval.approver_id != null ? String(approval.approver_id) : null;
+       var statusClass = approval.status === 'pending' ? 'warning' : approval.status === 'approved' ? 'success' : 'danger';
+       var priorityClass = approval.priority === 'high' || approval.priority === 'urgent' ? 'danger' : approval.priority === 'low' ? 'info' : 'success';
+  %>
     <div class="sidebar-block">
       <div class="approval-header">
         <div class="approval-user">
-          <% if approval.requester_id is @current_user_id: %>
-            <strong><%- @T('Request to') %> <%- approval.approver %></strong>
-          <% else if approval.approver_id is @current_user_id: %>
-            <strong><%- @T('Request from') %> <%- approval.requester %></strong>
-          <% else: %>
+          <% if (requesterId === currentUserId) { %>
+            <strong><%- self.T('Request to') %> <%- approval.approver %></strong>
+          <% } else if (approverId === currentUserId) { %>
+            <strong><%- self.T('Request from') %> <%- approval.requester %></strong>
+          <% } else { %>
             <strong><%- approval.approver %></strong>
-          <% end %>
+          <% } %>
         </div>
         <div class="approval-status">
-          <span class="label label-<%= approval.status is 'pending' and 'warning' or approval.status is 'approved' and 'success' or 'danger' %>">
-            <%- @T(approval.status.charAt(0).toUpperCase() + approval.status.slice(1)) %>
+          <span class="label label-<%= statusClass %>">
+            <%- self.T(approval.status.charAt(0).toUpperCase() + approval.status.slice(1)) %>
           </span>
         </div>
       </div>
@@ -26,55 +35,55 @@
         
         <div class="approval-meta">
           <div class="approval-priority">
-            <span class="label label-<%= approval.priority is 'high' and 'danger' or approval.priority is 'urgent' and 'danger' or approval.priority is 'low' and 'info' or 'success' %>">
-              <%- @T(approval.priority.charAt(0).toUpperCase() + approval.priority.slice(1)) %> Priority
+            <span class="label label-<%= priorityClass %>">
+              <%- self.T(approval.priority.charAt(0).toUpperCase() + approval.priority.slice(1)) %> Priority
             </span>
           </div>
           <div class="approval-date">
-            <%- @T('Requested') %> <%- new Date(approval.created_at).toLocaleDateString() %>
+            <%- self.T('Requested') %> <%- new Date(approval.created_at).toLocaleDateString() %>
           </div>
         </div>
         
-        <% if approval.status is 'pending': %>
-          <% if approval.approver_id is @current_user_id: %>
+        <% if (approval.status === 'pending') { %>
+          <% if (approverId === currentUserId) { %>
             <!-- Show approve/reject buttons to approver -->
             <div class="approval-actions btn-group btn-group-sm" role="group">
               <button class="btn btn-success js-approve" data-approval-id="<%= approval.id %>">
-                <i class="icon-checkmark"></i> <%- @T('Approve') %>
+                <i class="icon-checkmark"></i> <%- self.T('Approve') %>
               </button>
               <button class="btn btn-danger js-reject" data-approval-id="<%= approval.id %>">
-                <i class="icon-close"></i> <%- @T('Reject') %>
+                <i class="icon-close"></i> <%- self.T('Reject') %>
               </button>
             </div>
-          <% else if approval.requester_id is @current_user_id: %>
+          <% } else if (requesterId === currentUserId) { %>
             <!-- Show edit/delete buttons to requester -->
             <div class="approval-actions btn-group btn-group-sm" role="group">
               <button class="btn btn-outline-primary js-edit-approval" data-approval-id="<%= approval.id %>">
-                <i class="icon-edit"></i> <%- @T('Edit') %>
+                <i class="icon-edit"></i> <%- self.T('Edit') %>
               </button>
               <button class="btn btn-outline-danger js-delete-approval" data-approval-id="<%= approval.id %>">
-                <i class="icon-trash"></i> <%- @T('Delete') %>
+                <i class="icon-trash"></i> <%- self.T('Delete') %>
               </button>
             </div>
-          <% end %>
-        <% else: %>
+          <% } %>
+        <% } else { %>
           <!-- For completed approvals, only show delete to requester -->
-          <% if approval.requester_id is @current_user_id: %>
+          <% if (requesterId === currentUserId) { %>
             <div class="approval-actions">
               <button class="btn btn-outline-danger btn-sm js-delete-approval" data-approval-id="<%= approval.id %>">
-                <i class="icon-trash"></i> <%- @T('Delete') %>
+                <i class="icon-trash"></i> <%- self.T('Delete') %>
               </button>
             </div>
-          <% end %>
-        <% end %>
+          <% } %>
+        <% } %>
       </div>
     </div>
-  <% end %>
-<% else: %>
+  <% }); %>
+<% } else { %>
   <div class="sidebar-block">
     <div class="approvals-empty">
-      <p><%- @T('No approval requests for this ticket yet.') %></p>
-      <small class="text-muted"><%- @T('Use the "Request Approval" button to send approval requests to users.') %></small>
+      <p><%- self.T('No approval requests for this ticket yet.') %></p>
+      <small class="text-muted"><%- self.T('Use the "Request Approval" button to send approval requests to users.') %></small>
     </div>
   </div>
-<% end %>
+<% } %>
