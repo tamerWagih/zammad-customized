@@ -12,8 +12,13 @@ class App.TicketShareEdit extends App.ControllerModal
 
   content: ->
     permissions = @share?.permissions or []
-    checked = (name) -> if permissions?.indexOf(name) >= 0 then 'checked' else ''
-    # Normalize expires_at to date value (YYYY-MM-DD)
+    hasEdit = permissions?.indexOf('edit') >= 0
+    hasRead = permissions?.indexOf('read') >= 0
+    
+    # Determine current access level
+    currentAccessLevel = if hasEdit then 'full' else 'read'
+    
+    # Normalize expires_at to datetime-local value (YYYY-MM-DDTHH:MM)
     expiresAt = ''
     if @share?.expires_at
       try
@@ -23,25 +28,37 @@ class App.TicketShareEdit extends App.ControllerModal
         y = dt.getFullYear()
         m = pad(dt.getMonth()+1)
         d = pad(dt.getDate())
-        expiresAt = "#{y}-#{m}-#{d}"
+        h = pad(dt.getHours())
+        min = pad(dt.getMinutes())
+        expiresAt = "#{y}-#{m}-#{d}T#{h}:#{min}"
       catch
-        # Try to extract date part from string if it's in datetime format
-        if @share.expires_at.match(/^\d{4}-\d{2}-\d{2}/)
-          expiresAt = @share.expires_at.match(/^\d{4}-\d{2}-\d{2}/)[0]
+        # Try to extract datetime part from string if it's in datetime format
+        if @share.expires_at.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/)
+          expiresAt = @share.expires_at.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/)[0]
+        else if @share.expires_at.match(/^\d{4}-\d{2}-\d{2}/)
+          expiresAt = @share.expires_at.match(/^\d{4}-\d{2}-\d{2}/)[0] + "T00:00"
         else
           expiresAt = @share.expires_at
 
     """
     <div class="form-horizontal">
       <div class="form-group">
-        <label class="control-label col-sm-3">#{__('Permissions')}</label>
+        <label class="control-label col-sm-3">#{__('Access Level')}</label>
         <div class="col-sm-9">
-          <label class="checkbox-inline">
-            <input type="checkbox" name="permissions[]" value="read" #{checked('read')}> #{__('Read')}
-          </label>
-        <label class="checkbox-inline">
-          <input type="checkbox" name="permissions[]" value="edit" #{checked('edit')}> #{__('Full access')}
-        </label>
+          <div class="radio">
+            <label>
+              <input type="radio" name="access_level" value="full" #{if currentAccessLevel is 'full' then 'checked' else ''}>
+              <strong>#{__('Full Access')}</strong>
+              <br><small class="text-muted">#{__('View, comment, and edit ticket')}</small>
+            </label>
+          </div>
+          <div class="radio">
+            <label>
+              <input type="radio" name="access_level" value="read" #{if currentAccessLevel is 'read' then 'checked' else ''}>
+              <strong>#{__('Read Only')}</strong>
+              <br><small class="text-muted">#{__('View ticket and comments only')}</small>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -53,9 +70,10 @@ class App.TicketShareEdit extends App.ControllerModal
       </div>
 
       <div class="form-group">
-        <label class="control-label col-sm-3">#{__('Expires at')}</label>
+        <label class="control-label col-sm-3">#{__('Expires At (Optional)')}</label>
         <div class="col-sm-9">
-          <input type="date" name="expires_at" class="form-control" value="#{expiresAt}" min="#{new Date().toISOString().split('T')[0]}">
+          <input type="datetime-local" name="expires_at" class="form-control" value="#{expiresAt}" min="#{new Date().toISOString().slice(0, 16)}">
+          <small class="help-block">#{__('Leave empty for no expiration')}</small>
         </div>
       </div>
     </div>
@@ -73,6 +91,16 @@ class App.TicketShareEdit extends App.ControllerModal
       return
     
     form_data = @formParam(e.currentTarget)
+    
+    # Convert access_level to permissions array
+    access_level = form_data.access_level || 'full'
+    if access_level is 'full'
+      form_data.permissions = ['read', 'comment', 'edit']
+    else if access_level is 'read'
+      form_data.permissions = ['read']
+    
+    # Remove access_level from form data as backend expects permissions array
+    delete form_data.access_level
     
     # Send flat form data like approval edit does
     @ajax(

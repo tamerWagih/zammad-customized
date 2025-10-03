@@ -1399,8 +1399,7 @@ class App.TicketZoom extends App.Controller
     current_user = App.User.current()
     can_edit = false
     
-    #
-    
+    # Check if user is owner
     if ticket?.owner_id && String(ticket.owner_id) is String(current_user?.id)
       can_edit = true
     else
@@ -1414,16 +1413,15 @@ class App.TicketZoom extends App.Controller
       
       share_permissions = ticket?.share_permissions || {}
       
-      
       # If user is not owner, they can only edit if they have edit permission AND not expired
       if share_permissions && share_permissions.edit && !is_expired
         can_edit = true
       else
         can_edit = false
-    
 
     if !can_edit
-      
+      # Show read-only message in bottom bar
+      @showReadOnlyMessage()
       
       # Disable Update button and its dropdown
       @$('.js-submit').prop('disabled', true)
@@ -1467,6 +1465,9 @@ class App.TicketZoom extends App.Controller
       @$('.articleNewEdit-body').attr('contenteditable', 'false')
       
     else
+      # Hide read-only message
+      @hideReadOnlyMessage()
+      
       @$('.js-submit').prop('disabled', false)
       @$('.js-reset').prop('disabled', false)
       @$('.edit input, .edit select, .edit textarea, .edit button').prop('disabled', false)
@@ -1482,6 +1483,45 @@ class App.TicketZoom extends App.Controller
       @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', false)
       @$('.js-add-empty').prop('disabled', false)
       @$('.checklist-item-add-button').prop('disabled', false)
+
+  # Show read-only message in the bottom bar
+  showReadOnlyMessage: =>
+    # Remove existing read-only message if any
+    @hideReadOnlyMessage()
+    
+    # Create read-only message
+    readOnlyMessage = $("""
+      <div class="read-only-share-message" style="
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        color: #6c757d;
+        font-size: 14px;
+        margin: 8px 0;
+      ">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+        </svg>
+        #{__('You have read-only access to this shared ticket')}
+      </div>
+    """)
+    
+    # Insert before the submit buttons
+    submitContainer = @$('.js-submit').closest('.attributeBar-actions')
+    if submitContainer.length
+      submitContainer.before(readOnlyMessage)
+    else
+      # Fallback: insert at the end of the attribute bar
+      @$('.attributeBar').append(readOnlyMessage)
+
+  # Hide read-only message
+  hideReadOnlyMessage: =>
+    @$('.read-only-share-message').remove()
 
 class TicketZoomRouter extends App.ControllerPermanent
   @requiredPermission: ['ticket.agent', 'ticket.customer']

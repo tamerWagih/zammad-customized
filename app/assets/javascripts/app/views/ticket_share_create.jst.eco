@@ -28,19 +28,21 @@
 
   <div class="form-group">
     <label class="control-label col-sm-3">
-      <%- @T('Permissions') %>
+      <%- @T('Access Level') %>
     </label>
     <div class="col-sm-9">
-      <div class="checkbox">
+      <div class="radio">
         <label>
-          <input type="checkbox" name="permissions[]" value="edit" checked>
-          <%- @T('Full access') %>
+          <input type="radio" name="access_level" value="full" checked>
+          <strong><%- @T('Full Access') %></strong>
+          <br><small class="text-muted"><%- @T('View, comment, and edit ticket') %></small>
         </label>
       </div>
-      <div class="checkbox">
+      <div class="radio">
         <label>
-          <input type="checkbox" name="permissions[]" value="read">
-          <%- @T('Read') %>
+          <input type="radio" name="access_level" value="read">
+          <strong><%- @T('Read Only') %></strong>
+          <br><small class="text-muted"><%- @T('View ticket and comments only') %></small>
         </label>
       </div>
     </div>
@@ -57,12 +59,12 @@
 
   <div class="form-group">
     <label class="control-label col-sm-3">
-      <%- @T('Expires') %>
+      <%- @T('Expires At (Optional)') %>
     </label>
     <div class="col-sm-9">
-      <input type="date" name="expires_at" class="form-control" min="<%= new Date().toISOString().split('T')[0] %>">
+      <input type="datetime-local" name="expires_at" class="form-control" min="<%= new Date().toISOString().slice(0, 16) %>">
       <small class="help-block">
-        <%- @T('Optional: Set when this share should expire') %>
+        <%- @T('Leave empty for no expiration') %>
       </small>
     </div>
   </div>

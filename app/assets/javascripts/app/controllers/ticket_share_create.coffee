@@ -77,6 +77,16 @@ class App.TicketShareCreate extends App.ControllerModal
     
     form_data = @formParam(e.currentTarget)
     
+    # Convert access_level to permissions array
+    access_level = form_data.access_level || 'full'
+    if access_level is 'full'
+      form_data.permissions = ['read', 'comment', 'edit']
+    else if access_level is 'read'
+      form_data.permissions = ['read']
+    
+    # Remove access_level from form data as backend expects permissions array
+    delete form_data.access_level
+    
     # Send flat form data like approval create does
     @ajax(
       id: 'create_ticket_share'
