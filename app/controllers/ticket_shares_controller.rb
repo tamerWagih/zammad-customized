@@ -69,7 +69,7 @@ class TicketSharesController < ApplicationController
       .new(current_user:)
       .execute(share: @share)
 
-    notify_shared_user(share_data, 'Share Deleted')
+    notify_shared_user(share_data, 'Share revoked')
 
     render json: { success: true, share: serialize_share(share_data) }
   rescue Exceptions::Forbidden => e
@@ -148,3 +148,4 @@ class TicketSharesController < ApplicationController
     value.present? ? value.to_s : nil
   end
 end
+

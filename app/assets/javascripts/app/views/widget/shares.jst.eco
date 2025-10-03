@@ -1,4 +1,3 @@
-
 <% if @shares && @shares.length > 0: %>
   <% for share in @shares: %>
     <div class="sidebar-block">
@@ -16,30 +15,36 @@
           </span>
         </div>
       </div>
-      
+
       <div class="share-content">
         <div class="share-permissions">
-          <% if share.permissions and share.permissions.length > 0: %>
-            <% for permission in share.permissions: %>
-              <% if permission is 'edit': %>
-                <span class="label label-primary">Full access</span>
-              <% else if permission is 'read': %>
-                <span class="label label-primary">Read</span>
-              <% else if permission is 'comment': %>
-                <span class="label label-primary">Comment</span>
-              <% else: %>
-                <span class="label label-primary"><%- permission %></span>
+          <% perms = share.permissions || [] %>
+          <% if perms.length > 0: %>
+            <% hasFullAccess = _.contains(perms, 'edit') and _.contains(perms, 'read') and _.contains(perms, 'comment') and perms.length <= 3 %>
+            <% if hasFullAccess: %>
+              <span class="label label-primary"><%- @T('Full Access') %></span>
+            <% else: %>
+              <% for permission in perms: %>
+                <% if permission is 'edit': %>
+                  <span class="label label-primary"><%- @T('Edit') %></span>
+                <% else if permission is 'read': %>
+                  <span class="label label-primary"><%- @T('Read') %></span>
+                <% else if permission is 'comment': %>
+                  <span class="label label-primary"><%- @T('Comment') %></span>
+                <% else: %>
+                  <span class="label label-primary"><%- permission %></span>
+                <% end %>
               <% end %>
             <% end %>
           <% else: %>
-            <span class="label label-default">No permissions</span>
+            <span class="label label-default"><%- @T('No permissions') %></span>
           <% end %>
         </div>
-        
+
         <div class="share-message">
           <%- share.message %>
         </div>
-        
+
         <div class="share-meta">
           <div class="share-date">
             <%- @T('Shared') %> <%- new Date(share.created_at).toLocaleDateString() %>
@@ -48,7 +53,7 @@
             <% end %>
           </div>
         </div>
-        
+
         <% if share.shared_by_id is @current_user_id: %>
           <!-- Show edit/revoke/delete buttons to person who shared -->
           <div class="share-actions btn-group btn-group-sm" role="group">
@@ -75,7 +80,7 @@
       </div>
     </div>
   <% end %>
-          <% else: %>
+<% else: %>
   <div class="sidebar-block">
     <div class="shares-empty">
       <p><%- @T('No shares for this ticket yet.') %></p>
