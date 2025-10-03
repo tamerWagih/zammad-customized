@@ -237,7 +237,8 @@ class App.TicketZoom extends App.Controller
         url:   "#{@apiPath}/tickets/#{@ticket_id}"
         success: (ticketData) =>
           # Update ticket object with fresh data
-          @ticket = new App.Ticket(ticketData)
+          App.Ticket.refresh([ticketData]) if ticketData?
+          @ticket = App.Ticket.findNative(@ticket_id)
           @enforceSharePermissionsUI()
           # Trigger sidebar rerender for approval/share widgets
           App.Event.trigger('ui::ticket::sidebarRerender')
@@ -256,7 +257,8 @@ class App.TicketZoom extends App.Controller
         url:   "#{@apiPath}/tickets/#{@ticket_id}"
         success: (ticketData) =>
           # Update ticket object with fresh data
-          @ticket = new App.Ticket(ticketData)
+          App.Ticket.refresh([ticketData]) if ticketData?
+          @ticket = App.Ticket.findNative(@ticket_id)
           @enforceSharePermissionsUI()
           # Trigger sidebar rerender for approval/share widgets
           App.Event.trigger('ui::ticket::sidebarRerender')
@@ -274,7 +276,8 @@ class App.TicketZoom extends App.Controller
         type:  'GET'
         url:   "#{@apiPath}/tickets/#{@ticket_id}"
         success: (ticketData) =>
-          @ticket = new App.Ticket(ticketData)
+          App.Ticket.refresh([ticketData]) if ticketData?
+          @ticket = App.Ticket.findNative(@ticket_id)
           @enforceSharePermissionsUI()
           # Trigger sidebar rerender
           App.Event.trigger('ui::ticket::sidebarRerender')

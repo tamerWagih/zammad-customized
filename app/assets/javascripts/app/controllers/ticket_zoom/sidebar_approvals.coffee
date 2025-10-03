@@ -40,7 +40,8 @@ class SidebarApprovals extends App.Controller
           type:  'GET'
           url:   "#{@apiPath}/tickets/#{@ticket_id}"
           success: (ticketData) =>
-            @ticket = new App.Ticket(ticketData)
+            App.Ticket.refresh([ticketData]) if ticketData?
+            @ticket = App.Ticket.findNative(@ticket_id)
             @createApprovalsWidget()
           error: (xhr, status, error) =>
             console.error 'Failed to load ticket for sidebar:', status, error
