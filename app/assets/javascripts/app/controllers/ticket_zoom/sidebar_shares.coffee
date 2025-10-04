@@ -79,8 +79,11 @@ class SidebarShares extends App.Controller
     current_can_share = @canShareOrApprove()
     if @last_can_share isnt current_can_share
       @last_can_share = current_can_share
-      taskKey = @parentVC?.taskKey || @taskKey
-      App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: taskKey, ticket_id: @ticket?.id || @ticket_id })
+      @delay =>
+        taskKey = @parentVC?.taskKey || @taskKey
+        if taskKey
+          App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: taskKey, ticket_id: @ticket?.id || @ticket_id })
+      , 300, 'update-shares-actions'
 
   refreshShares: =>
     @showPanel(@elSidebar) if @elSidebar
@@ -107,7 +110,15 @@ class SidebarShares extends App.Controller
   canShareOrApprove: =>
     current_user = App.User.current()
     return false unless current_user
-    @permissionCheck('admin.*') or @permissionCheck('ticket.agent')
+    
+    # Admins and agents can always share/approve
+    return true if @permissionCheck('admin.*') or @permissionCheck('ticket.agent')
+    
+    # Check if user is accessing via shares (receivers cannot share/approve)
+    return false if @hasShareAccess()
+    
+    # User is the ticket owner or in the ticket's group
+    true
 
   hasShareAccess: =>
     return false unless @ticket

@@ -36,13 +36,23 @@ class Service::Ticket::Approval::Create < Service::BaseWithCurrentUser
   private
 
   def create_auto_share_if_needed(ticket, approver)
-    # Check if approver is in a different group than the ticket's group
-    return if ticket.group_id == approver.primary_group_id
+    # Get approver's group IDs
+    approver_group_ids = approver.group_ids_access('read')
+    return if approver_group_ids.empty?
 
-    # Check if a share already exists for the approver's group
-    approver_group = approver.groups.find_by(id: approver.primary_group_id)
+    # Check if approver is in the same group as the ticket
+    return if approver_group_ids.include?(ticket.group_id)
+
+    # Find the first group the approver belongs to (excluding the ticket's group)
+    approver_group_id = approver_group_ids.find { |id| id != ticket.group_id }
+    return unless approver_group_id
+
+    # Check if a share already exists for this group
+    return if ticket.shares.active_current.exists?(group_id: approver_group_id)
+
+    # Get the group object
+    approver_group = Group.find(approver_group_id)
     return unless approver_group
-    return if ticket.shares.active_current.exists?(group_id: approver_group.id)
 
     # Create automatic share with approver's group
     ticket.shares.create!(

@@ -74,6 +74,9 @@ class App.TicketZoomSidebar extends App.ControllerObserver
 
     tabsSidebarEl = @$('.tabsSidebar')
     
+    # Clear existing sidebar content to prevent duplication
+    tabsSidebarEl.empty()
+    
     try
       @sidebar = new App.Sidebar(
         el:           tabsSidebarEl
