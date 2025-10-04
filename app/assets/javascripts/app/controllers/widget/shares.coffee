@@ -76,7 +76,13 @@ class App.WidgetShares extends App.Controller
     if !@lastShares || @lastShares.length is 0
       @loadShares()
 
-  loadShares: =>\n    return if @isLoadingShares\n\n    @isLoadingShares = true\n    @loadSharesFromAPI()\n\n  loadSharesFromAPI: =>
+  loadShares: =>
+    return if @isLoadingShares
+
+    @isLoadingShares = true
+    @loadSharesFromAPI()
+
+  loadSharesFromAPI: =>
     @ajax(
       id:          'load_shares'
       type:        'GET'
@@ -285,7 +291,9 @@ class App.WidgetShares extends App.Controller
     @currentAction = null
 
   # Notify the shared user about the action (for deletion/revocation)
-  notifyToSharedUser: (data, action) =>\n    # Group notifications handled on the server\n    return\n
+  notifyToSharedUser: (data, action) =>
+    # Group notifications handled on the server
+    return
   refresh: =>
     if @callback
       @callback()
