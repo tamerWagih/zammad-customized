@@ -29,6 +29,13 @@ class App.TicketZoomSidebar extends App.ControllerObserver
         backend.postParams(args)
 
   render: (ticket) =>
+    ticketModel = ticket
+    if !ticketModel?.currentView?()
+      if @object_id && App.Ticket.exists(@object_id)
+        ticketModel = App.Ticket.fullLocal(@object_id)
+
+    return unless ticketModel?.currentView?()
+    ticket = ticketModel
     @sidebarBackends ||= {}
     @sidebarItems = []
     sidebarBackends = App.Config.get('TicketZoomSidebar')

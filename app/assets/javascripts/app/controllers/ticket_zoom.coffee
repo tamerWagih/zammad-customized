@@ -66,7 +66,13 @@ class App.TicketZoom extends App.Controller
       # Only filter by taskKey if it is provided in the event payload
       return if data?.taskKey? and data.taskKey isnt @taskKey
       return if !@sidebarWidget
-      @sidebarWidget.render(@formCurrent())
+
+      ticketForSidebar = data?.ticket ? @ticket
+      if !ticketForSidebar?.currentView?() and App.Ticket.exists(@ticket_id)
+        ticketForSidebar = App.Ticket.fullLocal(@ticket_id)
+
+      return if !ticketForSidebar?.currentView?()
+      @sidebarWidget.render(ticketForSidebar)
     )
     @controllerBind('config_update', (data) =>
       return if data.name isnt 'checklist'
