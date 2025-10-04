@@ -6,12 +6,11 @@ class Service::Ticket::Share::Destroy < Service::BaseWithCurrentUser
     ensure_manageable!(share)
 
     serialized = serialize_share(share)
-    
-    # Send email notifications before destroying
+
     Service::Ticket::Share::EmailNotifier
       .new(current_user: current_user)
       .notify(share: share, action: :delete)
-    
+
     share.destroy!
 
     serialized
@@ -29,8 +28,8 @@ class Service::Ticket::Share::Destroy < Service::BaseWithCurrentUser
     {
       id:               share.id,
       ticket_id:        share.ticket_id,
-      shared_with_id:   share.shared_with_id,
-      shared_with_name: share.shared_with&.fullname,
+      group_id:         share.group_id,
+      group_name:       share.group_name,
       shared_by_id:     share.shared_by_id,
       shared_by_name:   share.shared_by&.fullname,
       permissions:      share.permissions,

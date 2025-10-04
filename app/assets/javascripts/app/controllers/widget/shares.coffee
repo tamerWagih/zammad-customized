@@ -76,33 +76,7 @@ class App.WidgetShares extends App.Controller
     if !@lastShares || @lastShares.length is 0
       @loadShares()
 
-  loadShares: =>
-    return if @isLoadingShares
-
-    @isLoadingShares = true
-
-    # First ensure we have a proper ticket object with share permissions
-    if !@ticket || !@ticket.share_permissions
-      @ajax(
-        id:    'load_ticket_for_permissions'
-        type:  'GET'
-        url:   "#{@apiPath}/tickets/#{@ticket_id}"
-        success: (ticketData) =>
-          App.Ticket.refresh([ticketData]) if ticketData?
-          @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
-          @loadSharesFromAPI()
-        error: (xhr, status, error) =>
-          # Ignore aborted requests
-          unless status is 'abort'
-            console.error 'Failed to load ticket for permissions:', status, error
-          @isLoadingShares = false
-        complete: (xhr, status) =>
-          @isLoadingShares = false
-      )
-    else
-      @loadSharesFromAPI()
-
-  loadSharesFromAPI: =>
+  loadShares: =>\n    return if @isLoadingShares\n\n    @isLoadingShares = true\n    @loadSharesFromAPI()\n\n  loadSharesFromAPI: =>
     @ajax(
       id:          'load_shares'
       type:        'GET'
@@ -311,41 +285,15 @@ class App.WidgetShares extends App.Controller
     @currentAction = null
 
   # Notify the shared user about the action (for deletion/revocation)
-  notifyToSharedUser: (data, action) =>
-    # Find the share data that was just deleted/revoked
-    share_data = data?.share || data
-    return unless share_data
-
-    shared_user_id = share_data.shared_with_id || share_data.user_id
-    return unless shared_user_id
-
-    # Get current user to check if we're notifying ourselves
-    current_user = App.User.current()
-    return if current_user && String(current_user.id) == String(shared_user_id)
-
-    # Create a notification for the shared user
-    message = if action is 'deleted'
-      __('Your access to this ticket has been removed by %s').replace('%s', current_user?.fullname || __('another user'))
-    else if action is 'revoked'
-      __('Your access to this ticket has been revoked by %s').replace('%s', current_user?.fullname || __('another user'))
-    else
-      __('Your access to this ticket has been updated by %s').replace('%s', current_user?.fullname || __('another user'))
-
-    # Send notification to the shared user via WebSocket
-    App.WebSocket.send(
-      event: 'notification'
-      data:
-        user_id: shared_user_id
-        type: 'info'
-        message: message
-        ticket_id: @ticket_id
-        action: action
-    )
-
+  notifyToSharedUser: (data, action) =>\n    # Group notifications handled on the server\n    return\n
   refresh: =>
     if @callback
       @callback()
 
   reload: =>
     @loadShares()
+
+
+
+
 

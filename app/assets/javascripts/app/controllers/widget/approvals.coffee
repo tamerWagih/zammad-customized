@@ -87,26 +87,6 @@ class App.WidgetApprovals extends App.Controller
     @isLoadingApprovals = true
 
     # First ensure we have a proper ticket object with share permissions
-    if !@ticket || !@ticket.share_permissions
-      @ajax(
-        id:    'load_ticket_for_permissions'
-        type:  'GET'
-        url:   "#{@apiPath}/tickets/#{@ticket_id}"
-        success: (ticketData) =>
-          App.Ticket.refresh([ticketData]) if ticketData?
-          @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
-          @loadApprovalsFromAPI()
-        error: (xhr, status, error) =>
-          # Ignore aborted requests
-          unless status is 'abort'
-            console.error 'Failed to load ticket for permissions:', status, error
-          @isLoadingApprovals = false
-        complete: (xhr, status) =>
-          @isLoadingApprovals = false
-      )
-    else
-      @loadApprovalsFromAPI()
-
   loadApprovalsFromAPI: =>
     @ajax(
       id:          'load_approvals'
@@ -351,3 +331,7 @@ class App.WidgetApprovals extends App.Controller
 
   reload: =>
     @loadApprovals()
+
+
+
+

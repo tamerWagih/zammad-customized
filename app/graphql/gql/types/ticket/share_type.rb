@@ -1,5 +1,3 @@
-# Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
-
 module Gql
   module Types
     module Ticket
@@ -8,8 +6,8 @@ module Gql
 
         field :id, GraphQL::Types::ID, null: false
         field :ticket_id, GraphQL::Types::ID, null: false
-        field :shared_with_id, GraphQL::Types::ID, null: false
-        field :shared_with, Gql::Types::UserType, null: true
+        field :group_id, GraphQL::Types::ID, null: false
+        field :group, Gql::Types::GroupType, null: true
         field :shared_by_id, GraphQL::Types::ID, null: false
         field :shared_by, Gql::Types::UserType, null: true
         field :permissions, [String], null: false
@@ -19,8 +17,8 @@ module Gql
         field :created_at, GraphQL::Types::ISO8601DateTime, null: false
         field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-        def shared_with
-          object.shared_with
+        def group
+          object.group
         end
 
         def shared_by

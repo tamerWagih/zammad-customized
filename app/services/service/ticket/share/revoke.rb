@@ -1,5 +1,3 @@
-# Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
-
 class Service::Ticket::Share::Revoke < Service::BaseWithCurrentUser
   def execute(share:)
     Pundit.authorize current_user, share.ticket, :update?
@@ -8,7 +6,6 @@ class Service::Ticket::Share::Revoke < Service::BaseWithCurrentUser
     share.update!(status: 'revoked') unless share.status == 'revoked'
     share.reload
 
-    # Send email notifications
     Service::Ticket::Share::EmailNotifier
       .new(current_user: current_user)
       .notify(share: share, action: :revoke)

@@ -7,11 +7,8 @@ import type { TicketById, TicketView } from '../types.ts'
 export const getTicketView = (ticket: TicketById) => {
   const session = useSessionStore()
 
-  // Check if user has read-only access via share (has read access but not edit access)
-  const isReadOnlyShareAccess = ticket.policy.agentReadAccess && !(ticket.policy as any).agentUpdateAccess && ticket.policy.update
-
-  // Ticket is editable if user has update permission AND is not read-only share access
-  const isTicketEditable = ticket.policy.update && !isReadOnlyShareAccess
+  const isReadOnlyShareAccess = false
+  const isTicketEditable = ticket.policy.update
 
   const isTicketCustomer =
     session.hasPermission('ticket.customer') && !ticket.policy.agentReadAccess

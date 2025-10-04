@@ -4,7 +4,7 @@ class Service::Ticket::Share::List < Service::BaseWithCurrentUser
   def execute(ticket:)
     Pundit.authorize current_user, ticket, :show?
 
-    scope = ticket.shares.includes(:shared_with, :shared_by)
+    scope = ticket.shares.includes(:group, :shared_by)
 
     return scope.order(created_at: :desc) if can_manage_shares?(ticket)
 
@@ -23,3 +23,4 @@ class Service::Ticket::Share::List < Service::BaseWithCurrentUser
     policy&.update?
   end
 end
+

@@ -4,7 +4,6 @@ class SidebarApprovals extends App.Controller
     @last_can_share = null
 
   sidebarItem: =>
-    
     return if @ticket.currentView() isnt 'agent'
     return unless @permissionCheck('ticket.agent') or @permissionCheck('admin.*')
 
@@ -17,7 +16,6 @@ class SidebarApprovals extends App.Controller
       sidebarActions: []
     }
 
-    # Only allow requesting approval if user is owner or has share access
     if @canShareOrApprove()
       @item.sidebarActions.push(
         title: __('Request Approval')
@@ -30,11 +28,9 @@ class SidebarApprovals extends App.Controller
   showPanel: (el) =>
     @elSidebar = el
 
-    # Ensure ticket object is properly loaded with share permissions
     if @ticket_id
-      @ticket = App.Ticket.fullLocal(@ticket_id)
-      # If local cache doesn't have share permissions, fetch from server
-      if !@ticket?.share_permissions
+      @ticket = App.Ticket.fullLocal(@ticket_id) || @ticket
+      unless @ticket
         @ajax(
           id:    'load_ticket_for_sidebar'
           type:  'GET'
@@ -44,18 +40,15 @@ class SidebarApprovals extends App.Controller
             @ticket = App.Ticket.findNative(@ticket_id)
             @createApprovalsWidget()
           error: (xhr, status, error) =>
-            console.error 'Failed to load ticket for sidebar:', status, error
+            console.error 'Failed to load ticket for sidebar:', status, error unless status is 'abort'
             @createApprovalsWidget()
         )
-      else
-        @createApprovalsWidget()
-    else
-      @createApprovalsWidget()
+        return
+
+    @createApprovalsWidget()
 
   createApprovalsWidget: =>
-    # Destroy existing widget if any
-    if @widget
-      @widget.destroy?()
+    @widget?.destroy?()
 
     @widget = new App.WidgetApprovals(
       el:       @elSidebar
@@ -63,47 +56,39 @@ class SidebarApprovals extends App.Controller
       parentVC: @
       callback: @refreshApprovals
     )
-    
-    # Load approvals data for isReceiver check
+
     @loadApprovalsForCheck()
-    
-    # Ensure widget loads data when panel is shown
+
     @delay =>
       if @widget
         @widget.reload()
-        # Also trigger ensureDataLoaded after a longer delay
         @delay =>
           if @widget && @widget.ensureDataLoaded
             @widget.ensureDataLoaded()
         , 500, 'approval-ensure-data'
     , 200, 'approval-panel-show'
 
-  # Standard reload method called by sidebar system
   reload: (args) =>
     if @widget && @widget.reload
       @widget.reload(args)
     else if @elSidebar
       @showPanel(@elSidebar)
-    
-    # Check if ticket assignment changed and trigger sidebar re-render
+
     @checkAndUpdateActions()
 
   checkAndUpdateActions: =>
-    # Check if the ability to share/approve has changed
     current_can_share = @canShareOrApprove()
     if @last_can_share isnt current_can_share
       @last_can_share = current_can_share
-      # Trigger sidebar re-render to update actions
-      # Get taskKey from parent controller
       taskKey = @parentVC?.taskKey || @taskKey
       App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: taskKey })
 
   refreshApprovals: =>
-    if @elSidebar
-      @showPanel(@elSidebar)
+    @showPanel(@elSidebar) if @elSidebar
 
   loadApprovalsForCheck: =>
-    # Load approvals data for isReceiver check
+    return unless @ticket
+
     @ajax(
       id: 'load_approvals_for_check'
       type: 'GET'
@@ -116,7 +101,6 @@ class SidebarApprovals extends App.Controller
     )
 
   requestApproval: =>
-    # Create approval request modal
     new App.TicketApprovalRequest(
       ticket_id: @ticket.id
       container: @elSidebar.closest('.content')
@@ -136,28 +120,8 @@ class SidebarApprovals extends App.Controller
     ))
 
   canShareOrApprove: =>
-    # Check if current user can share or request approval
     current_user = App.User.current()
     return false unless current_user
-    
-    # Allow users with full access permission from share, if not expired
-    share_permissions = @ticket?.share_permissions
-    is_expired = false
-    if @ticket?.share_expires_at
-      try
-        is_expired = new Date(@ticket.share_expires_at) <= new Date()
-      catch
-        is_expired = false
-    if share_permissions && share_permissions.edit && !is_expired
-      return true
-    
-    # Allow owner to request approval
-    if @ticket?.owner_id && String(@ticket.owner_id) == String(current_user.id)
-      return true
-    
-    # Everyone else cannot share or request approval
-    return false
+    @permissionCheck('admin.*') or @permissionCheck('ticket.agent')
 
 App.Config.set('450-Approvals', SidebarApprovals, 'TicketZoomSidebar')
-
-

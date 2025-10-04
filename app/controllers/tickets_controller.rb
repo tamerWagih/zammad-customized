@@ -62,7 +62,7 @@ class TicketsController < ApplicationController
         
         # Add share expiry date if user has a share
         if ticket.respond_to?(:shares) && current_user
-          user_share = ticket.shares.active_current.find_by(shared_with: current_user)
+          user_share = current_user_share(ticket)
           result[:share_expires_at] = user_share&.expires_at
         end
       rescue StandardError => e
@@ -91,7 +91,7 @@ class TicketsController < ApplicationController
       # Check all shares for this ticket
       if ticket.respond_to?(:shares)
         if current_user
-          user_share = ticket.shares.active_current.find_by(shared_with: current_user)
+          user_share = current_user_share(ticket)
           ticket_json[:share_expires_at] = user_share&.expires_at
         end
       end
@@ -573,4 +573,27 @@ class TicketsController < ApplicationController
     )
     render json: result, status: :ok
   end
-end
+\n  def current_user_share(ticket)
+    return unless current_user
+    return unless ticket.respond_to?(:shares)
+
+    cache = (@current_user_share_cache ||= {})
+    return cache[ticket.id] if cache.key?(ticket.id)
+
+    begin
+      user_group_ids = Array(current_user.group_ids_access('read'))
+      share = nil
+      if user_group_ids.present?
+        share = ticket.shares.active_current.detect do |ticket_share|
+          user_group_ids.include?(ticket_share.group_id)
+        end
+      end
+      cache[ticket.id] = share
+    rescue StandardError => e
+      Rails.logger.warn "Failed to determine share for current user on ticket #{ticket.id}: #{e.message}"
+      cache[ticket.id] = nil
+    end
+  end\nend\n
+
+
+

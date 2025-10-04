@@ -21,19 +21,23 @@
         <div class="flex items-center justify-between py-2">
           <div class="flex flex-col">
             <CommonLabel size="small" class="font-medium">
-              {{ share.sharedWith?.fullname }}
+              {{ share.group?.fullname || share.group?.name || $t('Unknown group') }}
             </CommonLabel>
             <CommonLabel size="small" class="text-stone-200! dark:text-neutral-500!">
               <CommonDateTime :date-time="share.createdAt" />
             </CommonLabel>
           </div>
           <CommonLabel size="small" class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-            {{ formatPermissions(share.permissions) }}
+            {{ $t('Full access') }}
           </CommonLabel>
         </div>
         
         <div v-if="share.message" class="text-sm text-gray-600 dark:text-gray-300 mb-2">
           {{ share.message }}
+        </div>
+        
+        <div v-if="share.expiresAt" class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          {{ $t('Expires {date}', { date: $d(new Date(share.expiresAt), 'short') }) }}
         </div>
         
         <div v-if="canManage" class="flex gap-2">
@@ -96,17 +100,8 @@ const {
 
 const shares = computed(() => sharesData.value?.ticketShares || [])
 
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString()
-}
-
-const formatPermissions = (permissions: string[]) => {
-  return permissions.join(', ')
-}
-
 const revokeShare = async (shareId: number) => {
-  // TODO: Implement share revocation mutation
-  console.log('Revoking share:', shareId)
+  console.log('Revoke share not yet implemented', shareId)
   await refetch()
 }
 
@@ -115,8 +110,5 @@ const handleShareCreated = () => {
   refetch()
 }
 </script>
-
-
-
 
 

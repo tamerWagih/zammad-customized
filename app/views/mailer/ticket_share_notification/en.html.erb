@@ -1,28 +1,14 @@
+<% group_name = share.group_name %>
+<% is_sharer = recipient.id == share.shared_by_id %>
+<% group_label = group_name.present? ? group_name : self.T('the shared group') %>
+
 <% case action %>
 <% when 'create' %>
-<% if recipient.id == share.shared_with_id %>
-<%- self.T('Ticket #%s shared with you', ticket.number) %>
-<% else %>
-<%- self.T('Ticket #%s shared by you', ticket.number) %>
-<% end %>
+<%- self.T('Ticket #%s shared with %s', ticket.number, group_label) %>
 <% when 'update' %>
-<% if recipient.id == share.shared_with_id %>
-<%- self.T('Ticket #%s share updated', ticket.number) %>
-<% else %>
-<%- self.T('Ticket #%s share updated by you', ticket.number) %>
-<% end %>
-<% when 'revoke' %>
-<% if recipient.id == share.shared_with_id %>
-<%- self.T('Ticket #%s share revoked', ticket.number) %>
-<% else %>
-<%- self.T('Ticket #%s share revoked by you', ticket.number) %>
-<% end %>
-<% when 'delete' %>
-<% if recipient.id == share.shared_with_id %>
-<%- self.T('Ticket #%s share removed', ticket.number) %>
-<% else %>
-<%- self.T('Ticket #%s share removed by you', ticket.number) %>
-<% end %>
+<%- self.T('Ticket #%s share for %s updated', ticket.number, group_label) %>
+<% when 'revoke', 'delete' %>
+<%- self.T('Ticket #%s share for %s revoked', ticket.number, group_label) %>
 <% end %>
 
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -30,28 +16,22 @@
     <h2 style="color: #333; margin: 0 0 10px 0;">
       <% case action %>
       <% when 'create' %>
-        <% if recipient.id == share.shared_with_id %>
-          <%- self.T('Ticket Shared with You') %>
-        <% else %>
+        <% if is_sharer %>
           <%- self.T('Ticket Shared Successfully') %>
+        <% else %>
+          <%- self.T('Ticket Shared with Your Group') %>
         <% end %>
       <% when 'update' %>
-        <% if recipient.id == share.shared_with_id %>
-          <%- self.T('Share Updated') %>
-        <% else %>
+        <% if is_sharer %>
           <%- self.T('Share Updated Successfully') %>
-        <% end %>
-      <% when 'revoke' %>
-        <% if recipient.id == share.shared_with_id %>
-          <%- self.T('Share Revoked') %>
         <% else %>
+          <%- self.T('Share Settings Updated') %>
+        <% end %>
+      <% when 'revoke', 'delete' %>
+        <% if is_sharer %>
           <%- self.T('Share Revoked Successfully') %>
-        <% end %>
-      <% when 'delete' %>
-        <% if recipient.id == share.shared_with_id %>
-          <%- self.T('Share Removed') %>
         <% else %>
-          <%- self.T('Share Removed Successfully') %>
+          <%- self.T('Group Access Revoked') %>
         <% end %>
       <% end %>
     </h2>
@@ -63,43 +43,33 @@
       
       <% case action %>
       <% when 'create' %>
-        <% if recipient.id == share.shared_with_id %>
+        <% if is_sharer %>
           <p style="margin: 10px 0; color: #666;">
-            <%- self.T('%s has shared this ticket with you.', actor.fullname) %>
+            <%- self.T('You have successfully shared this ticket with the group %s.', group_label) %>
           </p>
         <% else %>
           <p style="margin: 10px 0; color: #666;">
-            <%- self.T('You have successfully shared this ticket with %s.', share.shared_with.fullname) %>
+            <%- self.T('%s granted your group full access to this ticket.', actor.fullname) %>
           </p>
         <% end %>
       <% when 'update' %>
-        <% if recipient.id == share.shared_with_id %>
+        <% if is_sharer %>
           <p style="margin: 10px 0; color: #666;">
-            <%- self.T('%s has updated your access to this ticket.', actor.fullname) %>
+            <%- self.T('You have updated the share for the group %s.', group_label) %>
           </p>
         <% else %>
           <p style="margin: 10px 0; color: #666;">
-            <%- self.T('You have successfully updated the share with %s.', share.shared_with.fullname) %>
+            <%- self.T('%s updated the share settings for your group.', actor.fullname) %>
           </p>
         <% end %>
-      <% when 'revoke' %>
-        <% if recipient.id == share.shared_with_id %>
+      <% when 'revoke', 'delete' %>
+        <% if is_sharer %>
           <p style="margin: 10px 0; color: #666;">
-            <%- self.T('%s has revoked your access to this ticket.', actor.fullname) %>
+            <%- self.T('You have revoked the share for the group %s.', group_label) %>
           </p>
         <% else %>
           <p style="margin: 10px 0; color: #666;">
-            <%- self.T('You have successfully revoked the share with %s.', share.shared_with.fullname) %>
-          </p>
-        <% end %>
-      <% when 'delete' %>
-        <% if recipient.id == share.shared_with_id %>
-          <p style="margin: 10px 0; color: #666;">
-            <%- self.T('%s has removed your access to this ticket.', actor.fullname) %>
-          </p>
-        <% else %>
-          <p style="margin: 10px 0; color: #666;">
-            <%- self.T('You have successfully removed the share with %s.', share.shared_with.fullname) %>
+            <%- self.T('%s revoked your group access to this ticket.', actor.fullname) %>
           </p>
         <% end %>
       <% end %>
@@ -113,20 +83,14 @@
       
       <div style="margin: 15px 0;">
         <strong><%- self.T('Access Level') %>:</strong>
-        <% if share.permissions.include?('edit') %>
-          <span style="background-color: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">
-            <%- self.T('Full Access') %>
-          </span>
-        <% else %>
-          <span style="background-color: #6c757d; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">
-            <%- self.T('Read Only') %>
-          </span>
-        <% end %>
+        <span style="background-color: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">
+          <%- self.T('Full access for group members') %>
+        </span>
       </div>
       
       <% if share.expires_at %>
         <div style="margin: 10px 0; color: #666;">
-          <strong><%- self.T('Expires') %>:</strong> <%- share.expires_at.strftime('%B %d, %Y at %I:%M %p') %>
+          <strong><%- self.T('Expires') %>:</strong> <%- share.expires_at.strftime('%B %d, %Y') %>
         </div>
       <% end %>
     </div>

@@ -1,17 +1,11 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
 class Service::Ticket::Share::Update < Service::BaseWithCurrentUser
-  VALID_PERMISSIONS = Service::Ticket::Share::Create::VALID_PERMISSIONS
-
   def execute(share:, attributes: {})
     Pundit.authorize current_user, share.ticket, :update?
     ensure_manageable!(share)
 
     updates = {}
-
-    if attributes.key?(:permissions)
-      updates[:permissions] = normalize_permissions(attributes[:permissions])
-    end
 
     if attributes.key?(:message)
       updates[:message] = attributes[:message]
@@ -24,7 +18,6 @@ class Service::Ticket::Share::Update < Service::BaseWithCurrentUser
     share.update!(updates) if updates.any?
     share.reload
 
-    # Send email notifications if updates were made
     if updates.any?
       Service::Ticket::Share::EmailNotifier
         .new(current_user: current_user)
@@ -42,20 +35,20 @@ class Service::Ticket::Share::Update < Service::BaseWithCurrentUser
     raise Exceptions::Forbidden, __('You can only update shares you created.')
   end
 
-  def normalize_permissions(raw_permissions)
-    permissions = Array(raw_permissions).map(&:to_s).reject(&:blank?).uniq
-    permissions = ['read'] if permissions.empty?
-
-    invalid = permissions - VALID_PERMISSIONS
-    if invalid.any?
-      raise Exceptions::UnprocessableEntity,
-            __('Share permissions contain unsupported values: %s.') % invalid.join(', ')
-    end
-
-    permissions
-  end
-
   def normalize_expires_at(value)
-    value.presence
+    return if value.blank?
+
+    date = case value
+           when Date
+             value
+           when Time
+             value.to_date
+           else
+             Date.parse(value.to_s)
+           end
+
+    date.end_of_day
+  rescue ArgumentError
+    raise Exceptions::UnprocessableEntity, __('Expiry date is invalid. Please provide a valid date.')
   end
 end

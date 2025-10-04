@@ -189,7 +189,6 @@ const {
   isTicketAgent,
   isTicketCustomer,
   isTicketEditable,
-  isReadOnlyShareAccess,
   articleTypeHandler,
   articleTypeSelectHandler,
 } = useTicketEditForm(ticket, form)
@@ -197,7 +196,6 @@ const {
 const sidebarContext = computed<TicketSidebarContext>(() => ({
   ticket,
   isTicketEditable,
-  isReadOnlyShareAccess,
   screenType: TicketSidebarScreenType.TicketDetailView,
   form: form.value,
   formValues: {
@@ -236,7 +234,6 @@ provideTicketInformation({
   ticket,
   ticketId,
   isTicketEditable,
-  isReadOnlyShareAccess,
   form,
   newTicketArticlePresent,
   showTicketArticleReplyForm,
@@ -619,7 +616,7 @@ const {
         <ArticleList ref="article-list" :aria-busy="isLoadingArticles" />
 
         <ArticleReply
-          v-if="ticket?.id && isTicketEditable && !isReadOnlyShareAccess"
+          v-if="ticket?.id && isTicketEditable && !"
           v-show="!isLoadingArticles"
           v-model:pinned="isReplyPinned"
           :ticket="ticket"
@@ -678,7 +675,6 @@ const {
         :group-id="groupId"
         :is-ticket-agent="isTicketAgent"
         :is-ticket-editable="isTicketEditable"
-        :is-read-only-share-access="isReadOnlyShareAccess"
         :has-available-draft="hasAvailableDraft"
         :live-user-list="liveUserList"
         :shared-draft-id="ticket?.sharedDraftZoomId"
@@ -690,3 +686,5 @@ const {
     </template>
   </LayoutContent>
 </template>
+
+

@@ -39,11 +39,12 @@ module Ticket::Share::TriggersSubscriptions
   def trigger_share_subscription(action)
     # Custom share subscription event
     # This will trigger frontend listeners for TicketShare events
-    event_data = { 
+    event_data = {
       share: {
         id: id,
         ticket_id: ticket_id,
-        user: shared_with&.fullname,
+        group_id: group_id,
+        group: group&.fullname || group&.name,
         permissions: permissions,
         message: message,
         status: status,
@@ -56,3 +57,5 @@ module Ticket::Share::TriggersSubscriptions
     Sessions.broadcast("TicketShare:#{action}", event_data)
   end
 end
+
+

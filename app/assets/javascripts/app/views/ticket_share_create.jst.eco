@@ -1,50 +1,28 @@
 <% if @error: %>
   <div class="alert alert-warning">
-    <%- @T('Unable to load users. Please try again.') %>
+    <%- @T('Unable to load groups. Please try again.') %>
   </div>
 <% end %>
 
 <form class="form-horizontal">
   <div class="form-group">
     <label class="control-label col-sm-3">
-      <%- @T('Share with') %>
+      <%- @T('Share with group') %>
     </label>
     <div class="col-sm-9">
-      <select name="shared_with_id" class="form-control" required>
+      <select name="group_id" class="form-control" required>
         <option value="">
-          <%- @T('Select a user to share with...') %>
+          <%- @T('Select a group to share with...') %>
         </option>
-        <% for user in @users: %>
-          <option value="<%= user.id %>">
-            <%- user.firstname %> <%- user.lastname %> (<%- user.email %>)
+        <% for group in @groups: %>
+          <option value="<%= group.id %>">
+            <%- group.fullname || group.name %>
           </option>
         <% end %>
       </select>
       <small class="help-block">
-        <%- @T('Only agents and admins are shown') %>
+        <%- @T('All members of the selected group receive full access') %>
       </small>
-    </div>
-  </div>
-
-  <div class="form-group">
-    <label class="control-label col-sm-3">
-      <%- @T('Access Level') %>
-    </label>
-    <div class="col-sm-9">
-      <div class="radio">
-        <label>
-          <input type="radio" name="access_level" value="full" checked>
-          <strong><%- @T('Full Access') %></strong>
-          <br><small class="text-muted"><%- @T('View, comment, and edit ticket') %></small>
-        </label>
-      </div>
-      <div class="radio">
-        <label>
-          <input type="radio" name="access_level" value="read">
-          <strong><%- @T('Read Only') %></strong>
-          <br><small class="text-muted"><%- @T('View ticket and comments only') %></small>
-        </label>
-      </div>
     </div>
   </div>
 
@@ -53,18 +31,18 @@
       <%- @T('Message') %>
     </label>
     <div class="col-sm-9">
-      <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the shared user...') %>"></textarea>
+      <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the group...') %>"></textarea>
     </div>
   </div>
 
   <div class="form-group">
     <label class="control-label col-sm-3">
-      <%- @T('Expires At (Optional)') %>
+      <%- @T('Expire on (Optional)') %>
     </label>
     <div class="col-sm-9">
-      <input type="datetime-local" name="expires_at" class="form-control" min="<%= new Date().toISOString().slice(0, 16) %>">
+      <input type="date" name="expires_at" class="form-control">
       <small class="help-block">
-        <%- @T('Leave empty for no expiration') %>
+        <%- @T('Access ends at the end of the selected day') %>
       </small>
     </div>
   </div>

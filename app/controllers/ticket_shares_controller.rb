@@ -18,18 +18,17 @@ class TicketSharesController < ApplicationController
     share = Service::Ticket::Share::Create
       .new(current_user:)
       .execute(
-        ticket:          @ticket,
-        shared_with_id:  share_create_params[:shared_with_id],
-        permissions:     share_create_params[:permissions],
-        message:         share_create_params[:message],
-        expires_at:      share_create_params[:expires_at]
+        ticket:     @ticket,
+        group_id:   share_create_params[:group_id],
+        message:    share_create_params[:message],
+        expires_at: share_create_params[:expires_at]
       )
 
-    notify_shared_user(share, 'Ticket shared with you')
+    notify_shared_group(share, __('Ticket shared with your group'))
 
     render json: { share: serialize_share(share) }, status: :created
   rescue ActiveRecord::RecordNotFound
-    render json: { error: __('User not found') }, status: :not_found
+    render json: { error: __('Group not found') }, status: :not_found
   rescue Exceptions::UnprocessableEntity => e
     render json: { error: e.message }, status: :unprocessable_entity
   end
@@ -39,7 +38,7 @@ class TicketSharesController < ApplicationController
       .new(current_user:)
       .execute(share: @share)
 
-    notify_shared_user(share, 'Share revoked')
+    notify_shared_group(share, __('Share revoked'))
 
     render json: { share: serialize_share(share) }
   rescue Exceptions::Forbidden => e
@@ -53,7 +52,7 @@ class TicketSharesController < ApplicationController
       .new(current_user:)
       .execute(share: @share, attributes: share_update_params)
 
-    notify_shared_user(share, 'Share updated') if share.shared_with_id.present?
+    notify_shared_group(share, __('Share updated'))
 
     render json: { share: serialize_share(share) }
   rescue Exceptions::Forbidden => e
@@ -69,7 +68,7 @@ class TicketSharesController < ApplicationController
       .new(current_user:)
       .execute(share: @share)
 
-    notify_shared_user(share_data, 'Share revoked')
+    notify_shared_group(share_data, __('Share revoked'))
 
     render json: { success: true, share: serialize_share(share_data) }
   rescue Exceptions::Forbidden => e
@@ -93,59 +92,76 @@ class TicketSharesController < ApplicationController
   end
 
   def share_create_params
-    params.permit(:shared_with_id, :message, :expires_at, permissions: [])
+    params.permit(:group_id, :message, :expires_at)
   end
 
   def share_update_params
-    params.permit(:message, :expires_at, permissions: [])
+    params.permit(:message, :expires_at)
   end
 
   def serialize_share(share)
-    shared_with_id = share.respond_to?(:shared_with_id) ? share.shared_with_id : share[:shared_with_id]
-    shared_by_id   = share.respond_to?(:shared_by_id) ? share.shared_by_id : share[:shared_by_id]
-    shared_with_name = share.respond_to?(:shared_with) ? share.shared_with&.fullname : share[:shared_with_name]
-    shared_by_name   = share.respond_to?(:shared_by) ? share.shared_by&.fullname : share[:shared_by_name]
+    group_id = extract_attribute(share, :group_id)
+    group_name = extract_attribute(share, :group_name) || share.try(:group)&.fullname || share.try(:group)&.name
 
     {
-      id:               stringify_id(share[:id] || share.id),
-      ticket_id:        stringify_id(share[:ticket_id] || share.ticket_id),
-      shared_with_id:   stringify_id(shared_with_id),
-      shared_with_name: shared_with_name,
-      user:             shared_with_name,
-      shared_by_id:     stringify_id(shared_by_id),
-      shared_by_name:   shared_by_name,
-      permissions:      Array(share[:permissions] || share.permissions),
-      message:          share[:message] || share.message,
-      status:           share[:status] || share.status,
-      created_at:       share[:created_at] || share.created_at,
-      updated_at:       share[:updated_at] || share.updated_at,
-      expires_at:       share[:expires_at] || share.expires_at
+      id:               stringify_id(extract_attribute(share, :id)),
+      ticket_id:        stringify_id(extract_attribute(share, :ticket_id)),
+      group_id:         stringify_id(group_id),
+      group_name:       group_name,
+      group:            group_name,
+      shared_by_id:     stringify_id(extract_attribute(share, :shared_by_id)),
+      shared_by_name:   share.respond_to?(:shared_by) ? share.shared_by&.fullname : share[:shared_by_name],
+      permissions:      Array(extract_attribute(share, :permissions)),
+      message:          extract_attribute(share, :message),
+      status:           extract_attribute(share, :status),
+      created_at:       extract_attribute(share, :created_at),
+      updated_at:       extract_attribute(share, :updated_at),
+      expires_at:       extract_attribute(share, :expires_at)
     }
   end
 
-  def notify_shared_user(share_data, notification_type)
-    shared_with_id = if share_data.respond_to?(:shared_with_id)
-                       share_data.shared_with_id
-                     else
-                       share_data[:shared_with_id]
-                     end
+  def notify_shared_group(share_data, notification_type)
+    group_id = extract_attribute(share_data, :group_id)
+    return if group_id.blank?
 
-    return if shared_with_id.blank?
+    member_ids = group_member_ids(group_id)
+    member_ids << extract_attribute(share_data, :shared_by_id)
 
-    OnlineNotification.add(
-      type:          notification_type,
-      object:        'Ticket',
-      o_id:          @ticket.id,
-      seen:          false,
-      user_id:       shared_with_id,
-      created_by_id: current_user.id,
-    )
-  rescue StandardError
+    member_ids.compact.uniq.each do |user_id|
+      next if user_id.to_i == current_user.id
+
+      OnlineNotification.add(
+        type:          notification_type,
+        object:        'Ticket',
+        o_id:          @ticket.id,
+        seen:          false,
+        user_id:       user_id,
+        created_by_id: current_user.id,
+      )
+    end
+  rescue StandardError => e
+    Rails.logger.warn "Failed to create share notification: #{e.message}"
     nil
+  end
+
+  def group_member_ids(group_id)
+    Array(User.group_access(group_id, 'read')).select(&:active?).map(&:id)
+  rescue StandardError => e
+    Rails.logger.warn "Failed to resolve group members for share notification: #{e.message}"
+    []
+  end
+
+  def extract_attribute(source, key)
+    if source.respond_to?(key)
+      source.public_send(key)
+    elsif source.respond_to?(:[])
+      source[key]
+    end
   end
 
   def stringify_id(value)
     value.present? ? value.to_s : nil
   end
 end
+
 

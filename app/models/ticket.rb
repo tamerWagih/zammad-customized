@@ -734,24 +734,25 @@ returns a hex color code
 
   # Check share permissions for a given user
   def share_permissions_for(user)
-    return { read: false, comment: false, edit: false } unless user
-    
-    # Check if shares table exists and association is available
-    return { read: false, comment: false, edit: false } unless respond_to?(:shares)
-    
+    default = { read: false, comment: false, edit: false }
+    return default unless user
+    return default unless respond_to?(:shares)
+
     begin
-      share = shares.active_current.find_by(shared_with: user)
-      return { read: false, comment: false, edit: false } unless share
-      
-      permissions = share.permissions || []
+      share_group_ids = shares.active_current.pluck(:group_id)
+      return default if share_group_ids.blank?
+
+      user_group_ids = Array(user.group_ids_access('read'))
+      has_access = (share_group_ids & user_group_ids).present?
+
       {
-        read: permissions.include?('read'),
-        comment: permissions.include?('comment'),
-        edit: permissions.include?('edit')
+        read: has_access,
+        comment: has_access,
+        edit: has_access
       }
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
-      { read: false, comment: false, edit: false }
+      default
     end
   end
 
@@ -787,3 +788,4 @@ returns a hex color code
     end
   end
 end
+

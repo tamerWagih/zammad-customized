@@ -66,13 +66,7 @@ class App.TicketZoom extends App.Controller
       # Only filter by taskKey if it is provided in the event payload
       return if data?.taskKey? and data.taskKey isnt @taskKey
       return if !@sidebarWidget
-
-      ticketForSidebar = data?.ticket ? @ticket
-      if !ticketForSidebar?.currentView?() and App.Ticket.exists(@ticket_id)
-        ticketForSidebar = App.Ticket.fullLocal(@ticket_id)
-
-      return if !ticketForSidebar?.currentView?()
-      @sidebarWidget.render(ticketForSidebar)
+      @sidebarWidget.render(@formCurrent())
     )
     @controllerBind('config_update', (data) =>
       return if data.name isnt 'checklist'
@@ -149,10 +143,10 @@ class App.TicketZoom extends App.Controller
     if !newTicketRaw
       newTicketRaw = data.assets.Ticket[@ticket_id]
 
-    view       = @ticket?.currentView()
-    readable   = @ticket?.userGroupAccess?('read') || @ticket?.groupAccess?('read') || false
-    changeable = @ticket?.userGroupAccess?('change') || @ticket?.groupAccess?('change') || false
-    fullable   = @ticket?.userGroupAccess?('full') || @ticket?.groupAccess?('full') || false
+    view       = @ticket && @ticket.currentView && @ticket.currentView()
+    readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || false
+    changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || false
+    fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || false
     formMeta   = data.form_meta
 
     # on the following states we want to rerender the ticket:
@@ -198,10 +192,10 @@ class App.TicketZoom extends App.Controller
     # get ticket
     @ticket         = App.Ticket.fullLocal(@ticket_id)
     @ticket.article = undefined
-    @view           = @ticket.currentView()
-    @readable       = @ticket?.userGroupAccess?('read') || @ticket?.groupAccess?('read') || false
-    @changeable     = @ticket?.userGroupAccess?('change') || @ticket?.groupAccess?('change') || false
-    @fullable       = @ticket?.userGroupAccess?('full') || @ticket?.groupAccess?('full') || false
+    @view           = @ticket && @ticket.currentView && @ticket.currentView()
+    @readable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || false
+    @changeable     = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || false
+    @fullable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || false
     @formMeta       = data.form_meta
 
     # render page
@@ -214,28 +208,15 @@ class App.TicketZoom extends App.Controller
 
     App.Event.trigger('ui::ticket::all::loaded', data)
 
-    # Enforce read-only UI for shared read-only or expired shares
-    # Add delay to ensure DOM is fully rendered
-    @delay =>
-      @enforceSharePermissionsUI()
-    , 100, 'enforce-share-permissions'
-
-    # Also trigger sidebar rerender to update approval/share widgets
+    # Trigger sidebar rerender to update approval/share widgets
     @delay =>
       App.Event.trigger('ui::ticket::sidebarRerender')
     , 200, 'trigger-sidebar-rerender'
 
-    # Re-apply after any sidebar rerender
-    @controllerBind('ui::ticket::sidebarRerender', =>
-      @delay =>
-        @enforceSharePermissionsUI()
-      , 100, 'enforce-share-permissions-rerender'
-    )
-
     # Listen for real-time approval/share changes to update UI permissions
     @controllerBind('TicketApproval:create TicketApproval:update TicketApproval:destroy', (data) =>
       ticket_id = data?.approval?.ticket_id || data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
-      return unless ticket_id?.toString() is @ticket_id?.toString()
+      return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
       # Refresh ticket object with latest share permissions from server
       @ajax(
         id:    'ticket-share-refresh'
@@ -245,7 +226,6 @@ class App.TicketZoom extends App.Controller
           # Update ticket object with fresh data
           App.Ticket.refresh([ticketData]) if ticketData?
           @ticket = App.Ticket.findNative(@ticket_id)
-          @enforceSharePermissionsUI()
           # Trigger sidebar rerender for approval/share widgets
           App.Event.trigger('ui::ticket::sidebarRerender')
         error: =>
@@ -255,7 +235,7 @@ class App.TicketZoom extends App.Controller
 
     @controllerBind('TicketShare:create TicketShare:update TicketShare:destroy', (data) =>
       ticket_id = data?.share?.ticket_id || data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
-      return unless ticket_id?.toString() is @ticket_id?.toString()
+      return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
       # Refresh ticket object with latest share permissions from server
       @ajax(
         id:    'ticket-share-refresh'
@@ -265,7 +245,6 @@ class App.TicketZoom extends App.Controller
           # Update ticket object with fresh data
           App.Ticket.refresh([ticketData]) if ticketData?
           @ticket = App.Ticket.findNative(@ticket_id)
-          @enforceSharePermissionsUI()
           # Trigger sidebar rerender for approval/share widgets
           App.Event.trigger('ui::ticket::sidebarRerender')
         error: =>
@@ -284,7 +263,6 @@ class App.TicketZoom extends App.Controller
         success: (ticketData) =>
           App.Ticket.refresh([ticketData]) if ticketData?
           @ticket = App.Ticket.findNative(@ticket_id)
-          @enforceSharePermissionsUI()
           # Trigger sidebar rerender
           App.Event.trigger('ui::ticket::sidebarRerender')
         error: =>
@@ -791,7 +769,7 @@ class App.TicketZoom extends App.Controller
         in_reply_to: ''
         subtype:     ''
 
-    if @ticket.currentView() is 'agent'
+    if @ticket && @ticket.currentView && @ticket.currentView() is 'agent'
       currentStore.article.internal = internal
 
     currentStore
@@ -813,6 +791,7 @@ class App.TicketZoom extends App.Controller
     return if modelDiff.ticket.state_id
 
     # and we are in the customer interface
+    return unless @ticket && @ticket.currentView
     return if @ticket.currentView() isnt 'customer'
 
     # and the default is was not set before
@@ -852,7 +831,7 @@ class App.TicketZoom extends App.Controller
 
     delete currentParams.article.form_id
 
-    if @ticket.currentView() is 'customer'
+    if @ticket && @ticket.currentView && @ticket.currentView() is 'customer'
       currentParams.article.internal = ''
 
     currentParams
@@ -1006,7 +985,7 @@ class App.TicketZoom extends App.Controller
       )
 
     # set defaults
-    if ticket.currentView() is 'agent'
+    if ticket && ticket.currentView && ticket.currentView() is 'agent'
       if !ticket['owner_id']
         ticket['owner_id'] = 1
 
@@ -1071,7 +1050,7 @@ class App.TicketZoom extends App.Controller
     @submitChecklist(e, ticket, macro, editContollerForm)
 
   submitChecklist: (e, ticket, macro, editContollerForm) =>
-    return @submitTimeAccounting(e, ticket, macro, editContollerForm) if ticket.currentView() isnt 'agent'
+    return @submitTimeAccounting(e, ticket, macro, editContollerForm) unless ticket && ticket.currentView && ticket.currentView() is 'agent'
     return @submitTimeAccounting(e, ticket, macro, editContollerForm) if !App.Config.get('checklist')
 
     macroContainsStateChange = macro?.perform?.hasOwnProperty('ticket.state_id')
@@ -1403,135 +1382,6 @@ class App.TicketZoom extends App.Controller
     @tooltipCopied.tooltip('hide')
 
   # Disable editing capabilities when user has only read permission or share expired
-  enforceSharePermissionsUI: =>
-    ticket = @ticket
-    current_user = App.User.current()
-    can_edit = false
-    
-    # Check if user is owner
-    if ticket?.owner_id && String(ticket.owner_id) is String(current_user?.id)
-      can_edit = true
-    else
-      # User is not owner - check share permissions
-      is_expired = false
-      if ticket?.share_expires_at
-        try
-          is_expired = new Date(ticket.share_expires_at) <= new Date()
-        catch
-          is_expired = false
-      
-      share_permissions = ticket?.share_permissions || {}
-      
-      # If user is not owner, they can only edit if they have edit permission AND not expired
-      if share_permissions && share_permissions.edit && !is_expired
-        can_edit = true
-      else
-        can_edit = false
-
-    if !can_edit
-      # Show read-only message in bottom bar
-      @showReadOnlyMessage()
-      
-      # Disable Update button and its dropdown
-      @$('.js-submit').prop('disabled', true)
-      @$('.js-reset').prop('disabled', true)
-      
-      # Disable attribute bar elements
-      @$('.edit input, .edit select, .edit textarea, .edit button').prop('disabled', true)
-      
-      # Disable "Stay on tab" dropdown
-      @$('.js-secondaryAction[data-type="stayOnTab"]').prop('disabled', true)
-      @$('.dropdown--actions .btn').prop('disabled', true)
-      
-      # Disable update button dropdown (drag up)
-      @$('.js-openDropdownMacro').prop('disabled', true)
-      @$('.js-submitDropdown .btn--split--last').prop('disabled', true)
-      
-      # Disable ticket actions (Create Task, etc.)
-      @$('.ticket-actions .btn').prop('disabled', true)
-
-      # Disable customer and organization selectors in read-only mode
-      @$('.js-customer').prop('disabled', true)
-      @$('.js-organization').prop('disabled', true)
-
-      # Disable most interactive controls inside sidebar panels
-      @$('.tabsSidebar .content input, .tabsSidebar .content textarea, .tabsSidebar .content select').prop('disabled', true)
-
-      # Disable specific sidebar tab actions
-      # Ticket tab: subscribe button
-      @$('.js-subscribe input[name="subscribe"]').prop('disabled', true)
-      @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', true)
-      
-      # Checklist tab: add empty checklist
-      @$('.js-add-empty').prop('disabled', true)
-      @$('.checklist-item-add-button').prop('disabled', true)
-      
-      # Explicitly disable action buttons inside each sidebar tab section
-      @$('.tabsSidebar .content .btn, .tabsSidebar .content .js-approve, .tabsSidebar .content .js-reject, .tabsSidebar .content .js-edit-approval, .tabsSidebar .content .js-delete-approval, .tabsSidebar .content .js-request-approval, .tabsSidebar .content .js-edit-share, .tabsSidebar .content .js-revoke-share, .tabsSidebar .content .js-delete-share, .tabsSidebar .content .js-add-subscriber').prop('disabled', true)
-      
-      # Prevent richtext editing if present
-      @$('.articleNewEdit-body').attr('contenteditable', 'false')
-      
-    else
-      # Hide read-only message
-      @hideReadOnlyMessage()
-      
-      @$('.js-submit').prop('disabled', false)
-      @$('.js-reset').prop('disabled', false)
-      @$('.edit input, .edit select, .edit textarea, .edit button').prop('disabled', false)
-      @$('.js-secondaryAction[data-type="stayOnTab"]').prop('disabled', false)
-      @$('.dropdown--actions .btn').prop('disabled', false)
-      @$('.js-openDropdownMacro').prop('disabled', false)
-      @$('.js-submitDropdown .btn--split--last').prop('disabled', false)
-      @$('.ticket-actions .btn').prop('disabled', false)
-      @$('.js-customer').prop('disabled', false)
-      @$('.js-organization').prop('disabled', false)
-      @$('.tabsSidebar .content input, .tabsSidebar .content textarea').prop('disabled', false)
-      @$('.tabsSidebar .content select').prop('disabled', false)
-      @$('.js-subscribe input[name="subscribe"]').prop('disabled', false)
-      @$('.js-unsubscribe input[name="unsubscribe"]').prop('disabled', false)
-      @$('.js-add-empty').prop('disabled', false)
-      @$('.checklist-item-add-button').prop('disabled', false)
-      @$('.tabsSidebar .content .btn, .tabsSidebar .content button, .tabsSidebar .content .js-create, .tabsSidebar .content .js-add').prop('disabled', false)
-
-  # Show read-only message in the bottom bar
-  showReadOnlyMessage: =>
-    # Remove existing read-only message if any
-    @hideReadOnlyMessage()
-    
-    # Create read-only message
-    readOnlyMessage = $("""
-      <div class="read-only-share-message" style="
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        color: #6c757d;
-        font-size: 14px;
-        margin: 8px 0;
-      ">
-        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-        </svg>
-        #{__('You have read-only access to this shared ticket')}
-      </div>
-    """)
-    
-    # Insert before the submit buttons
-    submitContainer = @$('.js-submit').closest('.attributeBar-actions')
-    if submitContainer.length
-      submitContainer.before(readOnlyMessage)
-    else
-      # Fallback: insert at the end of the attribute bar
-      @$('.attributeBar').append(readOnlyMessage)
-
-  # Hide read-only message
-  hideReadOnlyMessage: =>
-    @$('.read-only-share-message').remove()
 
 class TicketZoomRouter extends App.ControllerPermanent
   @requiredPermission: ['ticket.agent', 'ticket.customer']

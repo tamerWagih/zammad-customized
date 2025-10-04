@@ -1,5 +1,3 @@
-# Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
-
 class Service::Ticket::Share::EmailNotifier
   def initialize(current_user:)
     @current_user = current_user
@@ -8,39 +6,32 @@ class Service::Ticket::Share::EmailNotifier
   def notify(share:, action:)
     return unless share.persisted?
 
-    # Send email to both parties with error handling
-    begin
-      send_to_shared_user(share, action)
-    rescue => e
-      Rails.logger.error "Failed to send share notification email to shared user: #{e.message}"
-    end
-
-    begin
-      send_to_sharer(share, action)
-    rescue => e
-      Rails.logger.error "Failed to send share notification email to sharer: #{e.message}"
+    recipients_for(share).each do |recipient|
+      begin
+        send_notification(share, action, recipient)
+      rescue => e
+        Rails.logger.error "Failed to send share notification email to #{recipient.id}: #{e.message}"
+      end
     end
   end
 
   private
 
-  def send_to_shared_user(share, action)
-    return if share.shared_with_id == @current_user.id
-
-    NotificationFactory::Mailer.notification(
-      template: 'ticket_share_notification',
-      user:     share.shared_with,
-      objects:  build_objects(share, action, share.shared_with)
-    )
+  def recipients_for(share)
+    group_members = Array(User.group_access(share.group, 'read')).select(&:active?)
+    group_members << share.shared_by if share.shared_by&.active?
+    group_members << @current_user if @current_user&.active?
+    group_members.uniq { |user| user.id }
+  rescue => e
+    Rails.logger.error "Failed to build share recipients: #{e.message}"
+    share.shared_by ? [share.shared_by] : []
   end
 
-  def send_to_sharer(share, action)
-    return if share.shared_by_id == @current_user.id
-
+  def send_notification(share, action, recipient)
     NotificationFactory::Mailer.notification(
       template: 'ticket_share_notification',
-      user:     share.shared_by,
-      objects:  build_objects(share, action, share.shared_by)
+      user:     recipient,
+      objects:  build_objects(share, action, recipient)
     )
   end
 

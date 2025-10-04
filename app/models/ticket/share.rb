@@ -7,45 +7,32 @@ class Ticket::Share < ApplicationModel
   include HasTags
   include Ticket::Share::TriggersSubscriptions
 
-  VALID_PERMISSIONS = %w[read comment edit].freeze
+  VALID_PERMISSIONS = %w[full].freeze
+
+  before_validation :ensure_full_permission
 
   belongs_to :ticket
-  belongs_to :shared_with, class_name: 'User'
+  belongs_to :group
   belongs_to :shared_by, class_name: 'User'
 
   validates :ticket_id, presence: true
-  validates :shared_with_id, presence: true
-  validates :shared_with_id, uniqueness: { scope: :ticket_id, conditions: -> { where(status: 'active') } }, if: :active_status?
+  validates :group_id, presence: true
+  validates :group_id, uniqueness: { scope: :ticket_id, conditions: -> { where(status: 'active') } }, if: :active_status?
   validates :permissions, presence: true
   validate :valid_permissions
 
-  scope :with_permission, ->(permission) { where("permissions ? '#{permission}'") }
-  scope :readable, -> { with_permission('read') }
-  scope :editable, -> { with_permission('edit') }
   scope :active_current, -> { where(status: 'active').where('expires_at IS NULL OR expires_at > ?', Time.current) }
 
-  def has_permission?(permission)
-    permissions.include?(permission)
-  end
-
-  def can_read?
-    has_permission?('read')
-  end
-
-  def can_comment?
-    has_permission?('comment')
-  end
-
-  def can_edit?
-    has_permission?('edit')
+  def full_access?
+    Array(permissions).include?('full')
   end
 
   def revoke!
     update!(status: 'revoked')
   end
 
-  def shared_with_name
-    shared_with&.fullname
+  def group_name
+    group&.fullname || group&.name || 'Unknown group'
   end
 
   def shared_by_name
@@ -57,7 +44,7 @@ class Ticket::Share < ApplicationModel
       only: %i[
         id
         ticket_id
-        shared_with_id
+        group_id
         shared_by_id
         permissions
         message
@@ -66,7 +53,7 @@ class Ticket::Share < ApplicationModel
         updated_at
         expires_at
       ],
-      methods: %i[shared_with_name shared_by_name]
+      methods: %i[group_name shared_by_name]
     }.merge(options))
   end
 
@@ -77,22 +64,27 @@ class Ticket::Share < ApplicationModel
   end
 
   def valid_permissions
-    invalid_perms = Array(permissions) - VALID_PERMISSIONS
+    perms = Array(permissions)
+    invalid_perms = perms - VALID_PERMISSIONS
 
     if invalid_perms.any?
       errors.add(:permissions, "contains invalid permissions: #{invalid_perms.join(', ')}")
     end
 
-    if Array(permissions).blank?
+    if perms.blank?
       errors.add(:permissions, 'must contain at least one permission')
     end
+  end
+
+  def ensure_full_permission
+    self.permissions = ['full'] if permissions.blank?
   end
 
   def search_index_attribute_lookup(record)
     {
       ticket_id: record.ticket_id,
-      shared_with: record.shared_with&.fullname,
-      shared_by:   record.shared_by&.fullname,
+      group:     record.group&.fullname || record.group&.name,
+      shared_by: record.shared_by&.fullname,
       permissions: Array(record.permissions).join(', '),
       message:     record.message,
     }
@@ -101,9 +93,9 @@ class Ticket::Share < ApplicationModel
   def activity_message
     case status
     when 'active'
-      "Ticket shared with #{shared_with_name} (#{Array(permissions).join(', ')})"
+      "Ticket shared with group #{group_name} (full access)"
     when 'revoked'
-      "Share revoked for #{shared_with_name}"
+      "Share revoked for group #{group_name}"
     else
       "Share status changed to #{status}"
     end

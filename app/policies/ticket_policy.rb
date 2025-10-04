@@ -101,18 +101,18 @@ class TicketPolicy < ApplicationPolicy
   # - 'change'-> edit
   # - 'create'-> comment (e.g., add notes)
   def share_access?(access)
-    return nil if !user
+    return nil unless user
 
-    share = Ticket::Share.active_current.find_by(ticket_id: record.id, shared_with_id: user.id)
-    return nil if !share
+    share_group_ids = Ticket::Share.active_current.where(ticket_id: record.id).pluck(:group_id)
+    return nil if share_group_ids.empty?
+    return nil unless user.permissions?('ticket.agent')
+
+    user_group_ids = Array(user.group_ids_access('read'))
+    return nil if (share_group_ids & user_group_ids).blank?
 
     case access.to_s
-    when 'read'
-      share.can_read? || share.can_comment? || share.can_edit?
-    when 'change'
-      share.can_edit?
-    when 'create'
-      share.can_comment?
+    when 'read', 'change', 'create', 'full'
+      true
     else
       nil
     end
@@ -142,3 +142,4 @@ class TicketPolicy < ApplicationPolicy
     @customer_field_scope ||= ApplicationPolicy::FieldScope.new(deny: %i[time_unit time_units_per_type checklist referencing_checklist_tickets])
   end
 end
+
