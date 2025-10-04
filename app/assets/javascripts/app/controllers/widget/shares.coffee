@@ -11,6 +11,7 @@ class App.WidgetShares extends App.Controller
     @loadRetryCount = 0
     @isLoadingShares = false
     @shares = []
+    @lastRenderedShares = null
 
     # Load ticket object for userGroupAccess method
     if @ticket_id
@@ -89,7 +90,14 @@ class App.WidgetShares extends App.Controller
       )
 
   renderShares: (data, status, xhr) =>
-    @lastShares = data?.shares || []
+    shares = data?.shares || []
+    serialized = JSON.stringify(shares)
+    if serialized is @lastRenderedShares
+      @loadRetryCount = 0
+      return
+
+    @lastRenderedShares = serialized
+    @lastShares = shares
     @loadRetryCount = 0
     @render(@lastShares)
 

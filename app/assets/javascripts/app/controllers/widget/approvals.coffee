@@ -11,6 +11,7 @@ class App.WidgetApprovals extends App.Controller
     @loadRetryCount = 0
     @isLoadingApprovals = false
     @approvals = []
+    @lastRenderedApprovals = null
 
     # Load ticket object for userGroupAccess method
     if @ticket_id
@@ -102,7 +103,14 @@ class App.WidgetApprovals extends App.Controller
       )
 
   renderApprovals: (data, status, xhr) =>
-    @approvals = data?.approvals || []
+    approvals = data?.approvals || []
+    serialized = JSON.stringify(approvals)
+    if serialized is @lastRenderedApprovals
+      @loadRetryCount = 0
+      return
+
+    @lastRenderedApprovals = serialized
+    @approvals = approvals
     @loadRetryCount = 0
     @render(@approvals)
 
