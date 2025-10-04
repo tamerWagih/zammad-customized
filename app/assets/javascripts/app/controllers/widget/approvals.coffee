@@ -72,7 +72,15 @@ class App.WidgetApprovals extends App.Controller
 
     @isLoadingApprovals = true
 
-    # First ensure we have a proper ticket object with share permissions
+    # Refresh ticket reference for permission checks, including shared access
+    if @ticket_id
+      @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
+    else
+      @isLoadingApprovals = false
+      return
+
+    @loadApprovalsFromAPI()
+
   loadApprovalsFromAPI: =>
     @ajax(
       id:          'load_approvals'
