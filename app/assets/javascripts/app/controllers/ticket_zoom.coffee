@@ -63,8 +63,9 @@ class App.TicketZoom extends App.Controller
 
     # listen to rerender sidebars
     @controllerBind('ui::ticket::sidebarRerender', (data) =>
-      # Only filter by taskKey if it is provided in the event payload
+      # Filter by taskKey and ticket_id if provided in the event payload
       return if data?.taskKey? and data.taskKey isnt @taskKey
+      return if data?.ticket_id? and data.ticket_id.toString() isnt @ticket_id.toString()
       return if !@sidebarWidget
       @sidebarWidget.render(@formCurrent())
     )

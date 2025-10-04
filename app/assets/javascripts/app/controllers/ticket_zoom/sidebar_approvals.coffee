@@ -5,7 +5,7 @@ class SidebarApprovals extends App.Controller
 
   sidebarItem: =>
     return if @ticket.currentView() isnt 'agent'
-    return unless @permissionCheck('ticket.agent') or @permissionCheck('admin.*')
+    return unless @permissionCheck('ticket.agent') or @permissionCheck('admin.*') or @hasShareAccess()
 
     @item = {
       name: 'approvals'
@@ -81,7 +81,7 @@ class SidebarApprovals extends App.Controller
     if @last_can_share isnt current_can_share
       @last_can_share = current_can_share
       taskKey = @parentVC?.taskKey || @taskKey
-      App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: taskKey })
+      App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: taskKey, ticket_id: @ticket?.id || @ticket_id })
 
   refreshApprovals: =>
     @showPanel(@elSidebar) if @elSidebar
@@ -123,5 +123,20 @@ class SidebarApprovals extends App.Controller
     current_user = App.User.current()
     return false unless current_user
     @permissionCheck('admin.*') or @permissionCheck('ticket.agent')
+
+  hasShareAccess: =>
+    return false unless @ticket
+    current_user = App.User.current()
+    return false unless current_user
+    
+    # Check if user has access via shares
+    ticket_shares = App.TicketShare.findByAttribute('ticket_id', @ticket.id)
+    return false unless ticket_shares
+    
+    user_groups = current_user.group_ids || []
+    share_groups = ticket_shares.map((share) -> share.group_id)
+    
+    # Check if user belongs to any shared group
+    (user_groups & share_groups).length > 0
 
 App.Config.set('450-Approvals', SidebarApprovals, 'TicketZoomSidebar')

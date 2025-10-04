@@ -22,6 +22,9 @@ class Service::Ticket::Approval::Create < Service::BaseWithCurrentUser
       status:    'pending'
     )
 
+    # Create automatic share if approver is in a different group
+    create_auto_share_if_needed(ticket, approver)
+
     # Send email notifications
     Service::Ticket::Approval::EmailNotifier
       .new(current_user: current_user)
@@ -31,6 +34,26 @@ class Service::Ticket::Approval::Create < Service::BaseWithCurrentUser
   end
 
   private
+
+  def create_auto_share_if_needed(ticket, approver)
+    # Check if approver is in a different group than the ticket's group
+    return if ticket.group_id == approver.primary_group_id
+
+    # Check if a share already exists for the approver's group
+    approver_group = approver.groups.find_by(id: approver.primary_group_id)
+    return unless approver_group
+    return if ticket.shares.active_current.exists?(group_id: approver_group.id)
+
+    # Create automatic share with approver's group
+    ticket.shares.create!(
+      group:        approver_group,
+      shared_by:    current_user,
+      permissions:  ['full'],
+      message:      __('Automatic share created for approval request'),
+      expires_at:   nil, # No expiration for approval-related shares
+      status:       'active'
+    )
+  end
 
   def normalize_priority(value)
     priority = value.to_s.presence || 'normal'

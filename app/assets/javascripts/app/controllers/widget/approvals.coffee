@@ -18,32 +18,19 @@ class App.WidgetApprovals extends App.Controller
 
     @renderActions()
     
-    # Listen for ticket updates to refresh approvals
-    @controllerBind('Ticket:update Ticket:touch', (data) =>
-      return if data.id.toString() isnt @ticket_id.toString()
+    # Consolidated event handler to prevent multiple reloads
+    @controllerBind('Ticket:update Ticket:touch TicketApproval:create TicketApproval:update TicketApproval:destroy OnlineNotification::changed ui::ticket::sidebarRerender', (data) =>
+      # Check if this event is for our ticket
+      ticket_id = data?.id || data?.approval?.ticket_id || data?.ticket_id || data?.ticket?.id
+      if ticket_id && ticket_id.toString() isnt @ticket_id?.toString()
+        return
+      
       # Refresh ticket object for updated permissions
       if @ticket_id
         @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
-      @scheduleReload(500)
-    )
-    
-    
-    # Listen for notification events to refresh approvals
-    @controllerBind('OnlineNotification::changed', =>
-      @scheduleReload(800)
-    )
-    
-    # Also reload when the sidebar is re-rendered
-    @controllerBind('ui::ticket::sidebarRerender', (args) =>
-      @scheduleReload(150)
-    )
-
-    # Listen for real-time updates from other users with debounce
-    @controllerBind('TicketApproval:create TicketApproval:update TicketApproval:destroy', (data) =>
-      # Handle multiple possible event data structures
-      ticket_id = data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
-      return unless ticket_id?.toString() is @ticket_id?.toString()
-      @scheduleReload(500)
+      
+      # Single reload with debounce to prevent blinking
+      @scheduleReload(300)
     )
     
     # Periodic check to ensure data is loaded (fallback for missed events)
