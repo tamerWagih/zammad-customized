@@ -34,21 +34,7 @@ class App.WidgetShares extends App.Controller
     )
 
     # Listen for real-time updates from other users with debounce
-    @controllerBind('TicketShare:create', (data) =>
-      ticket_id = data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
-      return unless ticket_id?.toString() is @ticket_id?.toString()
-      @delay =>
-        @loadShares()
-      , 500, 'share-reload'
-    )
-    @controllerBind('TicketShare:update', (data) =>
-      ticket_id = data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
-      return unless ticket_id?.toString() is @ticket_id?.toString()
-      @delay =>
-        @loadShares()
-      , 500, 'share-reload'
-    )
-    @controllerBind('TicketShare:destroy', (data) =>
+    @controllerBind('TicketShare:create TicketShare:update TicketShare:destroy', (data) =>
       ticket_id = data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>

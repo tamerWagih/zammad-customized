@@ -44,22 +44,8 @@ class App.WidgetApprovals extends App.Controller
     )
 
     # Listen for real-time updates from other users with debounce
-    @controllerBind('TicketApproval:create', (data) =>
+    @controllerBind('TicketApproval:create TicketApproval:update TicketApproval:destroy', (data) =>
       # Handle multiple possible event data structures
-      ticket_id = data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
-      return unless ticket_id?.toString() is @ticket_id?.toString()
-      @delay =>
-        @loadApprovals()
-      , 500, 'approval-reload'
-    )
-    @controllerBind('TicketApproval:update', (data) =>
-      ticket_id = data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
-      return unless ticket_id?.toString() is @ticket_id?.toString()
-      @delay =>
-        @loadApprovals()
-      , 500, 'approval-reload'
-    )
-    @controllerBind('TicketApproval:destroy', (data) =>
       ticket_id = data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
       @delay =>
