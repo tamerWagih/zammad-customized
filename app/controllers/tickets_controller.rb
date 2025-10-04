@@ -573,7 +573,8 @@ class TicketsController < ApplicationController
     )
     render json: result, status: :ok
   end
-\n  def current_user_share(ticket)
+
+  def current_user_share(ticket)
     return unless current_user
     return unless ticket.respond_to?(:shares)
 
@@ -593,7 +594,8 @@ class TicketsController < ApplicationController
       Rails.logger.warn "Failed to determine share for current user on ticket #{ticket.id}: #{e.message}"
       cache[ticket.id] = nil
     end
-  end\nend\n
+  end
+end
 
 
 
