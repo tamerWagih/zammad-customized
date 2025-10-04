@@ -68,7 +68,7 @@ class TicketSharesController < ApplicationController
       .new(current_user:)
       .execute(share: @share)
 
-    notify_shared_group(share_data, __('Share revoked'))
+    notify_shared_group(share_data, __('Share deleted'))
 
     render json: { success: true, share: serialize_share(share_data) }
   rescue Exceptions::Forbidden => e
