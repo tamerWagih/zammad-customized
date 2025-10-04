@@ -1,5 +1,5 @@
 class App.Ticket extends App.Model
-  @configure 'Ticket', 'number', 'title', 'group_id', 'owner_id', 'customer_id', 'state_id', 'priority_id', 'article', 'tags', 'links', 'updated_at', 'preferences'
+  @configure 'Ticket', 'number', 'title', 'group_id', 'owner_id', 'customer_id', 'state_id', 'priority_id', 'article', 'tags', 'links', 'updated_at', 'preferences', 'share_permissions', 'share_expires_at'
   @extend Spine.Model.Ajax
   @url: @apiPath + '/tickets'
   @configure_attributes = [
@@ -131,6 +131,8 @@ class App.Ticket extends App.Model
         App.i18n.translateContent('Approval request deleted for |%s| by %s', item.title, item.created_by.displayName())
       when 'Ticket shared with you'
         App.i18n.translateContent('%s shared ticket |%s| with you', item.created_by.displayName(), item.title)
+      when 'Ticket shared with your group'
+        App.i18n.translateContent('%s shared ticket |%s| with your group', item.created_by.displayName(), item.title)
       when 'Share revoked'
         App.i18n.translateContent('%s revoked a share on |%s|', item.created_by.displayName(), item.title)
       when 'Share updated'
@@ -227,7 +229,54 @@ class App.Ticket extends App.Model
 
   userGroupAccess: (permission) ->
     user = App.User.current()
-    return @isAccessibleByGroup(user, permission)
+    return false if !user
+
+    return true if @hasSharePermission(permission)
+
+    @isAccessibleByGroup(user, permission)
+
+  hasSharePermission: (permission) ->
+    return false unless App.User.current()?.permission('ticket.agent')
+
+    perms = @sharePermissions()
+    return false unless perms
+
+    requested = []
+    if Array.isArray(permission)
+      requested = permission
+    else if permission?
+      requested = [permission]
+    else
+      requested = ['read']
+
+    for perm in requested
+      normalized = perm?.toString()?.toLowerCase()
+      allowed = switch normalized
+        when 'read' then perms.read
+        when 'change' then perms.edit
+        when 'create' then perms.comment or perms.edit
+        when 'comment' then perms.comment
+        when 'edit' then perms.edit
+        when 'full' then perms.edit
+        else perms.read
+      return true if allowed
+
+    false
+
+  sharePermissions: ->
+    perms = @share_permissions ? @preferences?.share_permissions
+    return null unless perms && typeof perms is 'object'
+
+    fetch = (key) ->
+      value = perms[key]
+      value = perms[key?.toString()] if value is undefined
+      !!value
+
+    {
+      read: fetch('read')
+      comment: fetch('comment')
+      edit: fetch('edit')
+    }
 
   userIsCustomer: ->
     user = App.User.current()
