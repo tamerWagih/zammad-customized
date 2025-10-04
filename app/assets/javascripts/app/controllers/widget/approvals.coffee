@@ -11,14 +11,11 @@ class App.WidgetApprovals extends App.Controller
     @loadRetryCount = 0
     @isLoadingApprovals = false
     @approvals = []
-    @lastRenderedApprovals = null
-    @lastRenderedApprovalsKey = null
 
     # Load ticket object for userGroupAccess method
     if @ticket_id
       @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
 
-    @delay (=> @loadApprovals()), 500, 'approval-initial'
     @renderActions()
     
     # Listen for ticket updates to refresh approvals
@@ -54,6 +51,7 @@ class App.WidgetApprovals extends App.Controller
       @ensureDataLoaded()
     , 2000, 'approval-data-check'
 
+    @loadApprovals()
   # Standard reload method called by sidebar system
   reload: (args) =>
     @loadApprovals()
@@ -102,16 +100,6 @@ class App.WidgetApprovals extends App.Controller
 
   renderApprovals: (data, status, xhr) =>
     approvals = data?.approvals || []
-    serialized = JSON.stringify(approvals)
-    cacheKey = "#{@ticket_id}::#{serialized}"
-
-    if cacheKey is @lastRenderedApprovalsKey
-      @approvals = approvals
-      @loadRetryCount = 0
-      return
-
-    @lastRenderedApprovals = serialized
-    @lastRenderedApprovalsKey = cacheKey
     @approvals = approvals
     @loadRetryCount = 0
     @render(@approvals)

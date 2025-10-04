@@ -11,14 +11,11 @@ class App.WidgetShares extends App.Controller
     @loadRetryCount = 0
     @isLoadingShares = false
     @shares = []
-    @lastRenderedShares = null
-    @lastRenderedSharesKey = null
 
     # Load ticket object for userGroupAccess method
     if @ticket_id
       @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
 
-    @delay (=> @loadShares()), 500, 'share-initial'
     @renderActions()
     
     # Also refresh on generic ticket updates/touches
@@ -51,6 +48,7 @@ class App.WidgetShares extends App.Controller
       @ensureDataLoaded()
     , 2000, 'share-data-check'
 
+    @loadShares()
   # Standard reload method called by sidebar system
   reload: (args) =>
     @loadShares()
@@ -91,16 +89,6 @@ class App.WidgetShares extends App.Controller
 
   renderShares: (data, status, xhr) =>
     shares = data?.shares || []
-    serialized = JSON.stringify(shares)
-    cacheKey = "#{@ticket_id}::#{serialized}"
-
-    if cacheKey is @lastRenderedSharesKey
-      @lastShares = shares
-      @loadRetryCount = 0
-      return
-
-    @lastRenderedShares = serialized
-    @lastRenderedSharesKey = cacheKey
     @lastShares = shares
     @loadRetryCount = 0
     @render(@lastShares)
