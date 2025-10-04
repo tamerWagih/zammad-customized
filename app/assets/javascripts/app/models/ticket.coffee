@@ -270,6 +270,12 @@ class App.Ticket extends App.Model
     fetch = (key) ->
       value = perms[key]
       value = perms[key?.toString()] if value is undefined
+      return false if value is null or value is undefined
+
+      if typeof value is 'string'
+        lowered = value.toLowerCase()
+        return lowered in ['true', '1', 'yes']
+
       !!value
 
     {

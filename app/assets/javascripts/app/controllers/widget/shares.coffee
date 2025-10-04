@@ -12,6 +12,7 @@ class App.WidgetShares extends App.Controller
     @isLoadingShares = false
     @shares = []
     @lastRenderedShares = null
+    @lastRenderedSharesKey = null
 
     # Load ticket object for userGroupAccess method
     if @ticket_id
@@ -26,21 +27,19 @@ class App.WidgetShares extends App.Controller
       # Refresh ticket object for updated permissions
       if @ticket_id
         @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
-      @delay (=> @loadShares()), 400, 'share-reload-ticket'
+      @scheduleReload(400)
     )
     
     # Also reload when the sidebar is re-rendered
     @controllerBind('ui::ticket::sidebarRerender', (args) =>
-      @delay (=> @loadShares()), 150, 'share-sidebar-rerender'
+      @scheduleReload(150)
     )
 
     # Listen for real-time updates from other users with debounce
     @controllerBind('TicketShare:create TicketShare:update TicketShare:destroy', (data) =>
       ticket_id = data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
-      @delay =>
-        @loadShares()
-      , 500, 'share-reload'
+      @scheduleReload(500)
     )
     
     @controllerBind('OnlineNotification::changed', =>
@@ -61,7 +60,10 @@ class App.WidgetShares extends App.Controller
   # Fallback mechanism to ensure data loads
   ensureDataLoaded: =>
     if !@lastShares || @lastShares.length is 0
-      @loadShares()
+      @scheduleReload()
+
+  scheduleReload: (delay = 150) =>
+    @delay (=> @loadShares()), delay, 'share-reload'
 
   loadShares: =>
     return if @isLoadingShares
@@ -92,11 +94,15 @@ class App.WidgetShares extends App.Controller
   renderShares: (data, status, xhr) =>
     shares = data?.shares || []
     serialized = JSON.stringify(shares)
-    if serialized is @lastRenderedShares
+    cacheKey = "#{@ticket_id}::#{serialized}"
+
+    if cacheKey is @lastRenderedSharesKey
+      @lastShares = shares
       @loadRetryCount = 0
       return
 
     @lastRenderedShares = serialized
+    @lastRenderedSharesKey = cacheKey
     @lastShares = shares
     @loadRetryCount = 0
     @render(@lastShares)
@@ -133,7 +139,7 @@ class App.WidgetShares extends App.Controller
     new App.TicketShareCreate(
       ticket_id: @ticket_id
       container: @el.closest('.content')
-      callback:  => @loadShares()
+      callback:  => @scheduleReload()
     )
 
 
@@ -188,7 +194,7 @@ class App.WidgetShares extends App.Controller
       container: @el.closest('.content')
       parentWidget: @
       callback: => 
-        @loadShares()
+        @scheduleReload()
     )
 
   deleteShare: (e) =>
@@ -261,7 +267,7 @@ class App.WidgetShares extends App.Controller
     # Don't show generic success message for edit actions to avoid duplicates
     
     # Reload shares from backend
-    @loadShares()
+    @scheduleReload()
     @callback() if @callback
     @clearCurrentAction()
 

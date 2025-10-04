@@ -12,6 +12,7 @@ class App.WidgetApprovals extends App.Controller
     @isLoadingApprovals = false
     @approvals = []
     @lastRenderedApprovals = null
+    @lastRenderedApprovalsKey = null
 
     # Load ticket object for userGroupAccess method
     if @ticket_id
@@ -26,9 +27,7 @@ class App.WidgetApprovals extends App.Controller
       # Refresh ticket object for updated permissions
       if @ticket_id
         @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
-      @delay =>
-        @loadApprovals()
-      , 500, 'approval-reload'
+      @scheduleReload(500)
     )
     
     
@@ -41,7 +40,7 @@ class App.WidgetApprovals extends App.Controller
     
     # Also reload when the sidebar is re-rendered
     @controllerBind('ui::ticket::sidebarRerender', (args) =>
-      @delay (=> @loadApprovals()), 150, 'approval-sidebar-rerender'
+      @scheduleReload(150)
     )
 
     # Listen for real-time updates from other users with debounce
@@ -49,9 +48,7 @@ class App.WidgetApprovals extends App.Controller
       # Handle multiple possible event data structures
       ticket_id = data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id?.toString() is @ticket_id?.toString()
-      @delay =>
-        @loadApprovals()
-      , 500, 'approval-reload'
+      @scheduleReload(500)
     )
     
     # Periodic check to ensure data is loaded (fallback for missed events)
@@ -66,7 +63,10 @@ class App.WidgetApprovals extends App.Controller
   # Fallback mechanism to ensure data loads
   ensureDataLoaded: =>
     if !@approvals || @approvals.length is 0
-      @loadApprovals()
+      @scheduleReload()
+
+  scheduleReload: (delay = 150) =>
+    @delay (=> @loadApprovals()), delay, 'approval-reload'
 
   loadApprovals: =>
     return if @isLoadingApprovals
@@ -105,11 +105,15 @@ class App.WidgetApprovals extends App.Controller
   renderApprovals: (data, status, xhr) =>
     approvals = data?.approvals || []
     serialized = JSON.stringify(approvals)
-    if serialized is @lastRenderedApprovals
+    cacheKey = "#{@ticket_id}::#{serialized}"
+
+    if cacheKey is @lastRenderedApprovalsKey
+      @approvals = approvals
       @loadRetryCount = 0
       return
 
     @lastRenderedApprovals = serialized
+    @lastRenderedApprovalsKey = cacheKey
     @approvals = approvals
     @loadRetryCount = 0
     @render(@approvals)
@@ -146,7 +150,7 @@ class App.WidgetApprovals extends App.Controller
     new App.TicketApprovalRequest(
       ticket_id: @ticket_id
       container: @el.closest('.content')
-      callback:  => @loadApprovals()
+      callback:  => @scheduleReload()
     )
 
 
@@ -213,7 +217,7 @@ class App.WidgetApprovals extends App.Controller
               approval: approval
               ticket_id: @ticket_id
               container: @el.closest('.content')
-              callback: => @loadApprovals()
+              callback: => @scheduleReload()
               parentWidget: @
             )
           else
@@ -272,7 +276,7 @@ class App.WidgetApprovals extends App.Controller
     # Don't show generic success message for edit actions to avoid duplicates
     
     # Reload approvals from backend immediately
-    @loadApprovals()
+    @scheduleReload()
     @callback() if @callback
     @clearCurrentAction()
 
