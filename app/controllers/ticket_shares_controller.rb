@@ -145,7 +145,10 @@ class TicketSharesController < ApplicationController
   end
 
   def group_member_ids(group_id)
-    Array(User.group_access(group_id, 'read')).select(&:active?).map(&:id)
+    # Only include agents and admins, not customers
+    group_users = Array(User.group_access(group_id, 'read')).select(&:active?)
+    agent_users = group_users.select { |user| user.permissions?('ticket.agent') }
+    agent_users.map(&:id)
   rescue StandardError => e
     Rails.logger.warn "Failed to resolve group members for share notification: #{e.message}"
     []

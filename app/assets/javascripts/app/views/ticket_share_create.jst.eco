@@ -21,7 +21,7 @@
         <% end %>
       </select>
       <small class="help-block">
-        <%- @T('All members of the selected group receive full access') %>
+        <%- @T('All agents and admins in the selected group receive full access') %>
       </small>
     </div>
   </div>

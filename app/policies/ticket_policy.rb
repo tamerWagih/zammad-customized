@@ -102,10 +102,10 @@ class TicketPolicy < ApplicationPolicy
   # - 'create'-> comment (e.g., add notes)
   def share_access?(access)
     return nil unless user
+    return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
 
     share_group_ids = Ticket::Share.active_current.where(ticket_id: record.id).pluck(:group_id)
     return nil if share_group_ids.empty?
-    return nil unless user.permissions?('ticket.agent')
 
     user_group_ids = Array(user.group_ids_access('read'))
     return nil if (share_group_ids & user_group_ids).blank?

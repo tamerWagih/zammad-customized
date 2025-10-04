@@ -739,6 +739,9 @@ returns a hex color code
     return default unless respond_to?(:shares)
 
     begin
+      # Only agents can access shared tickets
+      return default unless user.permissions?('ticket.agent')
+      
       share_group_ids = shares.active_current.pluck(:group_id)
       return default if share_group_ids.blank?
 

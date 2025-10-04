@@ -26,6 +26,12 @@ class App.TicketShareCreate extends App.ControllerModal
   renderWithGroups: (data) ->
     groups = if Array.isArray(data) then data else (data?.groups || [])
     groups = groups.filter (group) -> group?.active isnt false
+    
+    # Filter out the ticket's current group (requester's group already has access)
+    ticket = App.Ticket.find(@ticket_id)
+    if ticket?.group_id
+      groups = groups.filter (group) -> group.id.toString() isnt ticket.group_id.toString()
+    
     groups = groups.sort (a, b) ->
       nameA = (a.fullname || a.name || '').toLowerCase()
       nameB = (b.fullname || b.name || '').toLowerCase()

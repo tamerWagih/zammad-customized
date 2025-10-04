@@ -18,13 +18,22 @@ class Service::Ticket::Share::EmailNotifier
   private
 
   def recipients_for(share)
-    group_members = Array(User.group_access(share.group, 'read')).select(&:active?)
-    group_members << share.shared_by if share.shared_by&.active?
-    group_members << @current_user if @current_user&.active?
-    group_members.uniq { |user| user.id }
+    # Only include agents and admins, not customers
+    group_users = Array(User.group_access(share.group, 'read')).select(&:active?)
+    agent_users = group_users.select { |user| user.permissions?('ticket.agent') }
+    
+    recipients = agent_users.dup
+    recipients << share.shared_by if share.shared_by&.active? && share.shared_by.permissions?('ticket.agent')
+    recipients << @current_user if @current_user&.active? && @current_user.permissions?('ticket.agent')
+    recipients.uniq { |user| user.id }
   rescue => e
     Rails.logger.error "Failed to build share recipients: #{e.message}"
-    share.shared_by ? [share.shared_by] : []
+    # Fallback to just the shared_by user if they're an agent
+    if share.shared_by&.active? && share.shared_by.permissions?('ticket.agent')
+      [share.shared_by]
+    else
+      []
+    end
   end
 
   def send_notification(share, action, recipient)
