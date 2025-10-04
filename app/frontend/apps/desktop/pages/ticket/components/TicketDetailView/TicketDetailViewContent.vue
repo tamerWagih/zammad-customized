@@ -616,7 +616,7 @@ const {
         <ArticleList ref="article-list" :aria-busy="isLoadingArticles" />
 
         <ArticleReply
-          v-if="ticket?.id && isTicketEditable && !"
+          v-if="ticket?.id && isTicketEditable"
           v-show="!isLoadingArticles"
           v-model:pinned="isReplyPinned"
           :ticket="ticket"
@@ -686,5 +686,4 @@ const {
     </template>
   </LayoutContent>
 </template>
-
 
