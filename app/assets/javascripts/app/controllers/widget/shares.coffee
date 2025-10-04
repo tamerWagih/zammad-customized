@@ -43,9 +43,7 @@ class App.WidgetShares extends App.Controller
     )
     
     @controllerBind('OnlineNotification::changed', =>
-      @delay =>
-        @loadShares()
-      , 800, 'share-reload-notify'
+      @scheduleReload(800)
     )
 
     # Periodic check to ensure data is loaded (fallback for missed events)

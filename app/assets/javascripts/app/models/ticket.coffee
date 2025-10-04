@@ -137,6 +137,8 @@ class App.Ticket extends App.Model
         App.i18n.translateContent('%s revoked a share on |%s|', item.created_by.displayName(), item.title)
       when 'Share updated'
         App.i18n.translateContent('%s updated share on |%s|', item.created_by.displayName(), item.title)
+      when 'Share deleted'
+        App.i18n.translateContent('%s deleted share on |%s|', item.created_by.displayName(), item.title)
       when 'Ticket/Share updated'
         App.i18n.translateContent('%s updated share on |%s|', item.created_by.displayName(), item.title)
       else
@@ -239,6 +241,7 @@ class App.Ticket extends App.Model
     return false unless App.User.current()?.permission('ticket.agent')
 
     perms = @sharePermissions()
+    perms ?= @sharePermissionsFallback()
     return false unless perms
 
     requested = []
@@ -282,6 +285,39 @@ class App.Ticket extends App.Model
       read: fetch('read')
       comment: fetch('comment')
       edit: fetch('edit')
+    }
+
+  sharePermissionsFallback: ->
+    user = App.User.current()
+    return null unless user
+
+    shares = App.TicketShare?.findAllByAttribute && App.TicketShare.findAllByAttribute('ticket_id', @id) || []
+    return null unless shares?.length
+
+    groupIds = user.allGroupIds?('read') || []
+    return null unless groupIds.length
+
+    now = new Date()
+    matchingShare = shares.find (share) ->
+      return false unless share?.status is 'active'
+      return false unless share.group_id?
+      groupMatch = groupIds.some (gid) -> gid?.toString?() is share.group_id?.toString?()
+      return false unless groupMatch
+      return true unless share.expires_at
+      expiresAt = new Date(share.expires_at)
+      expiresAt > now
+
+    return null unless matchingShare
+
+    permissions = matchingShare.permissions || []
+    permissions = [permissions] unless Array.isArray(permissions)
+    permissions = permissions.map (perm) -> perm?.toString()?.toLowerCase?() || perm
+    hasFull = permissions.includes('full')
+
+    {
+      read: hasFull or permissions.includes('read')
+      comment: hasFull or permissions.includes('comment')
+      edit: hasFull or permissions.includes('edit') or permissions.includes('change')
     }
 
   userIsCustomer: ->

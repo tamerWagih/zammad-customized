@@ -33,9 +33,7 @@ class App.WidgetApprovals extends App.Controller
     
     # Listen for notification events to refresh approvals
     @controllerBind('OnlineNotification::changed', =>
-      @delay =>
-        @loadApprovals()
-      , 800, 'approval-reload-notify'
+      @scheduleReload(800)
     )
     
     # Also reload when the sidebar is re-rendered
