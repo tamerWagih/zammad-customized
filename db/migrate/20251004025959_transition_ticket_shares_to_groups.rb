@@ -12,7 +12,7 @@ class TransitionTicketSharesToGroups < ActiveRecord::Migration[7.2]
       remove_index :ticket_shares, column: [:ticket_id, :shared_with_id]
     end
 
-    if index_exists?(:ticket_shares, name: "index_ticket_shares_on_ticket_and_shared_with_active")
+    if index_exists?(:ticket_shares, [:ticket_id, :shared_with_id], name: "index_ticket_shares_on_ticket_and_shared_with_active")
       remove_index :ticket_shares, name: "index_ticket_shares_on_ticket_and_shared_with_active"
     end
 
@@ -41,5 +41,3 @@ class TransitionTicketSharesToGroups < ActiveRecord::Migration[7.2]
     raise ActiveRecord::IrreversibleMigration, "TransitionTicketSharesToGroups cannot be reversed"
   end
 end
-
-
