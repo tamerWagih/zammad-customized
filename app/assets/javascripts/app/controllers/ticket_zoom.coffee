@@ -249,38 +249,66 @@ class App.TicketZoom extends App.Controller
     @controllerBind('TicketApproval:create TicketApproval:update TicketApproval:destroy', (data) =>
       ticket_id = data?.approval?.ticket_id || data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
+      
+      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approval/Share event detected - reloading ticket data"
+      
       # Refresh ticket object with latest share permissions from server
       @ajax(
         id:    'ticket-share-refresh'
         type:  'GET'
-        url:   "#{@apiPath}/tickets/#{@ticket_id}"
+        url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
         success: (ticketData) =>
+          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success"
+          
           # Update ticket object with fresh data
-          App.Ticket.refresh([ticketData]) if ticketData?
+          App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]]) if ticketData?.assets?.Ticket?[@ticket_id]
           @ticket = App.Ticket.findNative(@ticket_id)
+          
+          # Re-attach approvals and shares data to ticket object
+          @approvals = ticketData.approvals || []
+          @shares = ticketData.shares || []
+          @ticket.approvals_data = @approvals
+          @ticket.shares_data = @shares
+          
+          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Re-attached approvals (#{@approvals.length}) and shares (#{@shares.length})"
+          
           # Trigger sidebar rerender for approval/share widgets
           App.Event.trigger('ui::ticket::sidebarRerender')
-        error: =>
-          console.error 'Failed to refresh ticket data for permissions'
+        error: (xhr, status, error) =>
+          console.error "[TICKET_ZOOM] Ticket ##{@ticket_id}: Failed to refresh ticket data:", status, error
       )
     )
 
     @controllerBind('TicketShare:create TicketShare:update TicketShare:destroy', (data) =>
       ticket_id = data?.share?.ticket_id || data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
+      
+      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Share event detected - reloading ticket data"
+      
       # Refresh ticket object with latest share permissions from server
       @ajax(
         id:    'ticket-share-refresh'
         type:  'GET'
-        url:   "#{@apiPath}/tickets/#{@ticket_id}"
+        url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
         success: (ticketData) =>
+          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success"
+          
           # Update ticket object with fresh data
-          App.Ticket.refresh([ticketData]) if ticketData?
+          App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]]) if ticketData?.assets?.Ticket?[@ticket_id]
           @ticket = App.Ticket.findNative(@ticket_id)
+          
+          # Re-attach approvals and shares data to ticket object
+          @approvals = ticketData.approvals || []
+          @shares = ticketData.shares || []
+          @ticket.approvals_data = @approvals
+          @ticket.shares_data = @shares
+          
+          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Re-attached approvals (#{@approvals.length}) and shares (#{@shares.length})"
+          
           # Trigger sidebar rerender for approval/share widgets
           App.Event.trigger('ui::ticket::sidebarRerender')
-        error: =>
-          console.error 'Failed to refresh ticket data for permissions'
+        error: (xhr, status, error) =>
+          console.error "[TICKET_ZOOM] Ticket ##{@ticket_id}: Failed to refresh ticket data:", status, error
       )
     )
 
