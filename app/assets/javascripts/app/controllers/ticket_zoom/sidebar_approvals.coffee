@@ -81,16 +81,19 @@ class ApprovalRequest extends App.ControllerModal
   content: =>
     @ticket = App.Ticket.find(@ticket_id)
     
+    # Get all agents for approver selection
+    agents = []
+    for user_id, user of App.User.all()
+      if user.active && user.permissions?('ticket.agent')
+        agents.push(user)
+    
+    # Sort by name
+    agents = _.sortBy(agents, (agent) -> agent.displayName())
+    
     content = $( App.view('widget/approval_request')(
       ticket: @ticket
+      agents: agents
     ))
-    
-    # Initialize user search for approver selection
-    content.find('.js-approver').each( (i, el) =>
-      @userSearchElement = new App.UserSearch(
-        el: $(el)
-      )
-    )
     
     content
 

@@ -4,11 +4,11 @@
       <div class="approval-header">
         <div class="approval-user">
           <% if approval.requester_id is @current_user_id: %>
-            <strong><%- @T('Request to') %> <%- approval.approver %></strong>
+            <strong><%- @T('Request to') %> <%- approval.approver_name %></strong>
           <% else if approval.approver_id is @current_user_id: %>
-            <strong><%- @T('Request from') %> <%- approval.requester %></strong>
+            <strong><%- @T('Request from') %> <%- approval.requester_name %></strong>
           <% else: %>
-            <strong><%- approval.approver %></strong>
+            <strong><%- approval.approver_name %></strong>
           <% end %>
         </div>
         <div class="approval-status">

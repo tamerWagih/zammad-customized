@@ -70,10 +70,18 @@ class App.WidgetShares extends App.Controller
       if share.group_id
         group = App.Group.find(share.group_id)
         share.group_name = group?.name || share.group_name
+      
+      # Get shared_by name properly (handle both object and string formats)
+      if share.shared_by
+        if typeof share.shared_by is 'object'
+          share.shared_by_name = share.shared_by_name || share.shared_by.firstname + ' ' + share.shared_by.lastname
+        else
+          share.shared_by_name = share.shared_by
     
     @html App.view('widget/shares')(
       shares: shares_data
       ticket_id: @ticket_id
+      current_user_id: current_user.id
     )
 
   revokeShare: (e) =>

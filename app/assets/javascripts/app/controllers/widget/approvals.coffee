@@ -63,6 +63,19 @@ class App.WidgetApprovals extends App.Controller
       approval.is_approved = approval.status is 'approved'
       approval.is_rejected = approval.status is 'rejected'
       
+      # Get user names properly (handle both object and string formats)
+      if approval.approver
+        if typeof approval.approver is 'object'
+          approval.approver_name = approval.approver_name || approval.approver.firstname + ' ' + approval.approver.lastname
+        else
+          approval.approver_name = approval.approver
+      
+      if approval.requester
+        if typeof approval.requester is 'object'
+          approval.requester_name = approval.requester_name || approval.requester.firstname + ' ' + approval.requester.lastname
+        else
+          approval.requester_name = approval.requester
+      
       # Format dates (use App.i18n for timestamp formatting)
       if approval.created_at
         approval.created_at_formatted = App.i18n.translateTimestamp(approval.created_at)
@@ -72,6 +85,7 @@ class App.WidgetApprovals extends App.Controller
     @html App.view('widget/approvals')(
       approvals: approvals_data
       ticket_id: @ticket_id
+      current_user_id: current_user.id
     )
 
   approve: (e) =>
