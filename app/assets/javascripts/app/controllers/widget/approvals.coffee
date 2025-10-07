@@ -139,10 +139,14 @@ class App.WidgetApprovals extends App.Controller
     approval = _.find(@localApprovals, (a) -> parseInt(a.id) is parseInt(approval_id))
     return unless approval
     
-    new ApprovalEdit(
+    new App.TicketApprovalEdit(
       ticket_id: @ticket_id
       approval: approval
       container: @el.closest('.content')
+      parentWidget: @  # Pass reference for callback
+      callback: =>
+        # Reload after edit
+        @reload()
     )
 
   deleteApproval: (e) =>
@@ -226,53 +230,3 @@ class ApprovalRequest extends App.ControllerModal
         )
     )
 
-class ApprovalEdit extends App.ControllerModal
-  buttonClose: true
-  buttonCancel: true
-  buttonSubmit: __('Update')
-  head: __('Edit Approval')
-
-  content: =>
-    @ticket = App.Ticket.find(@ticket_id)
-    
-    # Get all agents for approver selection
-    agents = []
-    for user_id, user of App.User.all()
-      if user.active && user.permissions?('ticket.agent')
-        agents.push(user)
-    
-    # Sort by name
-    agents = _.sortBy(agents, (agent) -> agent.displayName())
-    
-    content = $( App.view('widget/approval_edit')(
-      ticket: @ticket
-      approval: @approval
-      agents: agents
-    ))
-    
-    content
-
-  onSubmit: (e) =>
-    e.preventDefault()
-    params = @formParam(e.target)
-    
-    unless params.approver_id
-      @formValidate(form: e.target, errors: { approver_id: 'required' })
-      return
-    
-    @ajax(
-      id:   'update_approval'
-      type: 'PUT'
-      url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{@approval.id}"
-      data: JSON.stringify(params)
-      processData: false
-      success: =>
-        @close()
-        # Backend will trigger WebSocket event, which will refresh the data
-      error: (xhr, status, error) =>
-        console.error 'Failed to update approval:', status, error
-        @notify(
-          type: 'error'
-          msg: App.i18n.translateContent('Failed to update approval.')
-        )
-    )

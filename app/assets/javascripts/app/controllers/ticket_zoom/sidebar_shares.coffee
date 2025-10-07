@@ -67,48 +67,12 @@ class SidebarShares extends App.Controller
     )
 
   shareTicket: =>
-    new ShareTicket(
+    new App.TicketShareCreate(
       ticket_id: @ticket.id
       container: @el.closest('.content')
-    )
-
-class ShareTicket extends App.ControllerModal
-  buttonClose: true
-  buttonCancel: true
-  buttonSubmit: __('Share')
-  head: __('Share Ticket')
-
-  content: =>
-    @ticket = App.Ticket.find(@ticket_id)
-    
-    content = $( App.view('widget/share_ticket')(
-      ticket: @ticket
-    ))
-    
-    content
-
-  onSubmit: (e) =>
-    e.preventDefault()
-    params = @formParam(e.target)
-    
-    unless params.group_id
-      @formValidate(form: e.target, errors: { group_id: 'required' })
-      return
-    
-    @ajax(
-      id:   'create_share'
-      type: 'POST'
-      url:  "#{@apiPath}/tickets/#{@ticket_id}/shares"
-      data: JSON.stringify(params)
-      processData: false
-      success: =>
-        @close()
-      error: (xhr, status, error) =>
-        console.error 'Failed to create share:', status, error
-        @notify(
-          type: 'error'
-          msg: App.i18n.translateContent('Failed to share ticket.')
-        )
+      callback: =>
+        # Refresh the shares widget after creating
+        @widget.reload() if @widget && @widget.reload
     )
 
 App.Config.set('451-Shares', SidebarShares, 'TicketZoomSidebar')

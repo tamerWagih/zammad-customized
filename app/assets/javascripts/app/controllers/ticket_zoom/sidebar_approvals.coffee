@@ -67,58 +67,12 @@ class SidebarApprovals extends App.Controller
     )
 
   requestApproval: =>
-    new ApprovalRequest(
+    new App.TicketApprovalRequest(
       ticket_id: @ticket.id
       container: @el.closest('.content')
-    )
-
-class ApprovalRequest extends App.ControllerModal
-  buttonClose: true
-  buttonCancel: true
-  buttonSubmit: __('Request Approval')
-  head: __('Request Approval')
-
-  content: =>
-    @ticket = App.Ticket.find(@ticket_id)
-    
-    # Get all agents for approver selection
-    agents = []
-    for user_id, user of App.User.all()
-      if user.active && user.permissions?('ticket.agent')
-        agents.push(user)
-    
-    # Sort by name
-    agents = _.sortBy(agents, (agent) -> agent.displayName())
-    
-    content = $( App.view('widget/approval_request')(
-      ticket: @ticket
-      agents: agents
-    ))
-    
-    content
-
-  onSubmit: (e) =>
-    e.preventDefault()
-    params = @formParam(e.target)
-    
-    unless params.approver_id
-      @formValidate(form: e.target, errors: { approver_id: 'required' })
-      return
-    
-    @ajax(
-      id:   'create_approval'
-      type: 'POST'
-      url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals"
-      data: JSON.stringify(params)
-      processData: false
-      success: =>
-        @close()
-      error: (xhr, status, error) =>
-        console.error 'Failed to create approval:', status, error
-        @notify(
-          type: 'error'
-          msg: App.i18n.translateContent('Failed to create approval request.')
-        )
+      callback: =>
+        # Refresh the approvals widget after creating
+        @widget.reload() if @widget && @widget.reload
     )
 
 App.Config.set('450-Approvals', SidebarApprovals, 'TicketZoomSidebar')
