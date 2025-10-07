@@ -11,6 +11,16 @@ class App.TicketShareCreate extends App.ControllerModal
     'change select[name="group_id"]': 'toggleSubmit'
 
   content: ->
+    # Return false to prevent default rendering (Zammad pattern for async modals)
+    false
+  
+  render: =>
+    super
+    
+    # Show loading state
+    @el.find('.modal-body').html('<p class="loading">Loading groups...</p>')
+    
+    # Get available groups for sharing
     @ajax(
       id:          'groups_for_sharing'
       type:        'GET'
@@ -21,7 +31,6 @@ class App.TicketShareCreate extends App.ControllerModal
       error:       (xhr, status, error) =>
         @renderError(xhr, status, error)
     )
-    '<p>Loading groups...</p>'
 
   renderWithGroups: (data) ->
     groups = if Array.isArray(data) then data else (data?.groups || [])

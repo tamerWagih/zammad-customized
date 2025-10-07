@@ -12,6 +12,15 @@ class App.TicketApprovalRequest extends App.ControllerModal
 
 
   content: ->
+    # Return false to prevent default rendering (Zammad pattern for async modals)
+    false
+  
+  render: =>
+    super
+    
+    # Show loading state
+    @el.find('.modal-body').html('<p class="loading">Loading approvers...</p>')
+    
     # Get available users for approval
     @ajax(
       id:          'users_for_approval'
@@ -23,8 +32,6 @@ class App.TicketApprovalRequest extends App.ControllerModal
       error:       (xhr, status, error) =>
         @renderError(xhr, status, error)
     )
-    # Return loading content initially
-    '<p>Loading approvers...</p>'
 
 
   renderWithUsers: (data, status, xhr) =>
