@@ -205,7 +205,12 @@ class App.TicketZoom extends App.Controller
     @ticket         = App.Ticket.fullLocal(@ticket_id)
     @ticket.article = undefined
     
+    # Set approvals and shares on ticket object for permission checks (same pattern as tags)
+    @ticket._approvals_cache = @approvals
+    @ticket._shares_cache = @shares
+    
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket object retrieved"
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Set _approvals_cache (#{@approvals.length} items) and _shares_cache (#{@shares.length} items) on ticket object"
     
     # Evaluate permissions with detailed logging
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Evaluating permissions..."
@@ -264,6 +269,10 @@ class App.TicketZoom extends App.Controller
           @approvals = ticketData.approvals || []
           @shares = ticketData.shares || []
           
+          # Set cache on ticket object for permission checks
+          @ticket._approvals_cache = @approvals if @ticket
+          @ticket._shares_cache = @shares if @ticket
+          
           console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated approvals (#{@approvals.length}), shares (#{@shares.length})"
           
           # Trigger sidebar rerender for approval/share widgets
@@ -297,6 +306,10 @@ class App.TicketZoom extends App.Controller
           @approvals = ticketData.approvals || []
           @shares = ticketData.shares || []
           
+          # Set cache on ticket object for permission checks
+          @ticket._approvals_cache = @approvals if @ticket
+          @ticket._shares_cache = @shares if @ticket
+          
           console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated approvals (#{@approvals.length}), shares (#{@shares.length})"
           
           # Trigger sidebar rerender for approval/share widgets
@@ -313,10 +326,19 @@ class App.TicketZoom extends App.Controller
       @ajax(
         id:    'ticket-article-refresh'
         type:  'GET'
-        url:   "#{@apiPath}/tickets/#{@ticket_id}"
+        url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
         success: (ticketData) =>
           App.Ticket.refresh([ticketData]) if ticketData?
           @ticket = App.Ticket.findNative(@ticket_id)
+          
+          # Update approvals/shares cache for permission checks
+          if ticketData.approvals
+            @approvals = ticketData.approvals
+            @ticket._approvals_cache = @approvals if @ticket
+          if ticketData.shares
+            @shares = ticketData.shares
+            @ticket._shares_cache = @shares if @ticket
+          
           # Trigger sidebar rerender
           App.Event.trigger('ui::ticket::sidebarRerender')
         error: =>
