@@ -43,7 +43,15 @@ class Ticket::AssetsAll
   end
 
   def response(assets, attributes_to_change)
-    {
+    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Building API response for user ##{user.id} (#{user.email})"
+    
+    approvals_data = approvals
+    shares_data = shares
+    
+    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Approvals data size: #{approvals_data.size}"
+    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Shares data size: #{shares_data.size}"
+    
+    response_data = {
       ticket_id:          ticket.id,
       ticket_article_ids: articles.pluck(:id),
       assets:             assets,
@@ -52,9 +60,12 @@ class Ticket::AssetsAll
       mentions:           mentions.pluck(:id),
       time_accountings:   time_accountings,
       form_meta:          attributes_to_change[:form_meta],
-      approvals:          approvals,
-      shares:             shares,
+      approvals:          approvals_data,
+      shares:             shares_data,
     }
+    
+    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: API response built successfully"
+    response_data
   end
 
   def get_attributes_to_change(assets)

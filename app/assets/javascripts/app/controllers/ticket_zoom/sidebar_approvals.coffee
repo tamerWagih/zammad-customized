@@ -74,6 +74,10 @@ class SidebarApprovals extends App.Controller
     @createApprovalsWidget()
 
   createApprovalsWidget: =>
+    console.log "[SIDEBAR_APPROVALS] Ticket ##{@ticket?.id || @ticket_id}: createApprovalsWidget() called"
+    console.log "[SIDEBAR_APPROVALS] Ticket ##{@ticket?.id || @ticket_id}: elSidebar:", !!@elSidebar
+    console.log "[SIDEBAR_APPROVALS] Ticket ##{@ticket?.id || @ticket_id}: ticket object:", !!@ticket
+    
     @widget?.destroy?()
 
     @widget = new App.WidgetApprovals(
@@ -82,6 +86,8 @@ class SidebarApprovals extends App.Controller
       parentVC: @
       callback: @refreshApprovals
     )
+
+    console.log "[SIDEBAR_APPROVALS] Ticket ##{@ticket?.id || @ticket_id}: Widget created:", !!@widget
 
     # Load approvals data (use passed data if available)
     @loadApprovalsForCheck()

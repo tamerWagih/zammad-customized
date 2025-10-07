@@ -69,22 +69,30 @@ class App.WidgetApprovals extends App.Controller
     @loadApprovalsFromAPI()
 
   loadApprovalsFromAPI: =>
+    console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: loadApprovalsFromAPI() called"
+    console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: Making API call to /tickets/#{@ticket_id}/approvals"
+    
     @ajax(
       id:          'load_approvals'
       type:        'GET'
       url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals"
       processData: true
-      success:     @renderApprovals
+      success:     (data, status, xhr) =>
+        console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: API success - received data:", data
+        @renderApprovals(data, status, xhr)
       error:       (xhr, status, error) =>
+        console.error "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: API error:", status, error
         # Ignore aborted requests
         unless status is 'abort'
           console.error 'Failed to load approvals:', status, error
         @renderError(xhr, status, error)
       complete:    (xhr, status) =>
+        console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: API complete - status:", status
         @isLoadingApprovals = false
         if status is 'abort'
           if (@loadRetryCount ? 0) < 3
             @loadRetryCount = (@loadRetryCount ? 0) + 1
+            console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: Retrying load (attempt #{@loadRetryCount})"
             @delay (=> @loadApprovals()), 500, 'approval-retry'
       )
 

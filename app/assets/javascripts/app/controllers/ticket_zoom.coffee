@@ -141,6 +141,9 @@ class App.TicketZoom extends App.Controller
     )
 
   load: (data, local = false, newTicketRaw = undefined) =>
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: load() called with local=#{local}"
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Raw data keys:", Object.keys(data)
+    
     if !newTicketRaw
       newTicketRaw = data.assets.Ticket[@ticket_id]
 
@@ -209,14 +212,22 @@ class App.TicketZoom extends App.Controller
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Data attached to ticket object"
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: @ticket.approvals_data:", @ticket.approvals_data
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: @ticket.shares_data:", @ticket.shares_data
+    
+    # Evaluate permissions with detailed logging
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Evaluating permissions..."
     @view           = @ticket && @ticket.currentView && @ticket.currentView()
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: currentView() returned:", @view
+    
     @readable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || false
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: readable:", @readable
+    
     @changeable     = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || false
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: changeable:", @changeable
+    
     @fullable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || false
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: fullable:", @fullable
+    
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Permission evaluation complete - view: #{@view}, readable: #{@readable}, changeable: #{@changeable}, fullable: #{@fullable}"
     @formMeta       = data.form_meta
 
     # render page

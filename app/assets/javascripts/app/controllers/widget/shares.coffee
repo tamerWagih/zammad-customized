@@ -48,33 +48,48 @@ class App.WidgetShares extends App.Controller
     @delay (=> @loadShares()), delay, 'share-reload'
 
   loadShares: =>
-    return if @isLoadingShares
+    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: loadShares() called"
+    
+    if @isLoadingShares
+      console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: Already loading - skipping"
+      return
 
     @isLoadingShares = true
+    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: Loading from API"
     @loadSharesFromAPI()
 
   loadSharesFromAPI: =>
+    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: loadSharesFromAPI() called"
+    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: Making API call to /tickets/#{@ticket_id}/shares"
+    
     @ajax(
       id:          'load_shares'
       type:        'GET'
       url:         "#{@apiPath}/tickets/#{@ticket_id}/shares"
       processData: true
-      success:     @renderShares
+      success:     (data, status, xhr) =>
+        console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: API success - received data:", data
+        @renderShares(data, status, xhr)
       error:       (xhr, status, error) =>
+        console.error "[WIDGET_SHARES] Ticket ##{@ticket_id}: API error:", status, error
         # Ignore aborted requests
         unless status is 'abort'
           console.error 'Failed to load shares:', status, error
         @renderError(xhr, status, error)
       complete:    (xhr, status) =>
+        console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: API complete - status:", status
         @isLoadingShares = false
         if status is 'abort'
           if (@loadRetryCount ? 0) < 3
             @loadRetryCount = (@loadRetryCount ? 0) + 1
+            console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: Retrying load (attempt #{@loadRetryCount})"
             @delay (=> @loadShares()), 500, 'share-retry'
       )
 
   renderShares: (data, status, xhr) =>
     shares = data?.shares || []
+    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: renderShares() called with #{shares.length} shares"
+    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: Received shares from API:", shares
     @lastShares = shares
     @loadRetryCount = 0
     @render(@lastShares)
@@ -93,15 +108,21 @@ class App.WidgetShares extends App.Controller
     @html "<div class='sidebar-block'><div class='alert alert-danger'>#{error_message}</div></div>"
 
   render: (shares) =>
+    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: render() called with #{shares.length} shares"
+    
     # Render the full template with real data
     current_user = App.User.current()
     current_user_id = if current_user then String(current_user.id) else 'unknown'
+    
+    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: Rendering HTML with current_user_id:", current_user_id
     
     @html App.view('widget/shares')(
       shares: shares
       ticket_id: @ticket_id
       current_user_id: current_user_id
     )
+    
+    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: HTML rendered successfully"
 
   renderActions: =>
     @parentVC?.parentSidebar?.sidebarActionsRender('shares', @parentVC?.item?.sidebarActions || [])

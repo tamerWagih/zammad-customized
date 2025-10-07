@@ -4,10 +4,29 @@ class SidebarShares extends App.Controller
     @last_can_share = null
 
   sidebarItem: =>
-    return if @ticket.currentView() isnt 'agent'
+    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: sidebarItem() called"
+    
+    currentView = @ticket.currentView()
+    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: currentView =", currentView
+    
+    if currentView isnt 'agent'
+      console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: Not agent view - hiding sidebar"
+      return
+    
     # Standard Zammad: Agents and admins can see shares
     # Custom: Also allow users with share access or approval access
-    return unless @permissionCheck('ticket.agent') or @permissionCheck('admin.*') or @hasShareAccess() or @hasApprovalAccess()
+    isAgent = @permissionCheck('ticket.agent')
+    isAdmin = @permissionCheck('admin.*')
+    hasShare = @hasShareAccess()
+    hasApproval = @hasApprovalAccess()
+    
+    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: isAgent =", isAgent, ", isAdmin =", isAdmin, ", hasShare =", hasShare, ", hasApproval =", hasApproval
+    
+    unless isAgent or isAdmin or hasShare or hasApproval
+      console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: No permission - hiding sidebar"
+      return
+
+    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: Sidebar WILL be shown"
 
     @item = {
       name: 'shares'
@@ -28,28 +47,37 @@ class SidebarShares extends App.Controller
     @item
 
   showPanel: (el) =>
+    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket_id}: showPanel() called"
     @elSidebar = el
 
     if @ticket_id
       @ticket = App.Ticket.fullLocal(@ticket_id) || @ticket
+      console.log "[SIDEBAR_SHARES] Ticket ##{@ticket_id}: Loaded ticket object:", !!@ticket
       unless @ticket
+        console.log "[SIDEBAR_SHARES] Ticket ##{@ticket_id}: No ticket object - loading from API"
         @ajax(
           id:    'load_ticket_for_sidebar'
           type:  'GET'
           url:   "#{@apiPath}/tickets/#{@ticket_id}"
           success: (ticketData) =>
+            console.log "[SIDEBAR_SHARES] Ticket ##{@ticket_id}: Ticket loaded from API"
             App.Ticket.refresh([ticketData]) if ticketData?
             @ticket = App.Ticket.findNative(@ticket_id)
             @createSharesWidget()
           error: (xhr, status, error) =>
-            console.error 'Failed to load ticket for sidebar:', status, error unless status is 'abort'
+            console.error "[SIDEBAR_SHARES] Ticket ##{@ticket_id}: Failed to load ticket for sidebar:", status, error unless status is 'abort'
             @createSharesWidget()
         )
         return
 
+    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket_id}: Creating widget"
     @createSharesWidget()
 
   createSharesWidget: =>
+    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: createSharesWidget() called"
+    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: elSidebar:", !!@elSidebar
+    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: ticket object:", !!@ticket
+    
     if @widget
       @widget.destroy?()
 
@@ -59,6 +87,8 @@ class SidebarShares extends App.Controller
       parentVC: @
       callback: @refreshShares
     )
+
+    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: Widget created:", !!@widget
     
     # Load shares data (use passed data if available)
     @loadSharesForCheck()
