@@ -259,9 +259,12 @@ class App.TicketZoom extends App.Controller
         url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
         success: (ticketData) =>
           console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success"
+          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: ticketData:", ticketData
           
           # Update ticket object with fresh data
-          App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]]) if ticketData?.assets?.Ticket?[@ticket_id]
+          if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
+            App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]])
+          
           @ticket = App.Ticket.findNative(@ticket_id)
           
           # Re-attach approvals and shares data to ticket object
@@ -292,9 +295,12 @@ class App.TicketZoom extends App.Controller
         url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
         success: (ticketData) =>
           console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success"
+          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: ticketData:", ticketData
           
           # Update ticket object with fresh data
-          App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]]) if ticketData?.assets?.Ticket?[@ticket_id]
+          if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
+            App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]])
+          
           @ticket = App.Ticket.findNative(@ticket_id)
           
           # Re-attach approvals and shares data to ticket object
