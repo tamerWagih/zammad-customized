@@ -5,6 +5,8 @@ class SidebarApprovals extends App.Controller
 
   sidebarItem: =>
     return if @ticket.currentView() isnt 'agent'
+    # Standard Zammad: Agents and admins can see approvals
+    # Custom: Also allow users with share access or approval access
     return unless @permissionCheck('ticket.agent') or @permissionCheck('admin.*') or @hasShareAccess() or @hasApprovalAccess()
 
     @item = {

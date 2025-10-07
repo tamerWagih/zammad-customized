@@ -333,9 +333,13 @@ class App.Ticket extends App.Model
     return @isAccessibleByOwner(user)
 
   currentView: ->
+    # Standard Zammad: Agents with group access get agent view
     return 'agent' if App.User.current()?.permission('ticket.agent') && @userGroupAccess && @userGroupAccess('read')
+    # Custom: Approvers get agent view (even if not agents)
     return 'agent' if @hasApprovalAccess() # Approvers get agent view
+    # Custom: Users with share access get agent view (even if not agents)
     return 'agent' if @hasShareAccess() # Users with share access get agent view
+    # Standard Zammad: Customers get customer view
     return 'customer' if App.User.current()?.permission('ticket.customer')
     return
 

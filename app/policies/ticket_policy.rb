@@ -102,13 +102,17 @@ class TicketPolicy < ApplicationPolicy
   # Allow access via Ticket::Approval for approvers.
   # Approvers get full access to tickets they need to approve.
   # This prevents the need to create shares that give access to entire groups.
+  # NOTE: This is a custom implementation that bypasses the standard Zammad permission system
+  # to allow non-agents to approve tickets. In standard Zammad, only agents can approve.
   def approval_access?(access)
     return nil unless user
-    return nil unless user.permissions?('ticket.agent') # Only agents can be approvers
     
     # Check if user is an approver for this ticket (any status)
     is_approver = record.approvals.exists?(approver_id: user.id)
     return nil unless is_approver
+    
+    # CUSTOM: Allow non-agents to approve (bypasses standard Zammad permission check)
+    # In standard Zammad, this would require: user.permissions?('ticket.agent')
     
     # Approvers get full access (read, comment, edit) for tickets they need to approve
     case access.to_s
