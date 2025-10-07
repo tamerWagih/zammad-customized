@@ -406,10 +406,9 @@ class App.Ticket extends App.Model
       console.log "[TICKET_MODEL] Ticket ##{@id}: No ticket ID"
       return false
 
-    # Read from global cache instead of ticket object property
-    cache = window.TicketApprovalsSharesCache?[@id]
-    ticket_approvals = cache?.approvals || []
-    console.log "[TICKET_MODEL] Ticket ##{@id}: Approvals from global cache:", ticket_approvals
+    # Use _approvals_cache set by sidebar controller (same pattern as standard Zammad)
+    ticket_approvals = @_approvals_cache || []
+    console.log "[TICKET_MODEL] Ticket ##{@id}: Approvals from cache:", ticket_approvals
 
     unless ticket_approvals && ticket_approvals.length > 0
       console.log "[TICKET_MODEL] Ticket ##{@id}: No approvals data or empty array"
@@ -444,10 +443,9 @@ class App.Ticket extends App.Model
       console.log "[TICKET_MODEL] Ticket ##{@id}: User is not an agent"
       return false
 
-    # Read from global cache instead of ticket object property
-    cache = window.TicketApprovalsSharesCache?[@id]
-    ticket_shares = cache?.shares || []
-    console.log "[TICKET_MODEL] Ticket ##{@id}: Shares from global cache:", ticket_shares
+    # Use _shares_cache set by sidebar controller (same pattern as standard Zammad)
+    ticket_shares = @_shares_cache || []
+    console.log "[TICKET_MODEL] Ticket ##{@id}: Shares from cache:", ticket_shares
 
     unless ticket_shares && ticket_shares.length > 0
       console.log "[TICKET_MODEL] Ticket ##{@id}: No shares data or empty array"

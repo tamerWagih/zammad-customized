@@ -53,6 +53,8 @@ class App.TicketZoomSidebar extends App.ControllerObserver
           mentions:         @mentions
           time_accountings: @time_accountings
           links:            @links
+          approvals:        @approvals
+          shares:           @shares
           parent:           @parent
         )
       else
@@ -65,6 +67,8 @@ class App.TicketZoomSidebar extends App.ControllerObserver
           mentions:         @mentions
           time_accountings: @time_accountings
           links:            @links
+          approvals:        @approvals
+          shares:           @shares
           parent:           @parent
         )
       @sidebarItems.push @sidebarBackends[key]

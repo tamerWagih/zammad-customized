@@ -188,22 +188,13 @@ class App.TicketZoom extends App.Controller
     # remember time_accountings
     @time_accountings = data.time_accountings
 
-    # remember approvals and shares - Store in global registry
+    # remember approvals and shares (same pattern as tags and links)
     @approvals = data.approvals || []
     @shares = data.shares || []
-    
-    # Store in global window registry to survive object refreshes
-    window.TicketApprovalsSharesCache ||= {}
-    window.TicketApprovalsSharesCache[@ticket_id] = {
-      approvals: @approvals
-      shares: @shares
-      updated_at: new Date().getTime()
-    }
     
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: API response received"
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approvals from API:", @approvals
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Shares from API:", @shares
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Stored in global cache"
 
     if draft = App.TicketSharedDraftZoom.findByAttribute 'ticket_id', @ticket_id
       draft.remove(clear: true)
@@ -269,18 +260,11 @@ class App.TicketZoom extends App.Controller
           
           @ticket = App.Ticket.findNative(@ticket_id)
           
-          # Update global cache
+          # Update instance variables (same pattern as tags/links)
           @approvals = ticketData.approvals || []
           @shares = ticketData.shares || []
           
-          window.TicketApprovalsSharesCache ||= {}
-          window.TicketApprovalsSharesCache[@ticket_id] = {
-            approvals: @approvals
-            shares: @shares
-            updated_at: new Date().getTime()
-          }
-          
-          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated global cache - approvals (#{@approvals.length}), shares (#{@shares.length})"
+          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated approvals (#{@approvals.length}), shares (#{@shares.length})"
           
           # Trigger sidebar rerender for approval/share widgets
           App.Event.trigger('ui::ticket::sidebarRerender')
@@ -309,18 +293,11 @@ class App.TicketZoom extends App.Controller
           
           @ticket = App.Ticket.findNative(@ticket_id)
           
-          # Update global cache
+          # Update instance variables (same pattern as tags/links)
           @approvals = ticketData.approvals || []
           @shares = ticketData.shares || []
           
-          window.TicketApprovalsSharesCache ||= {}
-          window.TicketApprovalsSharesCache[@ticket_id] = {
-            approvals: @approvals
-            shares: @shares
-            updated_at: new Date().getTime()
-          }
-          
-          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated global cache - approvals (#{@approvals.length}), shares (#{@shares.length})"
+          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated approvals (#{@approvals.length}), shares (#{@shares.length})"
           
           # Trigger sidebar rerender for approval/share widgets
           App.Event.trigger('ui::ticket::sidebarRerender')

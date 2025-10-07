@@ -2,6 +2,12 @@ class SidebarShares extends App.Controller
   constructor: ->
     super
     @last_can_share = null
+    
+    # Set cache on ticket object for permission checks (same pattern as standard Zammad uses for tags/links)
+    if @ticket && @approvals
+      @ticket._approvals_cache = @approvals
+    if @ticket && @shares
+      @ticket._shares_cache = @shares
 
   sidebarItem: =>
     console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: sidebarItem() called"
@@ -171,9 +177,8 @@ class SidebarShares extends App.Controller
     current_user = App.User.current()
     return false unless current_user
 
-    # Read from global cache
-    cache = window.TicketApprovalsSharesCache?[@ticket.id]
-    ticket_shares = cache?.shares || []
+    # Use shares passed from constructor/reload
+    ticket_shares = @shares || []
     return false unless ticket_shares && Array.isArray(ticket_shares) && ticket_shares.length > 0
 
     # Filter only active shares
@@ -196,9 +201,8 @@ class SidebarShares extends App.Controller
     current_user = App.User.current()
     return false unless current_user
 
-    # Read from global cache
-    cache = window.TicketApprovalsSharesCache?[@ticket.id]
-    ticket_approvals = cache?.approvals || []
+    # Use approvals passed from constructor/reload
+    ticket_approvals = @approvals || []
     return false unless ticket_approvals && Array.isArray(ticket_approvals) && ticket_approvals.length > 0
 
     current_user_id = parseInt(current_user.id)
