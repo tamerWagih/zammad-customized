@@ -113,20 +113,23 @@ class App.WidgetApprovals extends App.Controller
     )
 
   updateApprovalStatus: (approval_id, status) =>
+    # Use the correct endpoint: POST to /approve or /reject
+    action = if status is 'approved' then 'approve' else 'reject'
+    
     @ajax(
-      id:   'update_approval'
-      type: 'PUT'
-      url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
-      data: JSON.stringify(status: status)
-      processData: false
+      id:   "#{action}_approval"
+      type: 'POST'
+      url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/#{action}"
+      processData: true
       success: =>
         # Backend will trigger WebSocket event, which will refresh the data
-        # No need to manually reload here
+        # Manually reload to ensure immediate update
+        @fetch()
       error: (xhr, status, error) =>
-        console.error 'Failed to update approval:', status, error
+        console.error "Failed to #{action} approval:", status, error
         @notify(
           type: 'error'
-          msg: App.i18n.translateContent('Failed to update approval status.')
+          msg: App.i18n.translateContent("Failed to #{action} approval.")
         )
     )
 
@@ -145,8 +148,8 @@ class App.WidgetApprovals extends App.Controller
       container: @el.closest('.content')
       parentWidget: @  # Pass reference for callback
       callback: =>
-        # Reload after edit
-        @reload()
+        # Reload fresh data from API after edit
+        @fetch()
     )
 
   deleteApproval: (e) =>
@@ -163,6 +166,8 @@ class App.WidgetApprovals extends App.Controller
           url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
           success: =>
             # Backend will trigger WebSocket event, which will refresh the data
+            # Manually reload to ensure immediate update
+            @fetch()
           error: (xhr, status, error) =>
             console.error 'Failed to delete approval:', status, error
             @notify(

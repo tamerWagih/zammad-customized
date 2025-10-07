@@ -98,6 +98,8 @@ class App.WidgetShares extends App.Controller
           url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}/revoke"
           success: =>
             # Backend will trigger WebSocket event, which will refresh the data
+            # Manually reload to ensure immediate update
+            @fetch()
           error: (xhr, status, error) =>
             console.error 'Failed to revoke share:', status, error
             @notify(
@@ -122,6 +124,8 @@ class App.WidgetShares extends App.Controller
           url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}"
           success: =>
             # Backend will trigger WebSocket event, which will refresh the data
+            # Manually reload to ensure immediate update
+            @fetch()
           error: (xhr, status, error) =>
             console.error 'Failed to delete share:', status, error
             @notify(
@@ -147,8 +151,8 @@ class App.WidgetShares extends App.Controller
       container: @el.closest('.content')
       parentWidget: @  # Pass reference for callback
       callback: =>
-        # Reload after edit
-        @reload()
+        # Reload fresh data from API after edit
+        @fetch()
     )
 
   openShareTicket: (e) =>
@@ -157,7 +161,7 @@ class App.WidgetShares extends App.Controller
       ticket_id: @ticket_id
       container: @el.closest('.content')
       callback: =>
-        # Reload after creating
-        @reload()
+        # Reload fresh data from API after creating
+        @fetch()
     )
 
