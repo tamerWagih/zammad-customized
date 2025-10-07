@@ -22,8 +22,10 @@ class Service::Ticket::Approval::Create < Service::BaseWithCurrentUser
       status:    'pending'
     )
 
-    # Create automatic share if approver is in a different group
-    create_auto_share_if_needed(ticket, approver)
+    # NOTE: Auto-share removed!
+    # Approvers now get access via TicketPolicy#approval_access?
+    # This prevents giving access to the entire group and maintains security.
+    # Only the specific approver gets full access to the ticket.
 
     # Send email notifications
     Service::Ticket::Approval::EmailNotifier
@@ -34,36 +36,6 @@ class Service::Ticket::Approval::Create < Service::BaseWithCurrentUser
   end
 
   private
-
-  def create_auto_share_if_needed(ticket, approver)
-    # Get approver's group IDs
-    approver_group_ids = approver.group_ids_access('read')
-    return if approver_group_ids.empty?
-
-    # Check if approver is in the same group as the ticket
-    return if approver_group_ids.include?(ticket.group_id)
-
-    # Find the first group the approver belongs to (excluding the ticket's group)
-    approver_group_id = approver_group_ids.find { |id| id != ticket.group_id }
-    return unless approver_group_id
-
-    # Check if a share already exists for this group
-    return if ticket.shares.active_current.exists?(group_id: approver_group_id)
-
-    # Get the group object
-    approver_group = Group.find(approver_group_id)
-    return unless approver_group
-
-    # Create automatic share with approver's group
-    ticket.shares.create!(
-      group:        approver_group,
-      shared_by:    current_user,
-      permissions:  ['full'],
-      message:      __('Automatic share created for approval request'),
-      expires_at:   nil, # No expiration for approval-related shares
-      status:       'active'
-    )
-  end
 
   def normalize_priority(value)
     priority = value.to_s.presence || 'normal'

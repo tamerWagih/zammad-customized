@@ -81,6 +81,10 @@ class TicketPolicy < ApplicationPolicy
   end
 
   def access?(access)
+    # Check approval access FIRST (approvers get full access)
+    approval_decision = approval_access?(access)
+    return approval_decision unless approval_decision.nil?
+    
     share_decision = share_access?(access)
     return share_decision unless share_decision.nil?
 
@@ -93,6 +97,26 @@ class TicketPolicy < ApplicationPolicy
     return false if !user.permissions?('ticket.agent')
 
     user.group_access?(record.group.id, access)
+  end
+
+  # Allow access via Ticket::Approval for approvers.
+  # Approvers get full access to tickets they need to approve.
+  # This prevents the need to create shares that give access to entire groups.
+  def approval_access?(access)
+    return nil unless user
+    return nil unless user.permissions?('ticket.agent') # Only agents can be approvers
+    
+    # Check if user is an approver for this ticket (any status)
+    is_approver = record.approvals.exists?(approver_id: user.id)
+    return nil unless is_approver
+    
+    # Approvers get full access (read, comment, edit) for tickets they need to approve
+    case access.to_s
+    when 'read', 'change', 'create', 'full'
+      true
+    else
+      nil
+    end
   end
 
   # Allow access via Ticket::Share for the current user.

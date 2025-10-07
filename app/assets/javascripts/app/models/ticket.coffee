@@ -331,6 +331,8 @@ class App.Ticket extends App.Model
 
   currentView: ->
     return 'agent' if App.User.current()?.permission('ticket.agent') && @userGroupAccess && @userGroupAccess('read')
+    return 'agent' if @hasApprovalAccess() # Approvers get agent view
+    return 'agent' if @hasShareAccess() # Users with share access get agent view
     return 'customer' if App.User.current()?.permission('ticket.customer')
     return
 
@@ -356,6 +358,47 @@ class App.Ticket extends App.Model
     return false if !user.permission('ticket.agent')
     return true if @isAccessibleByOwner(user)
     return @isAccessibleByGroup(user, permission)
+
+  hasApprovalAccess: ->
+    current_user = App.User.current()
+    return false unless current_user
+    return false unless @id
+    
+    # Check if user is an approver for this ticket
+    ticket_approvals = App.TicketApproval.findByAttribute('ticket_id', @id)
+    return false unless ticket_approvals && ticket_approvals.length > 0
+    
+    current_user_id = parseInt(current_user.id)
+    
+    # Check if user is an approver (any status - pending, approved, or rejected)
+    for approval in ticket_approvals
+      if parseInt(approval.approver_id) is current_user_id
+        return true
+    
+    false
+
+  hasShareAccess: ->
+    current_user = App.User.current()
+    return false unless current_user
+    return false unless @id
+    
+    # Check if user has access via shares
+    ticket_shares = App.TicketShare.findByAttribute('ticket_id', @id)
+    return false unless ticket_shares && ticket_shares.length > 0
+    
+    # Filter only active shares
+    active_shares = ticket_shares.filter((share) -> share.status is 'active')
+    return false unless active_shares.length > 0
+    
+    user_groups = current_user.group_ids || []
+    share_groups = active_shares.map((share) -> parseInt(share.group_id))
+    
+    # Check if user belongs to any shared group
+    for user_group_id in user_groups
+      if share_groups.indexOf(parseInt(user_group_id)) >= 0
+        return true
+    
+    false
 
   attributes: ->
     attrs = super
