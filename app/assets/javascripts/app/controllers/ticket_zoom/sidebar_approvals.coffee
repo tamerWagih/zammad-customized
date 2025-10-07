@@ -170,24 +170,33 @@ class SidebarApprovals extends App.Controller
     current_user = App.User.current()
     return false unless current_user
     
-    # Check if user has access via shares
-    ticket_shares = App.TicketShare.findByAttribute('ticket_id', @ticket.id)
-    return false unless ticket_shares
+    # Use shares_data attached to ticket object
+    ticket_shares = @ticket.shares_data
+    return false unless ticket_shares && Array.isArray(ticket_shares) && ticket_shares.length > 0
     
+    # Filter only active shares
+    active_shares = ticket_shares.filter((share) -> share.status is 'active')
+    return false unless active_shares.length > 0
+    
+    # Get user's groups
     user_groups = current_user.group_ids || []
-    share_groups = ticket_shares.map((share) -> share.group_id)
+    share_groups = active_shares.map((share) -> parseInt(share.group_id))
     
     # Check if user belongs to any shared group
-    (user_groups & share_groups).length > 0
+    for user_group_id in user_groups
+      if share_groups.indexOf(parseInt(user_group_id)) >= 0
+        return true
+    
+    false
 
   hasApprovalAccess: =>
     return false unless @ticket
     current_user = App.User.current()
     return false unless current_user
     
-    # Check if user is an approver for this ticket
-    ticket_approvals = App.TicketApproval.findByAttribute('ticket_id', @ticket.id)
-    return false unless ticket_approvals && ticket_approvals.length > 0
+    # Use approvals_data attached to ticket object
+    ticket_approvals = @ticket.approvals_data
+    return false unless ticket_approvals && Array.isArray(ticket_approvals) && ticket_approvals.length > 0
     
     current_user_id = parseInt(current_user.id)
     
