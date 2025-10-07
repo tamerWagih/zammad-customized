@@ -52,6 +52,8 @@ class Ticket::AssetsAll
       mentions:           mentions.pluck(:id),
       time_accountings:   time_accountings,
       form_meta:          attributes_to_change[:form_meta],
+      approvals:          approvals,
+      shares:             shares,
     }
   end
 
@@ -88,5 +90,52 @@ class Ticket::AssetsAll
 
   def mentions
     @mentions ||= ticket.mentions
+  end
+
+  def approvals
+    @approvals ||= if ticket.respond_to?(:approvals) && user.permissions?('ticket.agent')
+                     # Return all approvals for this ticket with user associations
+                     ticket.approvals.includes(:approver, :requester).map do |approval|
+                       {
+                         id:           approval.id,
+                         ticket_id:    approval.ticket_id,
+                         approver_id:  approval.approver_id,
+                         approver:     approval.approver&.attributes&.slice('id', 'firstname', 'lastname', 'email'),
+                         requester_id: approval.requester_id,
+                         requester:    approval.requester&.attributes&.slice('id', 'firstname', 'lastname', 'email'),
+                         status:       approval.status,
+                         message:      approval.message,
+                         priority:     approval.priority,
+                         created_at:   approval.created_at,
+                         updated_at:   approval.updated_at,
+                       }
+                     end
+                   else
+                     []
+                   end
+  end
+
+  def shares
+    @shares ||= if ticket.respond_to?(:shares) && user.permissions?('ticket.agent')
+                  # Return all shares for this ticket with user and group associations
+                  ticket.shares.includes(:shared_by, :group).map do |share|
+                    {
+                      id:           share.id,
+                      ticket_id:    share.ticket_id,
+                      group_id:     share.group_id,
+                      group:        share.group&.attributes&.slice('id', 'name'),
+                      shared_by_id: share.shared_by_id,
+                      shared_by:    share.shared_by&.attributes&.slice('id', 'firstname', 'lastname', 'email'),
+                      status:       share.status,
+                      permissions:  share.permissions,
+                      message:      share.message,
+                      expires_at:   share.expires_at,
+                      created_at:   share.created_at,
+                      updated_at:   share.updated_at,
+                    }
+                  end
+                else
+                  []
+                end
   end
 end

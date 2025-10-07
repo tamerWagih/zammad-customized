@@ -371,8 +371,8 @@ class App.Ticket extends App.Model
     return false unless current_user
     return false unless @id
     
-    # Check if user is an approver for this ticket
-    ticket_approvals = App.TicketApproval.findByAttribute('ticket_id', @id)
+    # Use approvals data attached to ticket object (from API response)
+    ticket_approvals = @approvals_data
     return false unless ticket_approvals && ticket_approvals.length > 0
     
     current_user_id = parseInt(current_user.id)
@@ -390,28 +390,28 @@ class App.Ticket extends App.Model
     return false unless @id
     return false unless current_user.permission('ticket.agent') # Only agents can access shared tickets
     
-    # Check if user has access via shares
-    ticket_shares = App.TicketShare.findByAttribute('ticket_id', @id)
+    # Use shares data attached to ticket object (from API response)
+    ticket_shares = @shares_data
     return false unless ticket_shares && ticket_shares.length > 0
-    
+
     # Filter only active shares
     active_shares = ticket_shares.filter((share) -> share.status is 'active')
     return false unless active_shares.length > 0
-    
+
     # Get user's groups with ANY permission level (read, change, or full)
     user_groups_read = current_user.allGroupIds('read') || []
     user_groups_change = current_user.allGroupIds('change') || []
     user_groups_full = current_user.allGroupIds('full') || []
-    
+
     # Combine all groups where user has any permission
     user_groups = user_groups_read.concat(user_groups_change).concat(user_groups_full)
     share_groups = active_shares.map((share) -> parseInt(share.group_id))
-    
+
     # Check if user has permission in any shared group
     for user_group_id in user_groups
       if share_groups.indexOf(parseInt(user_group_id)) >= 0
         return true
-    
+
     false
 
   attributes: ->

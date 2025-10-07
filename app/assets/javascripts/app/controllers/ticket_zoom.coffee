@@ -197,6 +197,10 @@ class App.TicketZoom extends App.Controller
     # get ticket
     @ticket         = App.Ticket.fullLocal(@ticket_id)
     @ticket.article = undefined
+    
+    # Attach approvals and shares directly to ticket object for permission checks
+    @ticket.approvals_data = @approvals
+    @ticket.shares_data = @shares
     @view           = @ticket && @ticket.currentView && @ticket.currentView()
     @readable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || false
     @changeable     = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || false
