@@ -48,6 +48,10 @@ class SidebarShares extends App.Controller
         return
 
     @createSharesWidget()
+    
+    # Use passed shares data if available to avoid additional API calls
+    if @shares && @shares.length > 0
+      @loadSharesForCheck()
 
   createSharesWidget: =>
     if @widget
@@ -89,6 +93,26 @@ class SidebarShares extends App.Controller
 
   refreshShares: =>
     @showPanel(@elSidebar) if @elSidebar
+
+  loadSharesForCheck: =>
+    return unless @ticket
+
+    # Use passed shares data if available, otherwise load from API
+    if @shares && @shares.length > 0
+      # Data already available from parent controller
+      return
+    else
+      # Fallback: load from API
+      @ajax(
+        id: 'load_shares_for_check'
+        type: 'GET'
+        url: "#{@apiPath}/tickets/#{@ticket.id}/shares"
+        processData: true
+        success: (data, status, xhr) =>
+          @shares = data?.shares || []
+        error: (xhr, status, error) =>
+          @shares = []
+      )
 
   createShare: =>
     new App.TicketShareCreate(

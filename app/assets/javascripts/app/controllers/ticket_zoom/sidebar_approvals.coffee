@@ -48,6 +48,10 @@ class SidebarApprovals extends App.Controller
         return
 
     @createApprovalsWidget()
+    
+    # Use passed approvals data if available to avoid additional API calls
+    if @approvals && @approvals.length > 0
+      @loadApprovalsForCheck()
 
   createApprovalsWidget: =>
     @widget?.destroy?()
@@ -94,16 +98,22 @@ class SidebarApprovals extends App.Controller
   loadApprovalsForCheck: =>
     return unless @ticket
 
-    @ajax(
-      id: 'load_approvals_for_check'
-      type: 'GET'
-      url: "#{@apiPath}/tickets/#{@ticket.id}/approvals"
-      processData: true
-      success: (data, status, xhr) =>
-        @approvals = data?.approvals || []
-      error: (xhr, status, error) =>
-        @approvals = []
-    )
+    # Use passed approvals data if available, otherwise load from API
+    if @approvals && @approvals.length > 0
+      # Data already available from parent controller
+      return
+    else
+      # Fallback: load from API
+      @ajax(
+        id: 'load_approvals_for_check'
+        type: 'GET'
+        url: "#{@apiPath}/tickets/#{@ticket.id}/approvals"
+        processData: true
+        success: (data, status, xhr) =>
+          @approvals = data?.approvals || []
+        error: (xhr, status, error) =>
+          @approvals = []
+      )
 
   requestApproval: =>
     new App.TicketApprovalRequest(
