@@ -230,15 +230,27 @@ class App.Ticket extends App.Model
     user.allOrganizationIds().includes(@organization_id)
 
   userGroupAccess: (permission) ->
-    # Simplified: Just check standard group access
-    # Backend TicketPolicy handles approval/share access via access?() method
-    # This method is for standard Zammad group-based permissions
+    # Check all access methods: standard group access, approvals, and shares
+    # Backend TicketPolicy checks these too, so frontend should match
     
     user = App.User.current()
     return false unless user
     return false unless user.permission('ticket.agent')
     
-    @isAccessibleByGroup(user, permission)
+    # 1. Check standard group access
+    return true if @isAccessibleByGroup(user, permission)
+    
+    # 2. Check if user is an approver (approvers get full access)
+    if @_approvals_cache or @approvals
+      approvals = @_approvals_cache or @approvals or []
+      for approval in approvals
+        if parseInt(approval.approver_id) is parseInt(user.id)
+          return true
+    
+    # 3. Check share permissions (uses share_permissions from backend)
+    return true if @hasSharePermission(permission)
+    
+    false
 
   hasSharePermission: (permission) ->
     return false unless App.User.current()?.permission('ticket.agent')
