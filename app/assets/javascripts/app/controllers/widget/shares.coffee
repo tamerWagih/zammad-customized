@@ -1,300 +1,228 @@
 class App.WidgetShares extends App.Controller
   events:
-    'click .js-edit-share': 'editShare'
-    'click .js-delete-share': 'deleteShare'
     'click .js-revoke-share': 'revokeShare'
-    'click .js-create-share': 'openShareCreate'
+    'click .js-delete-share': 'deleteShare'
+    'click .js-edit-share': 'editShare'
+    'click .js-share-ticket': 'openShareTicket'
 
   constructor: ->
     super
-    @lastShares = []  # Initialize to prevent undefined errors
-    @loadRetryCount = 0
-    @isLoadingShares = false
-    @shares = []
-
-    # Load ticket object for userGroupAccess method
-    if @ticket_id
-      @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
-
-    @renderActions()
     
-    # Consolidated event handler to prevent multiple reloads
-    @controllerBind('Ticket:update Ticket:touch TicketShare:create TicketShare:update TicketShare:destroy OnlineNotification::changed ui::ticket::sidebarRerender', (data) =>
-      # Check if this event is for our ticket
-      ticket_id = data?.id || data?.share?.ticket_id || data?.ticket_id || data?.ticket?.id
-      if ticket_id && ticket_id.toString() isnt @ticket_id?.toString()
-        return
-      
-      # Refresh ticket object for updated permissions
-      if @ticket_id
-        @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
-      
-      # Single reload with debounce to prevent blinking
-      @scheduleReload(300)
-    )
-
-    # Load shares data (widget will be initialized by sidebar controller)
-    # @loadShares() - Removed to prevent redundant API calls
-  # Standard reload method called by sidebar system
-  reload: (args) =>
-    @loadShares()
-
-  # Fallback mechanism to ensure data loads
-  ensureDataLoaded: =>
-    if !@lastShares || @lastShares.length is 0
-      @scheduleReload()
-
-  scheduleReload: (delay = 150) =>
-    @delay (=> @loadShares()), delay, 'share-reload'
-
-  loadShares: =>
-    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: loadShares() called"
-    
-    if @isLoadingShares
-      console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: Already loading - skipping"
+    # Standard pattern: if shares passed from parent, use them (like WidgetTag)
+    if @shares
+      @localShares = _.clone(@shares)
+      @render()
       return
+    
+    # Fallback: fetch from API if not provided
+    @fetch()
 
-    @isLoadingShares = true
-    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: Loading from API"
-    @loadSharesFromAPI()
-
-  loadSharesFromAPI: =>
-    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: loadSharesFromAPI() called"
-    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: Making API call to /tickets/#{@ticket_id}/shares"
+  fetch: =>
+    return unless @ticket_id
     
     @ajax(
       id:          'load_shares'
       type:        'GET'
       url:         "#{@apiPath}/tickets/#{@ticket_id}/shares"
       processData: true
-      success:     (data, status, xhr) =>
-        console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: API success - received data:", data
-        @renderShares(data, status, xhr)
-      error:       (xhr, status, error) =>
-        console.error "[WIDGET_SHARES] Ticket ##{@ticket_id}: API error:", status, error
-        # Ignore aborted requests
-        unless status is 'abort'
-          console.error 'Failed to load shares:', status, error
-        @renderError(xhr, status, error)
-      complete:    (xhr, status) =>
-        console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: API complete - status:", status
-        @isLoadingShares = false
-        if status is 'abort'
-          if (@loadRetryCount ? 0) < 3
-            @loadRetryCount = (@loadRetryCount ? 0) + 1
-            console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: Retrying load (attempt #{@loadRetryCount})"
-            @delay (=> @loadShares()), 500, 'share-retry'
-      )
+      success:     (data) =>
+        @localShares = data?.shares || []
+        @render()
+      error: (xhr, status, error) =>
+        console.error 'Failed to load shares:', status, error
+        @localShares = []
+        @render()
+    )
 
-  renderShares: (data, status, xhr) =>
-    shares = data?.shares || []
-    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: renderShares() called with #{shares.length} shares"
-    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: Received shares from API:", shares
-    @lastShares = shares
-    @loadRetryCount = 0
-    @render(@lastShares)
+  reload: (shares) =>
+    # Standard pattern: just update local data and re-render (like WidgetTag)
+    @localShares = _.clone(shares)
+    @render()
 
-  renderError: (xhr, status, error) =>
-    # Ignore aborted requests caused by view re-renders/navigation
-    if status is 'abort' or error is 'abort'
-      return
+  render: =>
+    # Prevent unnecessary re-renders (like WidgetTag)
+    return if @lastLocalShares && _.isEqual(@lastLocalShares, @localShares)
+    @lastLocalShares = _.clone(@localShares)
     
-    error_message = 'Unable to load shares'
-    if xhr?.responseJSON?.error
-      error_message = xhr.responseJSON.error
-    else if xhr?.statusText
-      error_message = "Unable to load shares: #{xhr.statusText}"
-    
-    @html "<div class='sidebar-block'><div class='alert alert-danger'>#{error_message}</div></div>"
-
-  render: (shares) =>
-    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: render() called with #{shares.length} shares"
-    
-    # Render the full template with real data
     current_user = App.User.current()
-    current_user_id = if current_user then String(current_user.id) else 'unknown'
+    shares_data = @localShares || []
     
-    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: Rendering HTML with current_user_id:", current_user_id
+    # Refresh ticket for permission checks
+    if @ticket_id
+      @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
+    
+    # Check if current user can manage shares
+    can_manage = @ticket && @ticket.editable && @ticket.editable()
+    
+    # Prepare display data
+    for share in shares_data
+      share.can_manage = can_manage
+      share.is_active = share.status is 'active'
+      share.is_revoked = share.status is 'revoked'
+      
+      # Format dates
+      if share.created_at
+        share.created_at_formatted = @formatTime(share.created_at, 'absolute')
+      if share.updated_at
+        share.updated_at_formatted = @formatTime(share.updated_at, 'absolute')
+      
+      # Get group name
+      if share.group_id
+        group = App.Group.find(share.group_id)
+        share.group_name = group?.name || share.group_name
     
     @html App.view('widget/shares')(
-      shares: shares
+      shares: shares_data
       ticket_id: @ticket_id
-      current_user_id: current_user_id
-    )
-    
-    console.log "[WIDGET_SHARES] Ticket ##{@ticket_id}: HTML rendered successfully"
-
-  renderActions: =>
-    @parentVC?.parentSidebar?.sidebarActionsRender('shares', @parentVC?.item?.sidebarActions || [])
-
-  openShareCreate: (e) =>
-    e?.preventDefault()
-    new App.TicketShareCreate(
-      ticket_id: @ticket_id
-      container: @el.closest('.content')
-      callback:  => @scheduleReload()
-    )
-
-
-  editShare: (e) =>
-    e.preventDefault()
-    e.stopPropagation()
-    e.stopImmediatePropagation()
-    @setCurrentAction('edit')
-    
-    share_id = $(e.currentTarget).data('share-id')
-    # Find current share data from last load
-    share = (@lastShares or []).find (s) -> String(s.id) == String(share_id)
-
-    # Safety check - if share not found, try to reload shares first
-    unless share
-      # Try to reload shares and find the share again
-      @ajax(
-        id: 'reload_share_for_edit'
-        type: 'GET'
-        url: "#{@apiPath}/tickets/#{@ticket_id}/shares"
-        processData: true
-        success: (data, status, xhr) =>
-          @lastShares = data?.shares || []
-          share = @lastShares.find (s) -> String(s.id) == String(share_id)
-          if share
-            # Found it after reload, proceed with edit
-            new App.TicketShareEdit(
-              share: share
-              ticket_id: @ticket_id
-              container: @el.closest('.content')
-              parentWidget: @
-              callback: => 
-                @loadShares()
-            )
-          else
-            # Still not found, show error
-            @notify(
-              type: 'error'
-              msg: __('Share data not found. Please refresh and try again.')
-            )
-        error: (xhr, status, error) =>
-          @notify(
-            type: 'error'
-            msg: __('Share data not found. Please refresh and try again.')
-          )
-      )
-      return
-
-    new App.TicketShareEdit(
-      share: share
-      ticket_id: @ticket_id
-      container: @el.closest('.content')
-      parentWidget: @
-      callback: => 
-        @scheduleReload()
-    )
-
-  deleteShare: (e) =>
-    e.preventDefault()
-    e.stopPropagation()
-    e.stopImmediatePropagation()
-    return if @_requestInFlight
-    share_id = $(e.currentTarget).data('share-id')
-    @setCurrentAction('delete')
-
-    new App.ControllerConfirm(
-      message: __('Are you sure you want to delete this share? This action cannot be undone.'),
-      buttonClass: 'btn--danger',
-      callback: =>
-        @_requestInFlight = true
-        @ajax(
-          id: 'delete_share'
-          type: 'DELETE'
-          url: "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}"
-          processData: true
-          success: (data, status, xhr) =>
-            @_requestInFlight = false
-            @shareSuccess(data, status, xhr)
-          error: (xhr, status, error) =>
-            @_requestInFlight = false
-            @shareError(xhr, status, error)
-          complete: => @_requestInFlight = false
-        )
-      buttonCancel: true
-      container: @el.closest('.content')
     )
 
   revokeShare: (e) =>
     e.preventDefault()
-    e.stopPropagation()
-    e.stopImmediatePropagation()
-    return if @_requestInFlight
-    share_id = $(e.currentTarget).data('share-id')
-    @setCurrentAction('revoke')
-
-    @_requestInFlight = true
-    @ajax(
-      id: 'revoke_share'
-      type: 'POST'
-      url: "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}/revoke"
-      processData: true
-      success: (data, status, xhr) =>
-        @_requestInFlight = false
-        @shareSuccess(data, status, xhr)
-      error: (xhr, status, error) =>
-        @_requestInFlight = false
-        @shareError(xhr, status, error)
-      complete: => @_requestInFlight = false
+    share_id = $(e.currentTarget).data('id')
+    return unless share_id
+    
+    new App.ControllerConfirm(
+      message: __('Are you sure you want to revoke this share?')
+      callback: =>
+        @ajax(
+          id:   'revoke_share'
+          type: 'POST'
+          url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}/revoke"
+          success: =>
+            # Backend will trigger WebSocket event, which will refresh the data
+          error: (xhr, status, error) =>
+            console.error 'Failed to revoke share:', status, error
+            @notify(
+              type: 'error'
+              msg: App.i18n.translateContent('Failed to revoke share.')
+            )
+        )
+      container: @el.closest('.content')
     )
 
-
-  shareSuccess: (data, status, xhr) =>
-    # Get the action type from the AJAX request to show appropriate message
-    action = @getCurrentAction()
-    if action is 'revoke'
-      @notify(type: 'success', msg: __('Share revoked successfully'))
-      # Show notification to the shared user that their access has been revoked
-      @notifyToSharedUser(data, 'revoked')
-    else if action is 'delete'
-      @notify(type: 'success', msg: __('Share deleted successfully'))
-      # Show notification to the shared user that their access has been removed
-      @notifyToSharedUser(data, 'deleted')
-    else if action is 'edit'
-      @notify(type: 'success', msg: __('Share updated successfully'))
-    # Don't show generic success message for edit actions to avoid duplicates
+  deleteShare: (e) =>
+    e.preventDefault()
+    share_id = $(e.currentTarget).data('id')
+    return unless share_id
     
-    # Reload shares from backend
-    @scheduleReload()
-    @callback() if @callback
-    @clearCurrentAction()
+    new App.ControllerConfirm(
+      message: __('Are you sure you want to delete this share?')
+      callback: =>
+        @ajax(
+          id:   'delete_share'
+          type: 'DELETE'
+          url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}"
+          success: =>
+            # Backend will trigger WebSocket event, which will refresh the data
+          error: (xhr, status, error) =>
+            console.error 'Failed to delete share:', status, error
+            @notify(
+              type: 'error'
+              msg: App.i18n.translateContent('Failed to delete share.')
+            )
+        )
+      container: @el.closest('.content')
+    )
 
-  shareError: (xhr, status, error) =>
-    action = @getCurrentAction()
-    if action is 'revoke'
-      @notify(type: 'error', msg: __('Failed to revoke share'))
-    else if action is 'delete'
-      @notify(type: 'error', msg: __('Failed to delete share'))
-    else
-      @notify(type: 'error', msg: __('Failed to update share'))
-    @clearCurrentAction()
+  editShare: (e) =>
+    e.preventDefault()
+    share_id = $(e.currentTarget).data('id')
+    return unless share_id
+    
+    # Find the share in local data
+    share = _.find(@localShares, (s) -> parseInt(s.id) is parseInt(share_id))
+    return unless share
+    
+    new ShareEdit(
+      ticket_id: @ticket_id
+      share: share
+      container: @el.closest('.content')
+    )
 
-  getCurrentAction: =>
-    @currentAction
+  openShareTicket: (e) =>
+    e.preventDefault()
+    new ShareTicket(
+      ticket_id: @ticket_id
+      container: @el.closest('.content')
+    )
 
-  setCurrentAction: (action) =>
-    @currentAction = action
+class ShareTicket extends App.ControllerModal
+  buttonClose: true
+  buttonCancel: true
+  buttonSubmit: __('Share')
+  head: __('Share Ticket')
 
-  clearCurrentAction: =>
-    @currentAction = null
+  content: =>
+    @ticket = App.Ticket.find(@ticket_id)
+    
+    content = $( App.view('widget/share_ticket')(
+      ticket: @ticket
+    ))
+    
+    content
 
-  # Notify the shared user about the action (for deletion/revocation)
-  notifyToSharedUser: (data, action) =>
-    # Group notifications handled on the server
-    return
-  refresh: =>
-    if @callback
-      @callback()
+  onSubmit: (e) =>
+    e.preventDefault()
+    params = @formParam(e.target)
+    
+    unless params.group_id
+      @formValidate(form: e.target, errors: { group_id: 'required' })
+      return
+    
+    @ajax(
+      id:   'create_share'
+      type: 'POST'
+      url:  "#{@apiPath}/tickets/#{@ticket_id}/shares"
+      data: JSON.stringify(params)
+      processData: false
+      success: =>
+        @close()
+        # Backend will trigger WebSocket event, which will refresh the data
+      error: (xhr, status, error) =>
+        console.error 'Failed to create share:', status, error
+        @notify(
+          type: 'error'
+          msg: App.i18n.translateContent('Failed to share ticket.')
+        )
+    )
 
-  reload: =>
-    @loadShares()
+class ShareEdit extends App.ControllerModal
+  buttonClose: true
+  buttonCancel: true
+  buttonSubmit: __('Update')
+  head: __('Edit Share')
 
+  content: =>
+    @ticket = App.Ticket.find(@ticket_id)
+    
+    content = $( App.view('widget/share_edit')(
+      ticket: @ticket
+      share: @share
+    ))
+    
+    content
 
-
-
-
+  onSubmit: (e) =>
+    e.preventDefault()
+    params = @formParam(e.target)
+    
+    unless params.group_id
+      @formValidate(form: e.target, errors: { group_id: 'required' })
+      return
+    
+    @ajax(
+      id:   'update_share'
+      type: 'PUT'
+      url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{@share.id}"
+      data: JSON.stringify(params)
+      processData: false
+      success: =>
+        @close()
+        # Backend will trigger WebSocket event, which will refresh the data
+      error: (xhr, status, error) =>
+        console.error 'Failed to update share:', status, error
+        @notify(
+          type: 'error'
+          msg: App.i18n.translateContent('Failed to update share.')
+        )
+    )

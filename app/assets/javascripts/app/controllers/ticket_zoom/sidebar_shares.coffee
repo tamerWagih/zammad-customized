@@ -1,241 +1,107 @@
 class SidebarShares extends App.Controller
-  constructor: (params) ->
+  constructor: ->
     super
-    @last_can_share = null
-    @approvals = params.approvals || []
-    @shares = params.shares || []
-    
-    console.log "[SIDEBAR_SHARES] Constructor - Ticket ##{@ticket?.id}: Received approvals:", @approvals.length, "shares:", @shares.length
-    
-    # Set cache on ticket object for permission checks (same pattern as standard Zammad uses for tags/links)
-    if @ticket && @approvals
-      @ticket._approvals_cache = @approvals
-      console.log "[SIDEBAR_SHARES] Constructor - Ticket ##{@ticket.id}: Set _approvals_cache with", @approvals.length, "items"
-    if @ticket && @shares
-      @ticket._shares_cache = @shares
-      console.log "[SIDEBAR_SHARES] Constructor - Ticket ##{@ticket.id}: Set _shares_cache with", @shares.length, "items"
 
   sidebarItem: =>
-    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: sidebarItem() called"
+    # Only show for agent view
+    return unless @ticket.currentView() is 'agent'
     
-    currentView = @ticket.currentView()
-    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: currentView =", currentView
-    
-    if currentView isnt 'agent'
-      console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: Not agent view - hiding sidebar"
-      return
-    
-    # Standard Zammad: Agents and admins can see shares
-    # Custom: Also allow users with share access or approval access
-    isAgent = @permissionCheck('ticket.agent')
-    isAdmin = @permissionCheck('admin.*')
-    hasShare = @hasShareAccess()
-    hasApproval = @hasApprovalAccess()
-    
-    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: isAgent =", isAgent, ", isAdmin =", isAdmin, ", hasShare =", hasShare, ", hasApproval =", hasApproval
-    
-    unless isAgent or isAdmin or hasShare or hasApproval
-      console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: No permission - hiding sidebar"
-      return
-
-    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: Sidebar WILL be shown"
+    # Only agents and admins can see shares
+    return unless @permissionCheck('ticket.agent') or @permissionCheck('admin.*')
 
     @item = {
       name: 'shares'
-      badgeIcon: 'team'
+      badgeIcon: 'group'
       badgeCallback: @badgeRender
       sidebarHead: __('Shares')
       sidebarCallback: @showPanel
       sidebarActions: []
     }
 
-    if @canShareOrApprove()
+    # Add action button if user can edit ticket
+    if @ticket.editable && @ticket.editable()
       @item.sidebarActions.push(
         title: __('Share Ticket')
-        name: 'share-create'
-        callback: @createShare
+        name: 'share-ticket'
+        callback: @shareTicket
       )
 
     @item
 
-  showPanel: (el) =>
-    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket_id}: showPanel() called"
-    @elSidebar = el
-
-    if @ticket_id
-      @ticket = App.Ticket.fullLocal(@ticket_id) || @ticket
-      console.log "[SIDEBAR_SHARES] Ticket ##{@ticket_id}: Loaded ticket object:", !!@ticket
-      unless @ticket
-        console.log "[SIDEBAR_SHARES] Ticket ##{@ticket_id}: No ticket object - loading from API"
-        @ajax(
-          id:    'load_ticket_for_sidebar'
-          type:  'GET'
-          url:   "#{@apiPath}/tickets/#{@ticket_id}"
-          success: (ticketData) =>
-            console.log "[SIDEBAR_SHARES] Ticket ##{@ticket_id}: Ticket loaded from API"
-            App.Ticket.refresh([ticketData]) if ticketData?
-            @ticket = App.Ticket.findNative(@ticket_id)
-            @createSharesWidget()
-          error: (xhr, status, error) =>
-            console.error "[SIDEBAR_SHARES] Ticket ##{@ticket_id}: Failed to load ticket for sidebar:", status, error unless status is 'abort'
-            @createSharesWidget()
-        )
-        return
-
-    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket_id}: Creating widget"
-    @createSharesWidget()
-
-  createSharesWidget: =>
-    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: createSharesWidget() called"
-    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: elSidebar:", !!@elSidebar
-    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: ticket object:", !!@ticket
+  badgeRender: (el) =>
+    # Count active shares for badge
+    shares = @shares || []
+    active_count = shares.filter((s) -> s.status is 'active').length
     
-    if @widget
-      @widget.destroy?()
-
-    @widget = new App.WidgetShares(
-      el:       @elSidebar
-      ticket_id: @ticket?.id || @ticket_id
-      parentVC: @
-      callback: @refreshShares
-    )
-
-    console.log "[SIDEBAR_SHARES] Ticket ##{@ticket?.id || @ticket_id}: Widget created:", !!@widget
-    
-    # Load shares data (use passed data if available)
-    @loadSharesForCheck()
+    if active_count > 0
+      el.html(App.view('generic/badge')(
+        text: active_count
+        type: 'info'
+      ))
 
   reload: (args) =>
-    console.log "[SIDEBAR_SHARES] Reload - Ticket ##{@ticket?.id}: Called with args:", args
-    
-    # Update local data if provided (same pattern as tags/links)
-    if args.approvals?
-      @approvals = args.approvals
-      console.log "[SIDEBAR_SHARES] Reload - Ticket ##{@ticket?.id}: Updated @approvals to", @approvals.length, "items"
+    # Standard pattern: update local data if provided (like SidebarTicket)
     if args.shares?
       @shares = args.shares
-      console.log "[SIDEBAR_SHARES] Reload - Ticket ##{@ticket?.id}: Updated @shares to", @shares.length, "items"
     
-    # Re-set cache on ticket object for permission checks
-    if @ticket && @approvals
-      @ticket._approvals_cache = @approvals
-      console.log "[SIDEBAR_SHARES] Reload - Ticket ##{@ticket.id}: Re-set _approvals_cache with", @approvals.length, "items"
-    if @ticket && @shares
-      @ticket._shares_cache = @shares
-      console.log "[SIDEBAR_SHARES] Reload - Ticket ##{@ticket.id}: Re-set _shares_cache with", @shares.length, "items"
-    
+    # Reload widget if it exists
     if @widget && @widget.reload
-      @widget.reload(args)
-    else if @elSidebar
-      @showPanel(@elSidebar)
+      @widget.reload(@shares)
+
+  showPanel: (el) =>
+    @elSidebar = el
     
-    @checkAndUpdateActions()
-
-  checkAndUpdateActions: =>
-    current_can_share = @canShareOrApprove()
-    if @last_can_share isnt current_can_share
-      @last_can_share = current_can_share
-      @delay =>
-        taskKey = @parentVC?.taskKey || @taskKey
-        if taskKey
-          App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: taskKey, ticket_id: @ticket?.id || @ticket_id })
-      , 300, 'update-shares-actions'
-
-  refreshShares: =>
-    @showPanel(@elSidebar) if @elSidebar
-
-  loadSharesForCheck: =>
-    return unless @ticket
-
-    # Use passed shares data if available, otherwise load from API
-    if @shares && @shares.length > 0
-      # Data already available from parent controller
-      return
-    else
-      # Fallback: load from API
-      @ajax(
-        id: 'load_shares_for_check'
-        type: 'GET'
-        url: "#{@apiPath}/tickets/#{@ticket.id}/shares"
-        processData: true
-        success: (data, status, xhr) =>
-          @shares = data?.shares || []
-        error: (xhr, status, error) =>
-          @shares = []
-      )
-
-  createShare: =>
-    new App.TicketShareCreate(
+    # Standard pattern: create widget and pass data (like SidebarTicket does with WidgetTag)
+    @widget = new App.WidgetShares(
+      el: @elSidebar
       ticket_id: @ticket.id
-      container: @elSidebar.closest('.content')
-      callback: @refreshShares
+      ticket: @ticket
+      shares: @shares  # Pass data from parent
     )
 
-  badgeRender: (el) =>
-    @badgeEl = el
-    @badgeRenderLocal()
+  shareTicket: =>
+    new ShareTicket(
+      ticket_id: @ticket.id
+      container: @el.closest('.content')
+    )
 
-  badgeRenderLocal: =>
-    @badgeEl.html(App.view('generic/sidebar_tabs_item')(
-      name: 'shares'
-      icon: 'team'
-      counter: ''
-      counterPossible: false
+class ShareTicket extends App.ControllerModal
+  buttonClose: true
+  buttonCancel: true
+  buttonSubmit: __('Share')
+  head: __('Share Ticket')
+
+  content: =>
+    @ticket = App.Ticket.find(@ticket_id)
+    
+    content = $( App.view('widget/share_ticket')(
+      ticket: @ticket
     ))
-
-  canShareOrApprove: =>
-    current_user = App.User.current()
-    return false unless current_user
     
-    # Admins and agents can always share/approve
-    return true if @permissionCheck('admin.*') or @permissionCheck('ticket.agent')
+    content
+
+  onSubmit: (e) =>
+    e.preventDefault()
+    params = @formParam(e.target)
     
-    # Check if user is accessing via shares (receivers cannot share/approve)
-    return false if @hasShareAccess()
+    unless params.group_id
+      @formValidate(form: e.target, errors: { group_id: 'required' })
+      return
     
-    # User is the ticket owner or in the ticket's group
-    true
+    @ajax(
+      id:   'create_share'
+      type: 'POST'
+      url:  "#{@apiPath}/tickets/#{@ticket_id}/shares"
+      data: JSON.stringify(params)
+      processData: false
+      success: =>
+        @close()
+      error: (xhr, status, error) =>
+        console.error 'Failed to create share:', status, error
+        @notify(
+          type: 'error'
+          msg: App.i18n.translateContent('Failed to share ticket.')
+        )
+    )
 
-  hasShareAccess: =>
-    return false unless @ticket
-    current_user = App.User.current()
-    return false unless current_user
-
-    # Use shares passed from constructor/reload
-    ticket_shares = @shares || []
-    return false unless ticket_shares && Array.isArray(ticket_shares) && ticket_shares.length > 0
-
-    # Filter only active shares
-    active_shares = ticket_shares.filter((share) -> share.status is 'active')
-    return false unless active_shares.length > 0
-
-    # Get user's groups
-    user_groups = current_user.group_ids || []
-    share_groups = active_shares.map((share) -> parseInt(share.group_id))
-
-    # Check if user belongs to any shared group
-    for user_group_id in user_groups
-      if share_groups.indexOf(parseInt(user_group_id)) >= 0
-        return true
-
-    false
-
-  hasApprovalAccess: =>
-    return false unless @ticket
-    current_user = App.User.current()
-    return false unless current_user
-
-    # Use approvals passed from constructor/reload
-    ticket_approvals = @approvals || []
-    return false unless ticket_approvals && Array.isArray(ticket_approvals) && ticket_approvals.length > 0
-
-    current_user_id = parseInt(current_user.id)
-
-    # Check if user is an approver (any status - pending, approved, or rejected)
-    for approval in ticket_approvals
-      if parseInt(approval.approver_id) is current_user_id
-        return true
-
-    false
-
-App.Config.set('451-Shares', SidebarShares, 'TicketZoomSidebar')
+App.Config.set('600-Shares', SidebarShares, 'TicketZoomSidebar')
