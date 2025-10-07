@@ -2,7 +2,12 @@
   <div class="modal-body">
     <div class="form-group">
       <label for="approver_id"><%- @T('Approver') %> <span class="danger">*</span></label>
-      <div class="js-approver"></div>
+      <select class="form-control" name="approver_id" id="approver_id" required>
+        <option value=""><%- @T('Select an approver...') %></option>
+        <% for agent in @agents: %>
+          <option value="<%= agent.id %>" <%- 'selected' if @approval.approver_id is agent.id %>><%= agent.displayName() %> &lt;<%= agent.email %>&gt;</option>
+        <% end %>
+      </select>
     </div>
     
     <div class="form-group">

@@ -60,11 +60,11 @@ class App.WidgetShares extends App.Controller
       share.is_active = share.status is 'active'
       share.is_revoked = share.status is 'revoked'
       
-      # Format dates
+      # Format dates (use App.i18n for timestamp formatting)
       if share.created_at
-        share.created_at_formatted = @formatTime(share.created_at, 'absolute')
+        share.created_at_formatted = App.i18n.translateTimestamp(share.created_at)
       if share.updated_at
-        share.updated_at_formatted = @formatTime(share.updated_at, 'absolute')
+        share.updated_at_formatted = App.i18n.translateTimestamp(share.updated_at)
       
       # Get group name
       if share.group_id

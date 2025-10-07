@@ -63,11 +63,11 @@ class App.WidgetApprovals extends App.Controller
       approval.is_approved = approval.status is 'approved'
       approval.is_rejected = approval.status is 'rejected'
       
-      # Format dates
+      # Format dates (use App.i18n for timestamp formatting)
       if approval.created_at
-        approval.created_at_formatted = @formatTime(approval.created_at, 'absolute')
+        approval.created_at_formatted = App.i18n.translateTimestamp(approval.created_at)
       if approval.updated_at
-        approval.updated_at_formatted = @formatTime(approval.updated_at, 'absolute')
+        approval.updated_at_formatted = App.i18n.translateTimestamp(approval.updated_at)
     
     @html App.view('widget/approvals')(
       approvals: approvals_data
@@ -171,16 +171,19 @@ class ApprovalRequest extends App.ControllerModal
   content: =>
     @ticket = App.Ticket.find(@ticket_id)
     
+    # Get all agents for approver selection
+    agents = []
+    for user_id, user of App.User.all()
+      if user.active && user.permissions?('ticket.agent')
+        agents.push(user)
+    
+    # Sort by name
+    agents = _.sortBy(agents, (agent) -> agent.displayName())
+    
     content = $( App.view('widget/approval_request')(
       ticket: @ticket
+      agents: agents
     ))
-    
-    # Initialize user search for approver selection
-    content.find('.js-approver').each( (i, el) =>
-      @userSearchElement = new App.UserSearch(
-        el: $(el)
-      )
-    )
     
     content
 
@@ -218,18 +221,20 @@ class ApprovalEdit extends App.ControllerModal
   content: =>
     @ticket = App.Ticket.find(@ticket_id)
     
+    # Get all agents for approver selection
+    agents = []
+    for user_id, user of App.User.all()
+      if user.active && user.permissions?('ticket.agent')
+        agents.push(user)
+    
+    # Sort by name
+    agents = _.sortBy(agents, (agent) -> agent.displayName())
+    
     content = $( App.view('widget/approval_edit')(
       ticket: @ticket
       approval: @approval
+      agents: agents
     ))
-    
-    # Initialize user search for approver selection
-    content.find('.js-approver').each( (i, el) =>
-      @userSearchElement = new App.UserSearch(
-        el: $(el)
-        value: @approval.approver_id
-      )
-    )
     
     content
 
