@@ -1,0 +1,24 @@
+<form class="approval-request-form">
+  <div class="modal-body">
+    <div class="form-group">
+      <label for="approver_id"><%- @T('Approver') %> <span class="danger">*</span></label>
+      <div class="js-approver"></div>
+    </div>
+    
+    <div class="form-group">
+      <label for="priority"><%- @T('Priority') %></label>
+      <select class="form-control" name="priority" id="priority">
+        <option value="low"><%- @T('Low') %></option>
+        <option value="normal" selected><%- @T('Normal') %></option>
+        <option value="high"><%- @T('High') %></option>
+        <option value="urgent"><%- @T('Urgent') %></option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="message"><%- @T('Message') %></label>
+      <textarea class="form-control" name="message" id="message" rows="4" placeholder="<%- @T('Optional message for the approver...') %>"></textarea>
+    </div>
+  </div>
+</form>
+

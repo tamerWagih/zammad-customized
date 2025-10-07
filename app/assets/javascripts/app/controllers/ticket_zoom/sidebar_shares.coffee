@@ -29,15 +29,22 @@ class SidebarShares extends App.Controller
     @item
 
   badgeRender: (el) =>
+    @badgeEl = el
+    @badgeRenderLocal()
+
+  badgeRenderLocal: =>
+    return if !@badgeEl
+    
     # Count active shares for badge
     shares = @shares || []
     active_count = shares.filter((s) -> s.status is 'active').length
     
-    if active_count > 0
-      el.html(App.view('generic/badge')(
-        text: active_count
-        type: 'info'
-      ))
+    @badgeEl.html(App.view('generic/sidebar_tabs_item')(
+      name: 'shares'
+      icon: 'group'
+      counterPossible: active_count > 0
+      counter: active_count
+    ))
 
   reload: (args) =>
     # Standard pattern: update local data if provided (like SidebarTicket)

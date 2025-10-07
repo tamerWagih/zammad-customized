@@ -29,15 +29,22 @@ class SidebarApprovals extends App.Controller
     @item
 
   badgeRender: (el) =>
+    @badgeEl = el
+    @badgeRenderLocal()
+
+  badgeRenderLocal: =>
+    return if !@badgeEl
+    
     # Count pending approvals for badge
     approvals = @approvals || []
     pending_count = approvals.filter((a) -> a.status is 'pending').length
     
-    if pending_count > 0
-      el.html(App.view('generic/badge')(
-        text: pending_count
-        type: 'warning'
-      ))
+    @badgeEl.html(App.view('generic/sidebar_tabs_item')(
+      name: 'approvals'
+      icon: 'checkmark'
+      counterPossible: pending_count > 0
+      counter: pending_count
+    ))
 
   reload: (args) =>
     # Standard pattern: update local data if provided (like SidebarTicket)
