@@ -7,6 +7,13 @@ class Service::Ticket::Approval::Create < Service::BaseWithCurrentUser
     Pundit.authorize current_user, ticket, :update?
 
     approver = User.find(approver_id)
+    
+    # Only agents and admins can be approvers
+    unless approver.permissions?('ticket.agent')
+      raise Exceptions::UnprocessableEntity,
+            __('Only agents and admins can be approvers. %s does not have agent permissions.') % approver.fullname
+    end
+    
     normalized_priority = normalize_priority(priority)
 
     if ticket.approvals.pending.exists?(approver_id: approver.id)
