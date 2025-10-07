@@ -36,14 +36,14 @@
       <% if share.shared_by_id is @current_user_id: %>
         <div class="share-actions btn-group btn-group-sm" role="group">
           <% if share.status is 'active': %>
-            <button class="btn btn-outline-primary js-edit-share" data-share-id="<%= share.id %>">
+            <button class="btn btn-outline-primary js-edit-share" data-id="<%= share.id %>">
               <%- @T('Edit') %>
             </button>
-            <button class="btn btn-outline-warning js-revoke-share" data-share-id="<%= share.id %>">
+            <button class="btn btn-outline-warning js-revoke-share" data-id="<%= share.id %>">
               <%- @T('Revoke') %>
             </button>
           <% end %>
-          <button class="btn btn-outline-danger js-delete-share" data-share-id="<%= share.id %>">
+          <button class="btn btn-outline-danger js-delete-share" data-id="<%= share.id %>">
             <%- @T('Delete') %>
           </button>
         </div>

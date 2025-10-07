@@ -38,20 +38,20 @@
           <% if approval.approver_id is @current_user_id: %>
             <!-- Show approve/reject buttons to approver -->
             <div class="approval-actions btn-group btn-group-sm" role="group">
-              <button class="btn btn-success js-approve" data-approval-id="<%= approval.id %>">
+              <button class="btn btn-success js-approve" data-id="<%= approval.id %>">
                 <i class="icon-checkmark"></i> <%- @T('Approve') %>
               </button>
-              <button class="btn btn-danger js-reject" data-approval-id="<%= approval.id %>">
+              <button class="btn btn-danger js-reject" data-id="<%= approval.id %>">
                 <i class="icon-close"></i> <%- @T('Reject') %>
               </button>
             </div>
           <% else if approval.requester_id is @current_user_id: %>
             <!-- Show edit/delete buttons to requester -->
             <div class="approval-actions btn-group btn-group-sm" role="group">
-              <button class="btn btn-outline-primary js-edit-approval" data-approval-id="<%= approval.id %>">
+              <button class="btn btn-outline-primary js-edit-approval" data-id="<%= approval.id %>">
                 <i class="icon-edit"></i> <%- @T('Edit') %>
               </button>
-              <button class="btn btn-outline-danger js-delete-approval" data-approval-id="<%= approval.id %>">
+              <button class="btn btn-outline-danger js-delete-approval" data-id="<%= approval.id %>">
                 <i class="icon-trash"></i> <%- @T('Delete') %>
               </button>
             </div>
@@ -60,7 +60,7 @@
           <!-- For completed approvals, only show delete to requester -->
           <% if approval.requester_id is @current_user_id: %>
             <div class="approval-actions">
-              <button class="btn btn-outline-danger btn-sm js-delete-approval" data-approval-id="<%= approval.id %>">
+              <button class="btn btn-outline-danger btn-sm js-delete-approval" data-id="<%= approval.id %>">
                 <i class="icon-trash"></i> <%- @T('Delete') %>
               </button>
             </div>

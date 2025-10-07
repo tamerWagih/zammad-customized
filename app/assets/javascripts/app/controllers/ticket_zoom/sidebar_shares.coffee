@@ -41,7 +41,7 @@ class SidebarShares extends App.Controller
     
     @badgeEl.html(App.view('generic/sidebar_tabs_item')(
       name: 'shares'
-      icon: 'group'
+      icon: 'team'
       counterPossible: active_count > 0
       counter: active_count
     ))

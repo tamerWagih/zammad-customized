@@ -4,46 +4,44 @@
   </div>
 <% end %>
 
-<form class="form-horizontal">
-  <div class="form-group">
-    <label class="control-label col-sm-3">
-      <%- @T('Share with group') %>
-    </label>
-    <div class="col-sm-9">
-      <select name="group_id" class="form-control" required>
-        <option value="">
-          <%- @T('Select a group to share with...') %>
+<div class="form-group">
+  <label class="control-label col-sm-3">
+    <%- @T('Share with group') %>
+  </label>
+  <div class="col-sm-9">
+    <select name="group_id" class="form-control" required>
+      <option value="">
+        <%- @T('Select a group to share with...') %>
+      </option>
+      <% for group in @groups: %>
+        <option value="<%= group.id %>">
+          <%- group.fullname || group.name %>
         </option>
-        <% for group in @groups: %>
-          <option value="<%= group.id %>">
-            <%- group.fullname || group.name %>
-          </option>
-        <% end %>
-      </select>
-      <small class="help-block">
-        <%- @T('All agents and admins in the selected group receive full access') %>
-      </small>
-    </div>
+      <% end %>
+    </select>
+    <small class="help-block">
+      <%- @T('All agents and admins in the selected group receive full access') %>
+    </small>
   </div>
+</div>
 
-  <div class="form-group">
-    <label class="control-label col-sm-3">
-      <%- @T('Message') %>
-    </label>
-    <div class="col-sm-9">
-      <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the group...') %>"></textarea>
-    </div>
+<div class="form-group">
+  <label class="control-label col-sm-3">
+    <%- @T('Message') %>
+  </label>
+  <div class="col-sm-9">
+    <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the group...') %>"></textarea>
   </div>
+</div>
 
-  <div class="form-group">
-    <label class="control-label col-sm-3">
-      <%- @T('Expire on (Optional)') %>
-    </label>
-    <div class="col-sm-9">
-      <input type="date" name="expires_at" class="form-control">
-      <small class="help-block">
-        <%- @T('Access ends at the end of the selected day') %>
-      </small>
-    </div>
+<div class="form-group">
+  <label class="control-label col-sm-3">
+    <%- @T('Expire on (Optional)') %>
+  </label>
+  <div class="col-sm-9">
+    <input type="date" name="expires_at" class="form-control">
+    <small class="help-block">
+      <%- @T('Access ends at the end of the selected day') %>
+    </small>
   </div>
-</form>
+</div>
