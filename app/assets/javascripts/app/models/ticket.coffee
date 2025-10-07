@@ -230,27 +230,15 @@ class App.Ticket extends App.Model
     user.allOrganizationIds().includes(@organization_id)
 
   userGroupAccess: (permission) ->
-    console.log "[TICKET_MODEL] Ticket ##{@id}: userGroupAccess(#{permission}) called"
+    # Simplified: Just check standard group access
+    # Backend TicketPolicy handles approval/share access via access?() method
+    # This method is for standard Zammad group-based permissions
     
     user = App.User.current()
-    unless user
-      console.log "[TICKET_MODEL] Ticket ##{@id}: No current user"
-      return false
-
-    # Check approval access first (approvers get full access)
-    hasApproval = @hasApprovalAccess()
-    if hasApproval
-      console.log "[TICKET_MODEL] Ticket ##{@id}: Has approval access - returning true"
-      return true
-
-    hasSharePerm = @hasSharePermission(permission)
-    if hasSharePerm
-      console.log "[TICKET_MODEL] Ticket ##{@id}: Has share permission - returning true"
-      return true
-
-    isAccessible = @isAccessibleByGroup(user, permission)
-    console.log "[TICKET_MODEL] Ticket ##{@id}: isAccessibleByGroup returned:", isAccessible
-    isAccessible
+    return false unless user
+    return false unless user.permission('ticket.agent')
+    
+    @isAccessibleByGroup(user, permission)
 
   hasSharePermission: (permission) ->
     return false unless App.User.current()?.permission('ticket.agent')
@@ -345,30 +333,22 @@ class App.Ticket extends App.Model
     return @isAccessibleByOwner(user)
 
   currentView: ->
-    console.log "[TICKET_MODEL] Ticket ##{@id}: currentView() called"
+    # Simplified: Backend TicketPolicy is source of truth for access
+    # If this ticket exists in frontend, backend has granted access
+    # Just check user role to determine which view to show
     
-    # Custom: Approvers get agent view FIRST (bypasses group membership requirement)
-    hasApproval = @hasApprovalAccess()
-    console.log "[TICKET_MODEL] Ticket ##{@id}: hasApprovalAccess() =", hasApproval
-    return 'agent' if hasApproval # Approvers get agent view
+    user = App.User.current()
+    return unless user
     
-    # Custom: Users with share access get agent view (bypasses group membership requirement)
-    hasShare = @hasShareAccess()
-    console.log "[TICKET_MODEL] Ticket ##{@id}: hasShareAccess() =", hasShare
-    return 'agent' if hasShare # Users with share access get agent view
+    # Agents get agent view (backend ensures they have access)
+    # This includes: standard group access, approvers, and shared users
+    if user.permission('ticket.agent')
+      return 'agent'
     
-    # Standard Zammad: Agents with group access get agent view
-    isAgent = App.User.current()?.permission('ticket.agent')
-    hasGroupAccess = @userGroupAccess && @userGroupAccess('read')
-    console.log "[TICKET_MODEL] Ticket ##{@id}: isAgent =", isAgent, ", hasGroupAccess =", hasGroupAccess
-    return 'agent' if isAgent && hasGroupAccess
+    # Customers get customer view
+    if user.permission('ticket.customer')
+      return 'customer'
     
-    # Standard Zammad: Customers get customer view
-    isCustomer = App.User.current()?.permission('ticket.customer')
-    console.log "[TICKET_MODEL] Ticket ##{@id}: isCustomer =", isCustomer
-    return 'customer' if isCustomer
-    
-    console.log "[TICKET_MODEL] Ticket ##{@id}: currentView() returning undefined"
     return
 
   isAccessibleByOwner: (user) ->
@@ -394,19 +374,6 @@ class App.Ticket extends App.Model
     return true if @isAccessibleByOwner(user)
     return @isAccessibleByGroup(user, permission)
 
-  hasApprovalAccess: ->
-    # Permission check handled by backend TicketPolicy#approval_access?
-    # If user has access, backend will return ticket data
-    # This is just for currentView() to grant agent interface
-    # Real check: does the ticket belong to user's accessible tickets?
-    return @userGroupAccess && @userGroupAccess('read')
-
-  hasShareAccess: ->
-    # Permission check handled by backend TicketPolicy#share_access?
-    # If user has access, backend will return ticket data
-    # This is just for currentView() to grant agent interface
-    # Real check: does the ticket belong to user's accessible tickets?
-    return @userGroupAccess && @userGroupAccess('read')
 
   attributes: ->
     attrs = super
