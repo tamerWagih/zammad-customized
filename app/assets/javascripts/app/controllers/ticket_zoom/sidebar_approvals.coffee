@@ -1,6 +1,9 @@
 class SidebarApprovals extends App.Controller
-  constructor: ->
+  constructor: (params) ->
     super
+    
+    # Store approvals from parent (same pattern as SidebarTicket with tags/links)
+    @approvals = params.approvals || []
 
   sidebarItem: =>
     # Only show for agent view
@@ -71,8 +74,8 @@ class SidebarApprovals extends App.Controller
       ticket_id: @ticket.id
       container: @el.closest('.content')
       callback: =>
-        # Refresh the approvals widget after creating
-        @widget.reload() if @widget && @widget.reload
+        # Refresh the approvals widget by fetching fresh data from API
+        @widget.fetch() if @widget && @widget.fetch
     )
 
 App.Config.set('450-Approvals', SidebarApprovals, 'TicketZoomSidebar')

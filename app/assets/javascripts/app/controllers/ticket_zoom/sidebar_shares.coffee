@@ -1,6 +1,9 @@
 class SidebarShares extends App.Controller
-  constructor: ->
+  constructor: (params) ->
     super
+    
+    # Store shares from parent (same pattern as SidebarTicket with tags/links)
+    @shares = params.shares || []
 
   sidebarItem: =>
     # Only show for agent view
@@ -71,8 +74,8 @@ class SidebarShares extends App.Controller
       ticket_id: @ticket.id
       container: @el.closest('.content')
       callback: =>
-        # Refresh the shares widget after creating
-        @widget.reload() if @widget && @widget.reload
+        # Refresh the shares widget by fetching fresh data from API
+        @widget.fetch() if @widget && @widget.fetch
     )
 
 App.Config.set('451-Shares', SidebarShares, 'TicketZoomSidebar')
