@@ -188,13 +188,22 @@ class App.TicketZoom extends App.Controller
     # remember time_accountings
     @time_accountings = data.time_accountings
 
-    # remember approvals and shares
+    # remember approvals and shares - Store in global registry
     @approvals = data.approvals || []
     @shares = data.shares || []
+    
+    # Store in global window registry to survive object refreshes
+    window.TicketApprovalsSharesCache ||= {}
+    window.TicketApprovalsSharesCache[@ticket_id] = {
+      approvals: @approvals
+      shares: @shares
+      updated_at: new Date().getTime()
+    }
     
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: API response received"
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approvals from API:", @approvals
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Shares from API:", @shares
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Stored in global cache"
 
     if draft = App.TicketSharedDraftZoom.findByAttribute 'ticket_id', @ticket_id
       draft.remove(clear: true)
@@ -205,13 +214,7 @@ class App.TicketZoom extends App.Controller
     @ticket         = App.Ticket.fullLocal(@ticket_id)
     @ticket.article = undefined
     
-    # Attach approvals and shares directly to ticket object for permission checks
-    @ticket.approvals_data = @approvals
-    @ticket.shares_data = @shares
-    
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Data attached to ticket object"
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: @ticket.approvals_data:", @ticket.approvals_data
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: @ticket.shares_data:", @ticket.shares_data
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket object retrieved"
     
     # Evaluate permissions with detailed logging
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Evaluating permissions..."
@@ -250,16 +253,15 @@ class App.TicketZoom extends App.Controller
       ticket_id = data?.approval?.ticket_id || data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
       
-      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approval/Share event detected - reloading ticket data"
+      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approval event detected - reloading ticket data"
       
       # Refresh ticket object with latest share permissions from server
       @ajax(
-        id:    'ticket-share-refresh'
+        id:    'ticket-approval-refresh'
         type:  'GET'
         url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
         success: (ticketData) =>
-          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success"
-          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: ticketData:", ticketData
+          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success (approval event)"
           
           # Update ticket object with fresh data
           if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
@@ -267,13 +269,18 @@ class App.TicketZoom extends App.Controller
           
           @ticket = App.Ticket.findNative(@ticket_id)
           
-          # Re-attach approvals and shares data to ticket object
+          # Update global cache
           @approvals = ticketData.approvals || []
           @shares = ticketData.shares || []
-          @ticket.approvals_data = @approvals
-          @ticket.shares_data = @shares
           
-          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Re-attached approvals (#{@approvals.length}) and shares (#{@shares.length})"
+          window.TicketApprovalsSharesCache ||= {}
+          window.TicketApprovalsSharesCache[@ticket_id] = {
+            approvals: @approvals
+            shares: @shares
+            updated_at: new Date().getTime()
+          }
+          
+          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated global cache - approvals (#{@approvals.length}), shares (#{@shares.length})"
           
           # Trigger sidebar rerender for approval/share widgets
           App.Event.trigger('ui::ticket::sidebarRerender')
@@ -294,8 +301,7 @@ class App.TicketZoom extends App.Controller
         type:  'GET'
         url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
         success: (ticketData) =>
-          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success"
-          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: ticketData:", ticketData
+          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success (share event)"
           
           # Update ticket object with fresh data
           if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
@@ -303,13 +309,18 @@ class App.TicketZoom extends App.Controller
           
           @ticket = App.Ticket.findNative(@ticket_id)
           
-          # Re-attach approvals and shares data to ticket object
+          # Update global cache
           @approvals = ticketData.approvals || []
           @shares = ticketData.shares || []
-          @ticket.approvals_data = @approvals
-          @ticket.shares_data = @shares
           
-          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Re-attached approvals (#{@approvals.length}) and shares (#{@shares.length})"
+          window.TicketApprovalsSharesCache ||= {}
+          window.TicketApprovalsSharesCache[@ticket_id] = {
+            approvals: @approvals
+            shares: @shares
+            updated_at: new Date().getTime()
+          }
+          
+          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated global cache - approvals (#{@approvals.length}), shares (#{@shares.length})"
           
           # Trigger sidebar rerender for approval/share widgets
           App.Event.trigger('ui::ticket::sidebarRerender')

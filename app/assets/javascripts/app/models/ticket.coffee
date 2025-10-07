@@ -396,34 +396,35 @@ class App.Ticket extends App.Model
 
   hasApprovalAccess: ->
     console.log "[TICKET_MODEL] Ticket ##{@id}: hasApprovalAccess() called"
-    
+
     current_user = App.User.current()
     unless current_user
       console.log "[TICKET_MODEL] Ticket ##{@id}: No current user"
       return false
-    
+
     unless @id
       console.log "[TICKET_MODEL] Ticket ##{@id}: No ticket ID"
       return false
-    
-    # Use approvals data attached to ticket object (from API response)
-    ticket_approvals = @approvals_data
-    console.log "[TICKET_MODEL] Ticket ##{@id}: @approvals_data:", ticket_approvals
-    
+
+    # Read from global cache instead of ticket object property
+    cache = window.TicketApprovalsSharesCache?[@id]
+    ticket_approvals = cache?.approvals || []
+    console.log "[TICKET_MODEL] Ticket ##{@id}: Approvals from global cache:", ticket_approvals
+
     unless ticket_approvals && ticket_approvals.length > 0
       console.log "[TICKET_MODEL] Ticket ##{@id}: No approvals data or empty array"
       return false
-    
+
     current_user_id = parseInt(current_user.id)
     console.log "[TICKET_MODEL] Ticket ##{@id}: Current user ID:", current_user_id
-    
+
     # Check if user is an approver (any status - pending, approved, or rejected)
     for approval in ticket_approvals
       console.log "[TICKET_MODEL] Ticket ##{@id}: Checking approval - approver_id:", approval.approver_id, ", current_user_id:", current_user_id
       if parseInt(approval.approver_id) is current_user_id
         console.log "[TICKET_MODEL] Ticket ##{@id}: User IS an approver - returning true"
         return true
-    
+
     console.log "[TICKET_MODEL] Ticket ##{@id}: User is NOT an approver - returning false"
     false
 
@@ -434,19 +435,20 @@ class App.Ticket extends App.Model
     unless current_user
       console.log "[TICKET_MODEL] Ticket ##{@id}: No current user"
       return false
-    
+
     unless @id
       console.log "[TICKET_MODEL] Ticket ##{@id}: No ticket ID"
       return false
-    
+
     unless current_user.permission('ticket.agent')
       console.log "[TICKET_MODEL] Ticket ##{@id}: User is not an agent"
       return false
-    
-    # Use shares data attached to ticket object (from API response)
-    ticket_shares = @shares_data
-    console.log "[TICKET_MODEL] Ticket ##{@id}: @shares_data:", ticket_shares
-    
+
+    # Read from global cache instead of ticket object property
+    cache = window.TicketApprovalsSharesCache?[@id]
+    ticket_shares = cache?.shares || []
+    console.log "[TICKET_MODEL] Ticket ##{@id}: Shares from global cache:", ticket_shares
+
     unless ticket_shares && ticket_shares.length > 0
       console.log "[TICKET_MODEL] Ticket ##{@id}: No shares data or empty array"
       return false
@@ -454,7 +456,7 @@ class App.Ticket extends App.Model
     # Filter only active shares
     active_shares = ticket_shares.filter((share) -> share.status is 'active')
     console.log "[TICKET_MODEL] Ticket ##{@id}: Active shares:", active_shares
-    
+
     unless active_shares.length > 0
       console.log "[TICKET_MODEL] Ticket ##{@id}: No active shares"
       return false
@@ -467,7 +469,7 @@ class App.Ticket extends App.Model
     # Combine all groups where user has any permission
     user_groups = user_groups_read.concat(user_groups_change).concat(user_groups_full)
     console.log "[TICKET_MODEL] Ticket ##{@id}: User groups (all permissions):", user_groups
-    
+
     share_groups = active_shares.map((share) -> parseInt(share.group_id))
     console.log "[TICKET_MODEL] Ticket ##{@id}: Share groups:", share_groups
 
