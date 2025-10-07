@@ -233,6 +233,9 @@ class App.Ticket extends App.Model
     user = App.User.current()
     return false if !user
 
+    # Check approval access first (approvers get full access)
+    return true if @hasApprovalAccess()
+
     return true if @hasSharePermission(permission)
 
     @isAccessibleByGroup(user, permission)

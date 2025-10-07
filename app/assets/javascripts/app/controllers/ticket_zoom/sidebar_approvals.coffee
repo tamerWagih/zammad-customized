@@ -5,7 +5,7 @@ class SidebarApprovals extends App.Controller
 
   sidebarItem: =>
     return if @ticket.currentView() isnt 'agent'
-    return unless @permissionCheck('ticket.agent') or @permissionCheck('admin.*') or @hasShareAccess()
+    return unless @permissionCheck('ticket.agent') or @permissionCheck('admin.*') or @hasShareAccess() or @hasApprovalAccess()
 
     @item = {
       name: 'approvals'
@@ -149,5 +149,23 @@ class SidebarApprovals extends App.Controller
     
     # Check if user belongs to any shared group
     (user_groups & share_groups).length > 0
+
+  hasApprovalAccess: =>
+    return false unless @ticket
+    current_user = App.User.current()
+    return false unless current_user
+    
+    # Check if user is an approver for this ticket
+    ticket_approvals = App.TicketApproval.findByAttribute('ticket_id', @ticket.id)
+    return false unless ticket_approvals && ticket_approvals.length > 0
+    
+    current_user_id = parseInt(current_user.id)
+    
+    # Check if user is an approver (any status - pending, approved, or rejected)
+    for approval in ticket_approvals
+      if parseInt(approval.approver_id) is current_user_id
+        return true
+    
+    false
 
 App.Config.set('450-Approvals', SidebarApprovals, 'TicketZoomSidebar')
