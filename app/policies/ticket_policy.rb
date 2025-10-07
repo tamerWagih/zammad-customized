@@ -132,9 +132,16 @@ class TicketPolicy < ApplicationPolicy
     share_group_ids = Ticket::Share.active_current.where(ticket_id: record.id).pluck(:group_id)
     return nil if share_group_ids.empty?
 
-    user_group_ids = Array(user.group_ids_access('read'))
+    # Check if user has ANY permission level in the shared groups (read, change, or full)
+    user_group_ids_read = Array(user.group_ids_access('read'))
+    user_group_ids_change = Array(user.group_ids_access('change'))
+    user_group_ids_full = Array(user.group_ids_access('full'))
+    
+    # Combine all group IDs where user has any permission
+    user_group_ids = (user_group_ids_read + user_group_ids_change + user_group_ids_full).uniq
     return nil if (share_group_ids & user_group_ids).blank?
 
+    # Users with share access get full permissions
     case access.to_s
     when 'read', 'change', 'create', 'full'
       true
