@@ -78,11 +78,8 @@ class App.TicketShareEdit extends App.ControllerModal
     )
 
   submitSuccess: (data, status, xhr) =>
-    if @parentWidget && @parentWidget.shareSuccess
-      @parentWidget.shareSuccess(data, status, xhr)
-    else
-      @callback() if @callback
-
+    # Pass the updated share data to callback for immediate local update
+    @callback(data.share) if @callback
     @close()
 
   submitError: (xhr, status, error) =>

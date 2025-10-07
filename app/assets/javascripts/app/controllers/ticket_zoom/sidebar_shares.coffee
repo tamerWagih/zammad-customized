@@ -54,6 +54,9 @@ class SidebarShares extends App.Controller
     if args.shares?
       @shares = args.shares
     
+    # Update badge count
+    @badgeRenderLocal()
+    
     # Reload widget if it exists
     if @widget && @widget.reload
       @widget.reload(@shares)

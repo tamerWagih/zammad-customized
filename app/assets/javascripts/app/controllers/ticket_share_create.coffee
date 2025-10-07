@@ -11,16 +11,13 @@ class App.TicketShareCreate extends App.ControllerModal
     'change select[name="group_id"]': 'toggleSubmit'
 
   content: ->
-    # Return false to prevent default rendering (Zammad pattern for async modals)
-    false
+    # Return loading placeholder (same pattern as other Zammad modals)
+    '<p class="loading">Loading groups...</p>'
   
-  render: =>
+  onShown: (e) =>
     super
     
-    # Show loading state
-    @el.find('.modal-body').html('<p class="loading">Loading groups...</p>')
-    
-    # Get available groups for sharing
+    # Load groups asynchronously after modal is shown
     @ajax(
       id:          'groups_for_sharing'
       type:        'GET'

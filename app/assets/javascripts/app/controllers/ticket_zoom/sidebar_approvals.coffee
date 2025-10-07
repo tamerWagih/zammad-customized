@@ -54,6 +54,9 @@ class SidebarApprovals extends App.Controller
     if args.approvals?
       @approvals = args.approvals
     
+    # Update badge count
+    @badgeRenderLocal()
+    
     # Reload widget if it exists
     if @widget && @widget.reload
       @widget.reload(@approvals)

@@ -121,10 +121,27 @@ class App.WidgetApprovals extends App.Controller
       type: 'POST'
       url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/#{action}"
       processData: true
-      success: =>
-        # Backend will trigger WebSocket event, which will refresh the data
-        # Manually reload to ensure immediate update
-        @fetch()
+      success: (data) =>
+        # Update local data immediately
+        if data?.approval
+          index = _.findIndex(@localApprovals, (a) -> parseInt(a.id) is parseInt(approval_id))
+          if index >= 0
+            @localApprovals[index] = data.approval
+        else
+          # Fallback: just update status
+          approval = _.find(@localApprovals, (a) -> parseInt(a.id) is parseInt(approval_id))
+          if approval
+            approval.status = status
+        
+        # Re-render locally without API fetch
+        @render()
+        
+        # Update permission cache
+        ticket = App.Ticket.findNative(@ticket_id)
+        if ticket
+          ticket._approvals_cache = @localApprovals
+        
+        # WebSocket will handle eventual consistency
       error: (xhr, status, error) =>
         console.error "Failed to #{action} approval:", status, error
         @notify(
@@ -146,10 +163,15 @@ class App.WidgetApprovals extends App.Controller
       ticket_id: @ticket_id
       approval: approval
       container: @el.closest('.content')
-      parentWidget: @  # Pass reference for callback
-      callback: =>
-        # Reload fresh data from API after edit
-        @fetch()
+      callback: (updated_approval) =>
+        # Update local data immediately with response data
+        if updated_approval
+          index = _.findIndex(@localApprovals, (a) -> parseInt(a.id) is parseInt(updated_approval.id))
+          if index >= 0
+            @localApprovals[index] = updated_approval
+            # Re-render locally without API fetch
+            @render()
+        # WebSocket will handle eventual consistency
     )
 
   deleteApproval: (e) =>
@@ -165,15 +187,26 @@ class App.WidgetApprovals extends App.Controller
           type: 'DELETE'
           url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
           success: =>
-            # Backend will trigger WebSocket event, which will refresh the data
-            # Manually reload to ensure immediate update
-            @fetch()
+            # Remove from local data immediately
+            @localApprovals = _.filter(@localApprovals, (a) -> parseInt(a.id) isnt parseInt(approval_id))
+            
+            # Re-render locally without API fetch
+            @render()
+            
+            # Clear permission cache - will be updated by WebSocket event
+            ticket = App.Ticket.findNative(@ticket_id)
+            if ticket
+              ticket._approvals_cache = @localApprovals
+            
+            # WebSocket will handle eventual consistency
           error: (xhr, status, error) =>
-            console.error 'Failed to delete approval:', status, error
-            @notify(
-              type: 'error'
-              msg: App.i18n.translateContent('Failed to delete approval.')
-            )
+            # Only show error if not 404 (item might be already deleted)
+            if xhr.status isnt 404
+              console.error 'Failed to delete approval:', status, error
+              @notify(
+                type: 'error'
+                msg: App.i18n.translateContent('Failed to delete approval.')
+              )
         )
       container: @el.closest('.content')
     )

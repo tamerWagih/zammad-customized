@@ -96,10 +96,25 @@ class App.WidgetShares extends App.Controller
           id:   'revoke_share'
           type: 'POST'
           url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}/revoke"
-          success: =>
-            # Backend will trigger WebSocket event, which will refresh the data
-            # Manually reload to ensure immediate update
-            @fetch()
+          success: (data) =>
+            # Update local data immediately - set status to 'revoked'
+            share = _.find(@localShares, (s) -> parseInt(s.id) is parseInt(share_id))
+            if share
+              share.status = 'revoked'
+              # Or use the response data if available
+              if data?.share
+                index = _.findIndex(@localShares, (s) -> parseInt(s.id) is parseInt(share_id))
+                @localShares[index] = data.share if index >= 0
+            
+            # Re-render locally without API fetch
+            @render()
+            
+            # Clear permission cache - will be updated by WebSocket event
+            ticket = App.Ticket.findNative(@ticket_id)
+            if ticket
+              ticket._shares_cache = @localShares
+            
+            # WebSocket will handle eventual consistency
           error: (xhr, status, error) =>
             console.error 'Failed to revoke share:', status, error
             @notify(
@@ -123,15 +138,26 @@ class App.WidgetShares extends App.Controller
           type: 'DELETE'
           url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}"
           success: =>
-            # Backend will trigger WebSocket event, which will refresh the data
-            # Manually reload to ensure immediate update
-            @fetch()
+            # Remove from local data immediately
+            @localShares = _.filter(@localShares, (s) -> parseInt(s.id) isnt parseInt(share_id))
+            
+            # Re-render locally without API fetch
+            @render()
+            
+            # Clear permission cache - will be updated by WebSocket event
+            ticket = App.Ticket.findNative(@ticket_id)
+            if ticket
+              ticket._shares_cache = @localShares
+            
+            # WebSocket will handle eventual consistency
           error: (xhr, status, error) =>
-            console.error 'Failed to delete share:', status, error
-            @notify(
-              type: 'error'
-              msg: App.i18n.translateContent('Failed to delete share.')
-            )
+            # Only show error if not 404 (item might be already deleted)
+            if xhr.status isnt 404
+              console.error 'Failed to delete share:', status, error
+              @notify(
+                type: 'error'
+                msg: App.i18n.translateContent('Failed to delete share.')
+              )
         )
       container: @el.closest('.content')
     )
@@ -149,10 +175,15 @@ class App.WidgetShares extends App.Controller
       ticket_id: @ticket_id
       share: share
       container: @el.closest('.content')
-      parentWidget: @  # Pass reference for callback
-      callback: =>
-        # Reload fresh data from API after edit
-        @fetch()
+      callback: (updated_share) =>
+        # Update local data immediately with response data
+        if updated_share
+          index = _.findIndex(@localShares, (s) -> parseInt(s.id) is parseInt(updated_share.id))
+          if index >= 0
+            @localShares[index] = updated_share
+            # Re-render locally without API fetch
+            @render()
+        # WebSocket will handle eventual consistency
     )
 
   openShareTicket: (e) =>
