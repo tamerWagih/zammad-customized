@@ -406,9 +406,10 @@ class App.Ticket extends App.Model
       console.log "[TICKET_MODEL] Ticket ##{@id}: No ticket ID"
       return false
 
-    # Use _approvals_cache set by sidebar controller (same pattern as standard Zammad)
+    # Use _approvals_cache set by sidebar controller (same pattern as standard Zammad uses for tags/links)
     ticket_approvals = @_approvals_cache || []
-    console.log "[TICKET_MODEL] Ticket ##{@id}: Approvals from cache:", ticket_approvals
+    console.log "[TICKET_MODEL] Ticket ##{@id}: Approvals from _approvals_cache:", ticket_approvals
+    console.log "[TICKET_MODEL] Ticket ##{@id}: Cache is array?", Array.isArray(ticket_approvals), "Length:", ticket_approvals.length
 
     unless ticket_approvals && ticket_approvals.length > 0
       console.log "[TICKET_MODEL] Ticket ##{@id}: No approvals data or empty array"
@@ -443,9 +444,10 @@ class App.Ticket extends App.Model
       console.log "[TICKET_MODEL] Ticket ##{@id}: User is not an agent"
       return false
 
-    # Use _shares_cache set by sidebar controller (same pattern as standard Zammad)
+    # Use _shares_cache set by sidebar controller (same pattern as standard Zammad uses for tags/links)
     ticket_shares = @_shares_cache || []
-    console.log "[TICKET_MODEL] Ticket ##{@id}: Shares from cache:", ticket_shares
+    console.log "[TICKET_MODEL] Ticket ##{@id}: Shares from _shares_cache:", ticket_shares
+    console.log "[TICKET_MODEL] Ticket ##{@id}: Cache is array?", Array.isArray(ticket_shares), "Length:", ticket_shares.length
 
     unless ticket_shares && ticket_shares.length > 0
       console.log "[TICKET_MODEL] Ticket ##{@id}: No shares data or empty array"

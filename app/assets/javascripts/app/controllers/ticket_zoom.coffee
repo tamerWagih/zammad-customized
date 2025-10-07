@@ -193,8 +193,8 @@ class App.TicketZoom extends App.Controller
     @shares = data.shares || []
     
     console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: API response received"
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approvals from API:", @approvals
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Shares from API:", @shares
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approvals from API - count:", @approvals.length, "data:", @approvals
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Shares from API - count:", @shares.length, "data:", @shares
 
     if draft = App.TicketSharedDraftZoom.findByAttribute 'ticket_id', @ticket_id
       draft.remove(clear: true)

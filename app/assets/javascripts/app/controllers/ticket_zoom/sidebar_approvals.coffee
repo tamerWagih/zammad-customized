@@ -1,13 +1,19 @@
 class SidebarApprovals extends App.Controller
-  constructor: ->
+  constructor: (params) ->
     super
     @last_can_share = null
+    @approvals = params.approvals || []
+    @shares = params.shares || []
+    
+    console.log "[SIDEBAR_APPROVALS] Constructor - Ticket ##{@ticket?.id}: Received approvals:", @approvals.length, "shares:", @shares.length
     
     # Set cache on ticket object for permission checks (same pattern as standard Zammad uses for tags/links)
     if @ticket && @approvals
       @ticket._approvals_cache = @approvals
+      console.log "[SIDEBAR_APPROVALS] Constructor - Ticket ##{@ticket.id}: Set _approvals_cache with", @approvals.length, "items"
     if @ticket && @shares
       @ticket._shares_cache = @shares
+      console.log "[SIDEBAR_APPROVALS] Constructor - Ticket ##{@ticket.id}: Set _shares_cache with", @shares.length, "items"
 
   sidebarItem: =>
     console.log "[SIDEBAR_APPROVALS] Ticket ##{@ticket?.id || @ticket_id}: sidebarItem() called"
@@ -99,6 +105,24 @@ class SidebarApprovals extends App.Controller
     @loadApprovalsForCheck()
 
   reload: (args) =>
+    console.log "[SIDEBAR_APPROVALS] Reload - Ticket ##{@ticket?.id}: Called with args:", args
+    
+    # Update local data if provided (same pattern as tags/links)
+    if args.approvals?
+      @approvals = args.approvals
+      console.log "[SIDEBAR_APPROVALS] Reload - Ticket ##{@ticket?.id}: Updated @approvals to", @approvals.length, "items"
+    if args.shares?
+      @shares = args.shares
+      console.log "[SIDEBAR_APPROVALS] Reload - Ticket ##{@ticket?.id}: Updated @shares to", @shares.length, "items"
+    
+    # Re-set cache on ticket object for permission checks
+    if @ticket && @approvals
+      @ticket._approvals_cache = @approvals
+      console.log "[SIDEBAR_APPROVALS] Reload - Ticket ##{@ticket.id}: Re-set _approvals_cache with", @approvals.length, "items"
+    if @ticket && @shares
+      @ticket._shares_cache = @shares
+      console.log "[SIDEBAR_APPROVALS] Reload - Ticket ##{@ticket.id}: Re-set _shares_cache with", @shares.length, "items"
+    
     if @widget && @widget.reload
       @widget.reload(args)
     else if @elSidebar
