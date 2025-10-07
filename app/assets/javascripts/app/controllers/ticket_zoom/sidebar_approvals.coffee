@@ -48,10 +48,6 @@ class SidebarApprovals extends App.Controller
         return
 
     @createApprovalsWidget()
-    
-    # Use passed approvals data if available to avoid additional API calls
-    if @approvals && @approvals.length > 0
-      @loadApprovalsForCheck()
 
   createApprovalsWidget: =>
     @widget?.destroy?()
@@ -63,16 +59,8 @@ class SidebarApprovals extends App.Controller
       callback: @refreshApprovals
     )
 
+    # Load approvals data (use passed data if available)
     @loadApprovalsForCheck()
-
-    @delay =>
-      if @widget
-        @widget.reload()
-        @delay =>
-          if @widget && @widget.ensureDataLoaded
-            @widget.ensureDataLoaded()
-        , 500, 'approval-ensure-data'
-    , 200, 'approval-panel-show'
 
   reload: (args) =>
     if @widget && @widget.reload

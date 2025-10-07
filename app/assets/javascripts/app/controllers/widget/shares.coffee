@@ -33,12 +33,8 @@ class App.WidgetShares extends App.Controller
       @scheduleReload(300)
     )
 
-    # Periodic check to ensure data is loaded (fallback for missed events)
-    @delay =>
-      @ensureDataLoaded()
-    , 2000, 'share-data-check'
-
-    @loadShares()
+    # Load shares data (widget will be initialized by sidebar controller)
+    # @loadShares() - Removed to prevent redundant API calls
   # Standard reload method called by sidebar system
   reload: (args) =>
     @loadShares()

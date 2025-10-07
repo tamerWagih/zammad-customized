@@ -48,10 +48,6 @@ class SidebarShares extends App.Controller
         return
 
     @createSharesWidget()
-    
-    # Use passed shares data if available to avoid additional API calls
-    if @shares && @shares.length > 0
-      @loadSharesForCheck()
 
   createSharesWidget: =>
     if @widget
@@ -64,14 +60,8 @@ class SidebarShares extends App.Controller
       callback: @refreshShares
     )
     
-    @delay =>
-      if @widget
-        @widget.reload()
-        @delay =>
-          if @widget && @widget.ensureDataLoaded
-            @widget.ensureDataLoaded()
-        , 500, 'share-ensure-data'
-    , 200, 'share-panel-show'
+    # Load shares data (use passed data if available)
+    @loadSharesForCheck()
 
   reload: (args) =>
     if @widget && @widget.reload
