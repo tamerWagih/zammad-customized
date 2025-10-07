@@ -118,4 +118,4 @@ class ApprovalRequest extends App.ControllerModal
         )
     )
 
-App.Config.set('500-Approvals', SidebarApprovals, 'TicketZoomSidebar')
+App.Config.set('450-Approvals', SidebarApprovals, 'TicketZoomSidebar')

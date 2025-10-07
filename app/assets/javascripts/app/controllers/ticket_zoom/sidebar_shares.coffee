@@ -11,7 +11,7 @@ class SidebarShares extends App.Controller
 
     @item = {
       name: 'shares'
-      badgeIcon: 'group'
+      badgeIcon: 'team'
       badgeCallback: @badgeRender
       sidebarHead: __('Shares')
       sidebarCallback: @showPanel
@@ -111,4 +111,4 @@ class ShareTicket extends App.ControllerModal
         )
     )
 
-App.Config.set('600-Shares', SidebarShares, 'TicketZoomSidebar')
+App.Config.set('451-Shares', SidebarShares, 'TicketZoomSidebar')
