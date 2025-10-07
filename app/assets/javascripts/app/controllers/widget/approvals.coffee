@@ -48,17 +48,24 @@ class App.WidgetApprovals extends App.Controller
     @delay (=> @loadApprovals()), delay, 'approval-reload'
 
   loadApprovals: =>
-    return if @isLoadingApprovals
+    console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: loadApprovals() called"
+    
+    if @isLoadingApprovals
+      console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: Already loading - skipping"
+      return
 
     @isLoadingApprovals = true
 
     # Refresh ticket reference for permission checks, including shared access
     if @ticket_id
       @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
+      console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: Ticket object loaded:", !!@ticket
     else
+      console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: No ticket_id - aborting"
       @isLoadingApprovals = false
       return
 
+    console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: Loading from API"
     @loadApprovalsFromAPI()
 
   loadApprovalsFromAPI: =>
@@ -83,8 +90,10 @@ class App.WidgetApprovals extends App.Controller
 
   renderApprovals: (data, status, xhr) =>
     approvals = data?.approvals || []
+    console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: Received approvals from API:", approvals
     @approvals = approvals
     @loadRetryCount = 0
+    console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: Calling render with #{@approvals.length} approvals"
     @render(@approvals)
 
   renderError: (xhr, status, error) =>
@@ -101,15 +110,21 @@ class App.WidgetApprovals extends App.Controller
     @html "<div class='sidebar-block'><div class='alert alert-danger'>#{error_message}</div></div>"
 
   render: (approvals) =>
+    console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: render() called with #{approvals.length} approvals"
+    
     # Render the full template with real data
     current_user = App.User.current()
     current_user_id = if current_user then String(current_user.id) else 'unknown'
+    
+    console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: Rendering HTML with current_user_id:", current_user_id
     
     @html App.view('widget/approvals')(
       approvals: approvals
       ticket_id: @ticket_id
       current_user_id: current_user_id
     )
+    
+    console.log "[WIDGET_APPROVALS] Ticket ##{@ticket_id}: HTML rendered successfully"
 
   renderActions: =>
     @parentVC?.parentSidebar?.sidebarActionsRender('approvals', @parentVC?.item?.sidebarActions || [])

@@ -188,6 +188,10 @@ class App.TicketZoom extends App.Controller
     # remember approvals and shares
     @approvals = data.approvals || []
     @shares = data.shares || []
+    
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: API response received"
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approvals from API:", @approvals
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Shares from API:", @shares
 
     if draft = App.TicketSharedDraftZoom.findByAttribute 'ticket_id', @ticket_id
       draft.remove(clear: true)
@@ -201,10 +205,18 @@ class App.TicketZoom extends App.Controller
     # Attach approvals and shares directly to ticket object for permission checks
     @ticket.approvals_data = @approvals
     @ticket.shares_data = @shares
+    
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Data attached to ticket object"
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: @ticket.approvals_data:", @ticket.approvals_data
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: @ticket.shares_data:", @ticket.shares_data
     @view           = @ticket && @ticket.currentView && @ticket.currentView()
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: currentView() returned:", @view
     @readable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || false
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: readable:", @readable
     @changeable     = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || false
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: changeable:", @changeable
     @fullable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || false
+    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: fullable:", @fullable
     @formMeta       = data.form_meta
 
     # render page

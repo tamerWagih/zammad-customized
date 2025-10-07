@@ -95,7 +95,7 @@ class Ticket::AssetsAll
   def approvals
     @approvals ||= if ticket.respond_to?(:approvals) && user.permissions?('ticket.agent')
                      # Return all approvals for this ticket with user associations
-                     ticket.approvals.includes(:approver, :requester).map do |approval|
+                     result = ticket.approvals.includes(:approver, :requester).map do |approval|
                        {
                          id:           approval.id,
                          ticket_id:    approval.ticket_id,
@@ -110,7 +110,10 @@ class Ticket::AssetsAll
                          updated_at:   approval.updated_at,
                        }
                      end
+                     Rails.logger.info "[APPROVAL_API] Ticket ##{ticket.id}: Returning #{result.size} approvals for user ##{user.id} (#{user.email})"
+                     result
                    else
+                     Rails.logger.info "[APPROVAL_API] Ticket ##{ticket.id}: No approvals returned (respond_to: #{ticket.respond_to?(:approvals)}, is_agent: #{user.permissions?('ticket.agent')})"
                      []
                    end
   end
@@ -118,7 +121,7 @@ class Ticket::AssetsAll
   def shares
     @shares ||= if ticket.respond_to?(:shares) && user.permissions?('ticket.agent')
                   # Return all shares for this ticket with user and group associations
-                  ticket.shares.includes(:shared_by, :group).map do |share|
+                  result = ticket.shares.includes(:shared_by, :group).map do |share|
                     {
                       id:           share.id,
                       ticket_id:    share.ticket_id,
@@ -134,7 +137,10 @@ class Ticket::AssetsAll
                       updated_at:   share.updated_at,
                     }
                   end
+                  Rails.logger.info "[SHARE_API] Ticket ##{ticket.id}: Returning #{result.size} shares for user ##{user.id} (#{user.email})"
+                  result
                 else
+                  Rails.logger.info "[SHARE_API] Ticket ##{ticket.id}: No shares returned (respond_to: #{ticket.respond_to?(:shares)}, is_agent: #{user.permissions?('ticket.agent')})"
                   []
                 end
   end

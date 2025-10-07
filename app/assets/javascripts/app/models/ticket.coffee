@@ -230,15 +230,27 @@ class App.Ticket extends App.Model
     user.allOrganizationIds().includes(@organization_id)
 
   userGroupAccess: (permission) ->
+    console.log "[TICKET_MODEL] Ticket ##{@id}: userGroupAccess(#{permission}) called"
+    
     user = App.User.current()
-    return false if !user
+    unless user
+      console.log "[TICKET_MODEL] Ticket ##{@id}: No current user"
+      return false
 
     # Check approval access first (approvers get full access)
-    return true if @hasApprovalAccess()
+    hasApproval = @hasApprovalAccess()
+    if hasApproval
+      console.log "[TICKET_MODEL] Ticket ##{@id}: Has approval access - returning true"
+      return true
 
-    return true if @hasSharePermission(permission)
+    hasSharePerm = @hasSharePermission(permission)
+    if hasSharePerm
+      console.log "[TICKET_MODEL] Ticket ##{@id}: Has share permission - returning true"
+      return true
 
-    @isAccessibleByGroup(user, permission)
+    isAccessible = @isAccessibleByGroup(user, permission)
+    console.log "[TICKET_MODEL] Ticket ##{@id}: isAccessibleByGroup returned:", isAccessible
+    isAccessible
 
   hasSharePermission: (permission) ->
     return false unless App.User.current()?.permission('ticket.agent')
@@ -333,14 +345,30 @@ class App.Ticket extends App.Model
     return @isAccessibleByOwner(user)
 
   currentView: ->
+    console.log "[TICKET_MODEL] Ticket ##{@id}: currentView() called"
+    
     # Custom: Approvers get agent view FIRST (bypasses group membership requirement)
-    return 'agent' if @hasApprovalAccess() # Approvers get agent view
+    hasApproval = @hasApprovalAccess()
+    console.log "[TICKET_MODEL] Ticket ##{@id}: hasApprovalAccess() =", hasApproval
+    return 'agent' if hasApproval # Approvers get agent view
+    
     # Custom: Users with share access get agent view (bypasses group membership requirement)
-    return 'agent' if @hasShareAccess() # Users with share access get agent view
+    hasShare = @hasShareAccess()
+    console.log "[TICKET_MODEL] Ticket ##{@id}: hasShareAccess() =", hasShare
+    return 'agent' if hasShare # Users with share access get agent view
+    
     # Standard Zammad: Agents with group access get agent view
-    return 'agent' if App.User.current()?.permission('ticket.agent') && @userGroupAccess && @userGroupAccess('read')
+    isAgent = App.User.current()?.permission('ticket.agent')
+    hasGroupAccess = @userGroupAccess && @userGroupAccess('read')
+    console.log "[TICKET_MODEL] Ticket ##{@id}: isAgent =", isAgent, ", hasGroupAccess =", hasGroupAccess
+    return 'agent' if isAgent && hasGroupAccess
+    
     # Standard Zammad: Customers get customer view
-    return 'customer' if App.User.current()?.permission('ticket.customer')
+    isCustomer = App.User.current()?.permission('ticket.customer')
+    console.log "[TICKET_MODEL] Ticket ##{@id}: isCustomer =", isCustomer
+    return 'customer' if isCustomer
+    
+    console.log "[TICKET_MODEL] Ticket ##{@id}: currentView() returning undefined"
     return
 
   isAccessibleByOwner: (user) ->
@@ -367,36 +395,69 @@ class App.Ticket extends App.Model
     return @isAccessibleByGroup(user, permission)
 
   hasApprovalAccess: ->
+    console.log "[TICKET_MODEL] Ticket ##{@id}: hasApprovalAccess() called"
+    
     current_user = App.User.current()
-    return false unless current_user
-    return false unless @id
+    unless current_user
+      console.log "[TICKET_MODEL] Ticket ##{@id}: No current user"
+      return false
+    
+    unless @id
+      console.log "[TICKET_MODEL] Ticket ##{@id}: No ticket ID"
+      return false
     
     # Use approvals data attached to ticket object (from API response)
     ticket_approvals = @approvals_data
-    return false unless ticket_approvals && ticket_approvals.length > 0
+    console.log "[TICKET_MODEL] Ticket ##{@id}: @approvals_data:", ticket_approvals
+    
+    unless ticket_approvals && ticket_approvals.length > 0
+      console.log "[TICKET_MODEL] Ticket ##{@id}: No approvals data or empty array"
+      return false
     
     current_user_id = parseInt(current_user.id)
+    console.log "[TICKET_MODEL] Ticket ##{@id}: Current user ID:", current_user_id
     
     # Check if user is an approver (any status - pending, approved, or rejected)
     for approval in ticket_approvals
+      console.log "[TICKET_MODEL] Ticket ##{@id}: Checking approval - approver_id:", approval.approver_id, ", current_user_id:", current_user_id
       if parseInt(approval.approver_id) is current_user_id
+        console.log "[TICKET_MODEL] Ticket ##{@id}: User IS an approver - returning true"
         return true
     
+    console.log "[TICKET_MODEL] Ticket ##{@id}: User is NOT an approver - returning false"
     false
 
   hasShareAccess: ->
+    console.log "[TICKET_MODEL] Ticket ##{@id}: hasShareAccess() called"
+    
     current_user = App.User.current()
-    return false unless current_user
-    return false unless @id
-    return false unless current_user.permission('ticket.agent') # Only agents can access shared tickets
+    unless current_user
+      console.log "[TICKET_MODEL] Ticket ##{@id}: No current user"
+      return false
+    
+    unless @id
+      console.log "[TICKET_MODEL] Ticket ##{@id}: No ticket ID"
+      return false
+    
+    unless current_user.permission('ticket.agent')
+      console.log "[TICKET_MODEL] Ticket ##{@id}: User is not an agent"
+      return false
     
     # Use shares data attached to ticket object (from API response)
     ticket_shares = @shares_data
-    return false unless ticket_shares && ticket_shares.length > 0
+    console.log "[TICKET_MODEL] Ticket ##{@id}: @shares_data:", ticket_shares
+    
+    unless ticket_shares && ticket_shares.length > 0
+      console.log "[TICKET_MODEL] Ticket ##{@id}: No shares data or empty array"
+      return false
 
     # Filter only active shares
     active_shares = ticket_shares.filter((share) -> share.status is 'active')
-    return false unless active_shares.length > 0
+    console.log "[TICKET_MODEL] Ticket ##{@id}: Active shares:", active_shares
+    
+    unless active_shares.length > 0
+      console.log "[TICKET_MODEL] Ticket ##{@id}: No active shares"
+      return false
 
     # Get user's groups with ANY permission level (read, change, or full)
     user_groups_read = current_user.allGroupIds('read') || []
@@ -405,13 +466,18 @@ class App.Ticket extends App.Model
 
     # Combine all groups where user has any permission
     user_groups = user_groups_read.concat(user_groups_change).concat(user_groups_full)
+    console.log "[TICKET_MODEL] Ticket ##{@id}: User groups (all permissions):", user_groups
+    
     share_groups = active_shares.map((share) -> parseInt(share.group_id))
+    console.log "[TICKET_MODEL] Ticket ##{@id}: Share groups:", share_groups
 
     # Check if user has permission in any shared group
     for user_group_id in user_groups
       if share_groups.indexOf(parseInt(user_group_id)) >= 0
+        console.log "[TICKET_MODEL] Ticket ##{@id}: User HAS share access (group #{user_group_id}) - returning true"
         return true
 
+    console.log "[TICKET_MODEL] Ticket ##{@id}: User does NOT have share access - returning false"
     false
 
   attributes: ->
