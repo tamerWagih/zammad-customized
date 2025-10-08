@@ -36,6 +36,14 @@ class App.WidgetApprovals extends App.Controller
     )
 
   reload: (approvals) =>
+    # Skip reload if we just did a local update (within 2 seconds)
+    # This prevents WebSocket events from overwriting optimistic updates
+    if @lastLocalUpdateTime
+      timeSinceUpdate = Date.now() - @lastLocalUpdateTime
+      if timeSinceUpdate < 2000
+        console.log "[APPROVALS] Skipping reload - local update was #{timeSinceUpdate}ms ago"
+        return
+    
     # Standard pattern: just update local data and re-render (like WidgetTag)
     @localApprovals = _.clone(approvals)
     @render()
@@ -122,6 +130,9 @@ class App.WidgetApprovals extends App.Controller
       url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/#{action}"
       processData: true
       success: (data) =>
+        # Mark that we just did a local update
+        @lastLocalUpdateTime = Date.now()
+        
         # Update local data immediately
         if data?.approval
           index = _.findIndex(@localApprovals, (a) -> parseInt(a.id) is parseInt(approval_id))
@@ -169,6 +180,9 @@ class App.WidgetApprovals extends App.Controller
       callback: (updated_approval) =>
         # Update local data immediately with response data
         if updated_approval
+          # Mark that we just did a local update to prevent WebSocket overwrites
+          @lastLocalUpdateTime = Date.now()
+          
           index = _.findIndex(@localApprovals, (a) -> parseInt(a.id) is parseInt(updated_approval.id))
           if index >= 0
             @localApprovals[index] = updated_approval
@@ -198,6 +212,9 @@ class App.WidgetApprovals extends App.Controller
           type: 'DELETE'
           url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
           success: =>
+            # Mark that we just did a local update
+            @lastLocalUpdateTime = Date.now()
+            
             # Remove from local data immediately
             @localApprovals = _.filter(@localApprovals, (a) -> parseInt(a.id) isnt parseInt(approval_id))
             

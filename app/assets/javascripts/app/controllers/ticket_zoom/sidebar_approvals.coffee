@@ -75,7 +75,6 @@ class SidebarApprovals extends App.Controller
   requestApproval: =>
     new App.TicketApprovalRequest(
       ticket_id: @ticket.id
-      container: @el.closest('.content')
       callback: =>
         # Refresh the approvals widget by fetching fresh data from API
         @widget.fetch() if @widget && @widget.fetch

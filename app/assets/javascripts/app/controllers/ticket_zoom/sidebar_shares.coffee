@@ -75,7 +75,6 @@ class SidebarShares extends App.Controller
   shareTicket: =>
     new App.TicketShareCreate(
       ticket_id: @ticket.id
-      container: @el.closest('.content')
       callback: =>
         # Refresh the shares widget by fetching fresh data from API
         @widget.fetch() if @widget && @widget.fetch

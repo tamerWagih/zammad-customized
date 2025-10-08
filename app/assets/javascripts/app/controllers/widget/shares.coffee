@@ -35,6 +35,14 @@ class App.WidgetShares extends App.Controller
     )
 
   reload: (shares) =>
+    # Skip reload if we just did a local update (within 2 seconds)
+    # This prevents WebSocket events from overwriting optimistic updates
+    if @lastLocalUpdateTime
+      timeSinceUpdate = Date.now() - @lastLocalUpdateTime
+      if timeSinceUpdate < 2000
+        console.log "[SHARES] Skipping reload - local update was #{timeSinceUpdate}ms ago"
+        return
+    
     # Standard pattern: just update local data and re-render (like WidgetTag)
     @localShares = _.clone(shares)
     @render()
@@ -97,6 +105,9 @@ class App.WidgetShares extends App.Controller
           type: 'POST'
           url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}/revoke"
           success: (data) =>
+            # Mark that we just did a local update
+            @lastLocalUpdateTime = Date.now()
+            
             # Update local data immediately - set status to 'revoked'
             share = _.find(@localShares, (s) -> parseInt(s.id) is parseInt(share_id))
             if share
@@ -141,6 +152,9 @@ class App.WidgetShares extends App.Controller
           type: 'DELETE'
           url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}"
           success: =>
+            # Mark that we just did a local update
+            @lastLocalUpdateTime = Date.now()
+            
             # Remove from local data immediately
             @localShares = _.filter(@localShares, (s) -> parseInt(s.id) isnt parseInt(share_id))
             
@@ -184,6 +198,9 @@ class App.WidgetShares extends App.Controller
       callback: (updated_share) =>
         # Update local data immediately with response data
         if updated_share
+          # Mark that we just did a local update
+          @lastLocalUpdateTime = Date.now()
+          
           index = _.findIndex(@localShares, (s) -> parseInt(s.id) is parseInt(updated_share.id))
           if index >= 0
             @localShares[index] = updated_share
@@ -204,7 +221,6 @@ class App.WidgetShares extends App.Controller
     e.preventDefault()
     new App.TicketShareCreate(
       ticket_id: @ticket_id
-      container: @el.closest('.content')
       callback: =>
         # Reload fresh data from API after creating
         @fetch()
