@@ -20,6 +20,9 @@ class App.TicketShareEdit extends App.ControllerModal
         else
           expiresAt = ''
 
+    # Get today's date for min attribute (disable past dates)
+    today = new Date().toISOString().slice(0, 10)
+
     groupName = @share?.group_name || @share?.group?.fullname || @share?.group?.name
 
     """
@@ -41,7 +44,7 @@ class App.TicketShareEdit extends App.ControllerModal
       <div class="form-group">
         <label class="control-label col-sm-3">#{__('Expire on (Optional)')}</label>
         <div class="col-sm-9">
-          <input type="date" name="expires_at" class="form-control" value="#{expiresAt}">
+          <input type="date" name="expires_at" class="form-control" value="#{expiresAt}" min="#{today}">
           <small class="help-block">#{__('Access ends at the end of the selected day')}</small>
         </div>
       </div>

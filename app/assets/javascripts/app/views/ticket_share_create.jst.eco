@@ -39,7 +39,7 @@
     <%- @T('Expire on (Optional)') %>
   </label>
   <div class="col-sm-9">
-    <input type="date" name="expires_at" class="form-control">
+    <input type="date" name="expires_at" class="form-control" min="<%= new Date().toISOString().slice(0, 10) %>">
     <small class="help-block">
       <%- @T('Access ends at the end of the selected day') %>
     </small>
