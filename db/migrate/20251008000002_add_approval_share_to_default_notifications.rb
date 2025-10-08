@@ -57,9 +57,16 @@ class AddApprovalShareToDefaultNotifications < ActiveRecord::Migration[7.2]
     return if !setting
 
     current_state = setting.state || {}
+    initial_state = setting.state_initial || {}
+    
     current_state.delete('approval')
     current_state.delete('share')
+    initial_state.delete('approval')
+    initial_state.delete('share')
     
-    setting.update!(state: current_state)
+    setting.update!(
+      state: current_state,
+      state_initial: initial_state
+    )
   end
 end
