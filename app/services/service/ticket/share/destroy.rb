@@ -7,9 +7,9 @@ class Service::Ticket::Share::Destroy < Service::BaseWithCurrentUser
 
     serialized = serialize_share(share)
 
-    # For destroy, we need to trigger notification BEFORE destroying
-    # because Transaction system can't look up destroyed records
-    trigger_destroy_notification(share)
+    # For destroy operations, we need to add the event to EventBuffer BEFORE destroying
+    # because the record won't exist when TransactionDispatcher runs
+    add_destroy_event_to_buffer(share)
 
     share.destroy!
 
@@ -18,21 +18,17 @@ class Service::Ticket::Share::Destroy < Service::BaseWithCurrentUser
 
   private
 
-  def trigger_destroy_notification(share)
-    # Manually trigger notification before destroy
-    Rails.logger.info "[SHARE_NOTIFICATION] ✅ DELETE triggered for share ##{share.id} by user ##{current_user.id}"
-    notification = Transaction::ShareNotification.new(
-      {
-        object:     'Ticket::Share',
-        type:       'delete',
-        object_id:  share.id,
-        user_id:    current_user.id,
-        created_at: Time.zone.now,
-      },
-      { interface_handle: 'application_server' }
-    )
-    result = notification.perform
-    Rails.logger.info "[SHARE_NOTIFICATION] 📨 DELETE notification performed directly (result: #{result.inspect})"
+  def add_destroy_event_to_buffer(share)
+    # Add destroy event to EventBuffer before destroying the record
+    # This follows Zammad's pattern for destroy operations
+    Rails.logger.info "[SHARE_NOTIFICATION] ✅ DELETE event added to EventBuffer for share ##{share.id}"
+    EventBuffer.add('transaction', {
+      object:     'Ticket::Share',
+      type:       'delete',
+      id:         share.id,
+      user_id:    current_user.id,
+      created_at: Time.zone.now,
+    })
   end
 
   def ensure_manageable!(share)

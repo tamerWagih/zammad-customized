@@ -7,9 +7,9 @@ class Service::Ticket::Approval::Destroy < Service::BaseWithCurrentUser
 
     serialized = serialize_approval(approval)
     
-    # For destroy, we need to trigger notification BEFORE destroying
-    # because Transaction system can't look up destroyed records
-    trigger_destroy_notification(approval)
+    # For destroy operations, we need to add the event to EventBuffer BEFORE destroying
+    # because the record won't exist when TransactionDispatcher runs
+    add_destroy_event_to_buffer(approval)
     
     approval.destroy!
 
@@ -18,21 +18,17 @@ class Service::Ticket::Approval::Destroy < Service::BaseWithCurrentUser
 
   private
 
-  def trigger_destroy_notification(approval)
-    # Manually trigger notification before destroy
-    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ DELETE triggered for approval ##{approval.id} by user ##{current_user.id}"
-    notification = Transaction::ApprovalNotification.new(
-      {
-        object:     'Ticket::Approval',
-        type:       'delete',
-        object_id:  approval.id,
-        user_id:    current_user.id,
-        created_at: Time.zone.now,
-      },
-      { interface_handle: 'application_server' }
-    )
-    result = notification.perform
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📨 DELETE notification performed directly (result: #{result.inspect})"
+  def add_destroy_event_to_buffer(approval)
+    # Add destroy event to EventBuffer before destroying the record
+    # This follows Zammad's pattern for destroy operations
+    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ DELETE event added to EventBuffer for approval ##{approval.id}"
+    EventBuffer.add('transaction', {
+      object:     'Ticket::Approval',
+      type:       'delete',
+      id:         approval.id,
+      user_id:    current_user.id,
+      created_at: Time.zone.now,
+    })
   end
 
   def ensure_requester_or_admin!(approval)
