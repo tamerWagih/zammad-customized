@@ -5,6 +5,7 @@ class Ticket::Approval < ApplicationModel
   include HasSearchIndexBackend
   include ChecksClientNotification
   include HasTags
+  include HasTransactionDispatcher
   include Ticket::Approval::TriggersNotifications
   include Ticket::Approval::TriggersSubscriptions
 
