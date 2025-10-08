@@ -20,6 +20,7 @@ class Service::Ticket::Approval::Destroy < Service::BaseWithCurrentUser
 
   def trigger_destroy_notification(approval)
     # Manually trigger notification before destroy
+    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ DELETE triggered for approval ##{approval.id} by user ##{current_user.id}"
     notification = Transaction::ApprovalNotification.new(
       {
         object:     'Ticket::Approval',
@@ -30,7 +31,8 @@ class Service::Ticket::Approval::Destroy < Service::BaseWithCurrentUser
       },
       { interface_handle: 'application_server' }
     )
-    notification.perform
+    result = notification.perform
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📨 DELETE notification performed directly (result: #{result.inspect})"
   end
 
   def ensure_requester_or_admin!(approval)

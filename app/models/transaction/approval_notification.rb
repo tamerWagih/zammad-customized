@@ -48,19 +48,38 @@ class Transaction::ApprovalNotification
   end
 
   def perform
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 🔄 Backend perform() called for #{@item[:type]} on approval ##{@item[:object_id]}"
+    
     # return if we run import mode
-    return if Setting.get('import_mode')
-    return if approval.blank? || ticket.blank?
-    return if @params[:disable_notification]
-    return if @params[:send_notification] == false
+    if Setting.get('import_mode')
+      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped: import_mode enabled"
+      return
+    end
+    
+    if approval.blank? || ticket.blank?
+      Rails.logger.warn "[APPROVAL_NOTIFICATION] ⚠️  Skipped: approval or ticket not found (approval: #{approval.inspect}, ticket: #{ticket.inspect})"
+      return
+    end
+    
+    if @params[:disable_notification]
+      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped: disable_notification param"
+      return
+    end
+    
+    if @params[:send_notification] == false
+      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped: send_notification=false param"
+      return
+    end
 
     prepare_recipients_and_reasons
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📬 Recipients prepared: #{recipients_and_channels.count} recipient(s)"
 
     # send notifications
     recipients_and_channels.each do |recipient_settings|
       send_to_single_recipient(recipient_settings)
     end
 
+    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ Backend perform() completed for approval ##{@item[:object_id]}"
     true
   end
 
@@ -117,11 +136,19 @@ class Transaction::ApprovalNotification
     user     = recipient_settings[:user]
     channels = recipient_settings[:channels]
 
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 👤 Processing recipient: #{user.email} (channels: #{channels.keys.join(', ')})"
+
     # ignore user who changed it by him self via web
-    return if recipient_myself?(user)
+    if recipient_myself?(user)
+      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped #{user.email}: recipient is sender (myself)"
+      return
+    end
 
     # ignore inactive users
-    return if !user.active?
+    if !user.active?
+      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped #{user.email}: user inactive"
+      return
+    end
 
     # check if today already notified (for specific notification types)
     if %w[create update approve reject delete].include?(@item[:type])
@@ -160,11 +187,18 @@ class Transaction::ApprovalNotification
         created_by_id: created_by_id,
         user_id:       user.id,
       )
-      Rails.logger.debug { "sent approval online notification to agent (#{@item[:type]}/#{ticket.id}/#{user.email})" }
+      Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ Online notification sent to #{user.email} (#{@item[:type]}/#{ticket.id})"
     end
 
     # ignore email channel notification and empty emails
-    if !channels['email'] || user.email.blank?
+    if !channels['email']
+      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Email skipped for #{user.email}: email channel not enabled"
+      add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
+      return
+    end
+    
+    if user.email.blank?
+      Rails.logger.warn "[APPROVAL_NOTIFICATION] ⚠️  Email skipped for user: no email address"
       add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
       return
     end
@@ -173,6 +207,7 @@ class Transaction::ApprovalNotification
     add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
 
     # send email notification
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📧 Sending email to #{user.email} (template: ticket_approval_notification, action: #{@item[:type]}, ticket: ##{ticket.id})"
     NotificationFactory::Mailer.notification(
       template:    'ticket_approval_notification',
       user:        user,
@@ -181,7 +216,7 @@ class Transaction::ApprovalNotification
       references:  ticket.get_references,
       main_object: ticket,
     )
-    Rails.logger.debug { "sent approval email notification to agent (#{@item[:type]}/#{ticket.id}/#{user.email})" }
+    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ Email sent successfully to #{user.email} (#{@item[:type]}/#{ticket.id})"
   rescue Channel::DeliveryError => e
     status_code = begin
       e.original_error.response.status.to_i

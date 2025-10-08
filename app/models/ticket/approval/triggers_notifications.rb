@@ -14,6 +14,7 @@ module Ticket::Approval::TriggersNotifications
 
   def trigger_create_notification
     user_id = UserInfo.current_user_id || 1
+    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ CREATE triggered for approval ##{id} by user ##{user_id}"
     EventBuffer.add('transaction', {
       object:     'Ticket::Approval',
       type:       'create',
@@ -21,6 +22,7 @@ module Ticket::Approval::TriggersNotifications
       user_id:    user_id,
       created_at: Time.zone.now,
     })
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📨 Event added to EventBuffer: Ticket::Approval ##{id} (create)"
   end
 
   def trigger_update_notification
@@ -40,6 +42,7 @@ module Ticket::Approval::TriggersNotifications
       'update'
     end
 
+    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ #{type.upcase} triggered for approval ##{id} by user ##{user_id}"
     EventBuffer.add('transaction', {
       object:     'Ticket::Approval',
       type:       type,
@@ -48,6 +51,7 @@ module Ticket::Approval::TriggersNotifications
       user_id:    user_id,
       created_at: Time.zone.now,
     })
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📨 Event added to EventBuffer: Ticket::Approval ##{id} (#{type})"
   end
 
   def trigger_destroy_notification

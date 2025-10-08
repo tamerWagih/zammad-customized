@@ -14,6 +14,7 @@ module Ticket::Share::TriggersNotifications
 
   def trigger_create_notification
     user_id = UserInfo.current_user_id || 1
+    Rails.logger.info "[SHARE_NOTIFICATION] ✅ CREATE triggered for share ##{id} by user ##{user_id}"
     EventBuffer.add('transaction', {
       object:     'Ticket::Share',
       type:       'create',
@@ -21,6 +22,7 @@ module Ticket::Share::TriggersNotifications
       user_id:    user_id,
       created_at: Time.zone.now,
     })
+    Rails.logger.info "[SHARE_NOTIFICATION] 📨 Event added to EventBuffer: Ticket::Share ##{id} (create)"
   end
 
   def trigger_update_notification
@@ -33,6 +35,7 @@ module Ticket::Share::TriggersNotifications
       'update'
     end
 
+    Rails.logger.info "[SHARE_NOTIFICATION] ✅ #{type.upcase} triggered for share ##{id} by user ##{user_id}"
     EventBuffer.add('transaction', {
       object:     'Ticket::Share',
       type:       type,
@@ -41,6 +44,7 @@ module Ticket::Share::TriggersNotifications
       user_id:    user_id,
       created_at: Time.zone.now,
     })
+    Rails.logger.info "[SHARE_NOTIFICATION] 📨 Event added to EventBuffer: Ticket::Share ##{id} (#{type})"
   end
 
   def trigger_destroy_notification

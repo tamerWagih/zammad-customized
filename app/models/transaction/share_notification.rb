@@ -48,19 +48,38 @@ class Transaction::ShareNotification
   end
 
   def perform
+    Rails.logger.info "[SHARE_NOTIFICATION] 🔄 Backend perform() called for #{@item[:type]} on share ##{@item[:object_id]}"
+    
     # return if we run import mode
-    return if Setting.get('import_mode')
-    return if share.blank? || ticket.blank?
-    return if @params[:disable_notification]
-    return if @params[:send_notification] == false
+    if Setting.get('import_mode')
+      Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped: import_mode enabled"
+      return
+    end
+    
+    if share.blank? || ticket.blank?
+      Rails.logger.warn "[SHARE_NOTIFICATION] ⚠️  Skipped: share or ticket not found (share: #{share.inspect}, ticket: #{ticket.inspect})"
+      return
+    end
+    
+    if @params[:disable_notification]
+      Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped: disable_notification param"
+      return
+    end
+    
+    if @params[:send_notification] == false
+      Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped: send_notification=false param"
+      return
+    end
 
     prepare_recipients_and_reasons
+    Rails.logger.info "[SHARE_NOTIFICATION] 📬 Recipients prepared: #{recipients_and_channels.count} recipient(s)"
 
     # send notifications
     recipients_and_channels.each do |recipient_settings|
       send_to_single_recipient(recipient_settings)
     end
 
+    Rails.logger.info "[SHARE_NOTIFICATION] ✅ Backend perform() completed for share ##{@item[:object_id]}"
     true
   end
 
@@ -114,11 +133,19 @@ class Transaction::ShareNotification
     user     = recipient_settings[:user]
     channels = recipient_settings[:channels]
 
+    Rails.logger.info "[SHARE_NOTIFICATION] 👤 Processing recipient: #{user.email} (channels: #{channels.keys.join(', ')})"
+
     # ignore user who changed it by him self via web
-    return if recipient_myself?(user)
+    if recipient_myself?(user)
+      Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped #{user.email}: recipient is sender (myself)"
+      return
+    end
 
     # ignore inactive users
-    return if !user.active?
+    if !user.active?
+      Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped #{user.email}: user inactive"
+      return
+    end
 
     # check if today already notified (for specific notification types)
     if %w[create update revoke delete].include?(@item[:type])
@@ -157,11 +184,18 @@ class Transaction::ShareNotification
         created_by_id: created_by_id,
         user_id:       user.id,
       )
-      Rails.logger.debug { "sent share online notification to agent (#{@item[:type]}/#{ticket.id}/#{user.email})" }
+      Rails.logger.info "[SHARE_NOTIFICATION] ✅ Online notification sent to #{user.email} (#{@item[:type]}/#{ticket.id})"
     end
 
     # ignore email channel notification and empty emails
-    if !channels['email'] || user.email.blank?
+    if !channels['email']
+      Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Email skipped for #{user.email}: email channel not enabled"
+      add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
+      return
+    end
+    
+    if user.email.blank?
+      Rails.logger.warn "[SHARE_NOTIFICATION] ⚠️  Email skipped for user: no email address"
       add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
       return
     end
@@ -170,6 +204,7 @@ class Transaction::ShareNotification
     add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
 
     # send email notification
+    Rails.logger.info "[SHARE_NOTIFICATION] 📧 Sending email to #{user.email} (template: ticket_share_notification, action: #{@item[:type]}, ticket: ##{ticket.id})"
     NotificationFactory::Mailer.notification(
       template:    'ticket_share_notification',
       user:        user,
@@ -178,7 +213,7 @@ class Transaction::ShareNotification
       references:  ticket.get_references,
       main_object: ticket,
     )
-    Rails.logger.debug { "sent share email notification to agent (#{@item[:type]}/#{ticket.id}/#{user.email})" }
+    Rails.logger.info "[SHARE_NOTIFICATION] ✅ Email sent successfully to #{user.email} (#{@item[:type]}/#{ticket.id})"
   rescue Channel::DeliveryError => e
     status_code = begin
       e.original_error.response.status.to_i

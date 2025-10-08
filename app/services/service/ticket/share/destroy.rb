@@ -20,6 +20,7 @@ class Service::Ticket::Share::Destroy < Service::BaseWithCurrentUser
 
   def trigger_destroy_notification(share)
     # Manually trigger notification before destroy
+    Rails.logger.info "[SHARE_NOTIFICATION] ✅ DELETE triggered for share ##{share.id} by user ##{current_user.id}"
     notification = Transaction::ShareNotification.new(
       {
         object:     'Ticket::Share',
@@ -30,7 +31,8 @@ class Service::Ticket::Share::Destroy < Service::BaseWithCurrentUser
       },
       { interface_handle: 'application_server' }
     )
-    notification.perform
+    result = notification.perform
+    Rails.logger.info "[SHARE_NOTIFICATION] 📨 DELETE notification performed directly (result: #{result.inspect})"
   end
 
   def ensure_manageable!(share)
