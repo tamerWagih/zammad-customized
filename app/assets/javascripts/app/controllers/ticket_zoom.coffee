@@ -283,8 +283,8 @@ class App.TicketZoom extends App.Controller
             error: (xhr, status, error) =>
               console.error "[TICKET_ZOOM] Ticket ##{@ticket_id}: Failed to refresh ticket data:", status, error
           )
-        500  # 500ms delay ensures DB commit is complete and local UI has updated
-        'approval-websocket-refresh'
+        1000  # 1000ms delay (same as Zammad's fetchMayBe pattern)
+        "approval-websocket-refresh-#{@ticket_id}"
       )
     )
 
@@ -326,8 +326,8 @@ class App.TicketZoom extends App.Controller
             error: (xhr, status, error) =>
               console.error "[TICKET_ZOOM] Ticket ##{@ticket_id}: Failed to refresh ticket data:", status, error
           )
-        500  # 500ms delay ensures DB commit is complete and local UI has updated
-        'share-websocket-refresh'
+        1000  # 1000ms delay (same as Zammad's fetchMayBe pattern)
+        "share-websocket-refresh-#{@ticket_id}"
       )
     )
 
