@@ -131,10 +131,15 @@ class TransactionDispatcher
       end
 
       # get current state of objects
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 🔍 Looking for #{event[:object]} with id: #{event[:id]}"
       object = event[:object].constantize.find_by(id: event[:id])
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📦 Found object: #{object.inspect}"
 
       # next if object is already deleted
-      next if !object
+      if !object
+        Rails.logger.warn "[TRANSACTION_DISPATCHER] ⚠️  Object not found: #{event[:object]} ##{event[:id]} - skipping"
+        next
+      end
 
       if !list_objects[event[:object]]
         list_objects[event[:object]] = {}
