@@ -12,6 +12,8 @@ class Ticket::Share < ApplicationModel
   VALID_PERMISSIONS = %w[full].freeze
 
   before_validation :ensure_full_permission
+  before_create :set_created_by
+  before_update :set_updated_by
 
   belongs_to :ticket
   belongs_to :group
@@ -103,5 +105,15 @@ class Ticket::Share < ApplicationModel
     else
       "Share status changed to #{status}"
     end
+  end
+
+  private
+
+  def set_created_by
+    self.created_by_id = UserInfo.current_user_id if created_by_id.nil?
+  end
+
+  def set_updated_by
+    self.updated_by_id = UserInfo.current_user_id
   end
 end
