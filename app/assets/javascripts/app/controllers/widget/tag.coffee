@@ -52,8 +52,14 @@ class App.WidgetTag extends App.Controller
     return if @lastLocalTags && _.isEqual(@lastLocalTags, @localTags)
     @lastLocalTags = _.clone(@localTags)
 
+    # Filter out system-reserved tags (approval/rejection tags managed by approval system)
+    reservedTags = ['approved', 'rejected']
+    visibleTags = _.filter(@localTags || [], (tag) -> !_.contains(reservedTags, tag))
+    systemTags = _.filter(@localTags || [], (tag) -> _.contains(reservedTags, tag))
+
     @html App.view(@templateName)(
-      tags: @localTags || [],
+      tags: visibleTags
+      systemTags: systemTags
       editable: @editable
     )
     source = "#{App.Config.get('api_path')}/tag_search"
@@ -63,6 +69,10 @@ class App.WidgetTag extends App.Controller
       response: (e, ui) =>
         return if !ui
         return if !ui.content
+        # Filter out reserved tags from autocomplete
+        filteredContent = _.filter(ui.content, (item) -> !_.contains(reservedTags, item.value))
+        ui.content.length = 0
+        ui.content.push(item) for item in filteredContent
         for item in ui.content
           @possibleTags[item.value] = true
     )
@@ -100,6 +110,16 @@ class App.WidgetTag extends App.Controller
       @render()
       return
     return if source != 'macro' && App.Config.get('tag_new') is false && !@possibleTags[item]
+    
+    # Prevent manual addition of system-reserved tags (managed by approval system)
+    reservedTags = ['approved', 'rejected']
+    if _.contains(reservedTags, item)
+      @notify(
+        type: 'error'
+        msg: App.i18n.translateContent('This tag is reserved and managed by the approval system.')
+      )
+      return
+    
     @localTags.push item
     @render()
     App[@object_type].tagAdd(@object.id, item)
@@ -111,6 +131,15 @@ class App.WidgetTag extends App.Controller
     @remove(item)
 
   remove: (item) =>
+    # Prevent manual removal of system-reserved tags (managed by approval system)
+    reservedTags = ['approved', 'rejected']
+    if _.contains(reservedTags, item)
+      @notify(
+        type: 'error'
+        msg: App.i18n.translateContent('This tag is reserved and managed by the approval system.')
+      )
+      return
+    
     @localTags = _.filter(@localTags, (tagItem) -> return tagItem if tagItem isnt item)
     @render()
     App[@object_type].tagRemove(@object.id, item)
