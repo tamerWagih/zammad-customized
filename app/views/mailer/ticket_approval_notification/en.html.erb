@@ -1,150 +1,46 @@
 <% case action %>
 <% when 'create' %>
-<%= self.T('Approval request for ticket #%s', ticket.number) %>
+Approval request for ticket (#{ticket.title})
 <% when 'update' %>
-<%= self.T('Approval request updated for ticket #%s', ticket.number) %>
+Approval request updated for ticket (#{ticket.title})
 <% when 'approve' %>
-<%= self.T('Ticket #%s approved', ticket.number) %>
+Ticket approved (#{ticket.title})
 <% when 'reject' %>
-<%= self.T('Ticket #%s rejected', ticket.number) %>
+Ticket rejected (#{ticket.title})
 <% when 'delete' %>
-<%= self.T('Approval request deleted for ticket #%s', ticket.number) %>
+Approval request deleted for ticket (#{ticket.title})
 <% else %>
-<%= self.T('Approval notification for ticket #%s', ticket.number) %>
+Approval notification for ticket (#{ticket.title})
 <% end %>
 
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-    <h2 style="color: #333; margin: 0 0 10px 0;">
-      <% case action %>
-      <% when 'create' %>
-        <%= self.T('Approval Request') %>
-      <% when 'update' %>
-        <%= self.T('Approval Request Updated') %>
-      <% when 'approve' %>
-        <%= self.T('Ticket Approved') %>
-      <% when 'reject' %>
-        <%= self.T('Ticket Rejected') %>
-      <% when 'delete' %>
-        <%= self.T('Approval Request Deleted') %>
-      <% else %>
-        <%= self.T('Approval Notification') %>
-      <% end %>
-    </h2>
-    
-    <p style="color: #666; margin: 0;">
-      <%= self.T('Hello %s,', recipient.firstname) %>
-    </p>
-  </div>
-
-  <div style="background-color: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px;">
-    <h3 style="color: #333; margin: 0 0 15px 0;">
-      <%= self.T('Ticket Details') %>
-    </h3>
-    
-    <table style="width: 100%; border-collapse: collapse;">
-      <tr>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold; width: 30%;">
-          <%= self.T('Ticket #') %>
-        </td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee;">
-          <%= ticket.number %>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold;">
-          <%= self.T('Title') %>
-        </td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee;">
-          <%= ticket.title %>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold;">
-          <%= self.T('Status') %>
-        </td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee;">
-          <% case approval.status %>
-          <% when 'pending' %>
-            <span style="color: #ffc107; font-weight: bold;"><%= self.T('Pending') %></span>
-          <% when 'approved' %>
-            <span style="color: #28a745; font-weight: bold;"><%= self.T('Approved') %></span>
-          <% when 'rejected' %>
-            <span style="color: #dc3545; font-weight: bold;"><%= self.T('Rejected') %></span>
-          <% else %>
-            <%= approval.status %>
-          <% end %>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold;">
-          <%= self.T('Priority') %>
-        </td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee;">
-          <% case approval.priority %>
-          <% when 'low' %>
-            <span style="color: #6c757d;"><%= self.T('Low') %></span>
-          <% when 'normal' %>
-            <span style="color: #007bff;"><%= self.T('Normal') %></span>
-          <% when 'high' %>
-            <span style="color: #fd7e14;"><%= self.T('High') %></span>
-          <% when 'urgent' %>
-            <span style="color: #dc3545; font-weight: bold;"><%= self.T('Urgent') %></span>
-          <% else %>
-            <%= approval.priority %>
-          <% end %>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold;">
-          <%= self.T('Requester') %>
-        </td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee;">
-          <%= approval.requester %>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold;">
-          <%= self.T('Approver') %>
-        </td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee;">
-          <%= approval.approver %>
-        </td>
-      </tr>
-      <% if approval.message.present? %>
-      <tr>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold; vertical-align: top;">
-          <%= self.T('Message') %>
-        </td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #eee;">
-          <%= simple_format(approval.message) %>
-        </td>
-      </tr>
-      <% end %>
-    </table>
-  </div>
-
-  <div style="text-align: center; margin: 20px 0;">
-    <a href="<%= url %>" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
-      <%= self.T('View Ticket') %>
-    </a>
-  </div>
-
-  <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 12px; color: #666;">
-    <p style="margin: 0;">
-      <% case action %>
-      <% when 'create' %>
-        <%= self.T('You have received an approval request for this ticket.') %>
-      <% when 'approve' %>
-        <%= self.T('Your approval request has been approved.') %>
-      <% when 'reject' %>
-        <%= self.T('Your approval request has been rejected.') %>
-      <% else %>
-        <%= self.T('This notification was sent regarding an approval request.') %>
-      <% end %>
-    </p>
-    <p style="margin: 10px 0 0 0;">
-      <%= self.T('You can manage your notification preferences in your user profile.') %>
-    </p>
-  </div>
+<div>Hi #{recipient.firstname},</div>
+<br>
+<% case action %>
+<% when 'create' %>
+<div>You have received an approval request for ticket "<b>#{ticket.title}</b>" from "<b>#{approval.requester.fullname}</b>".</div>
+<% when 'update' %>
+<div>The approval request for ticket "<b>#{ticket.title}</b>" has been updated by "<b>#{actor.longname}</b>".</div>
+<% when 'approve' %>
+<div>Your approval request for ticket "<b>#{ticket.title}</b>" has been approved by "<b>#{actor.longname}</b>".</div>
+<% when 'reject' %>
+<div>Your approval request for ticket "<b>#{ticket.title}</b>" has been rejected by "<b>#{actor.longname}</b>".</div>
+<% when 'delete' %>
+<div>The approval request for ticket "<b>#{ticket.title}</b>" has been deleted.</div>
+<% else %>
+<div>There has been an update to the approval request for ticket "<b>#{ticket.title}</b>".</div>
+<% end %>
+<br>
+<div>
+Ticket: ##{ticket.number}<br>
+Status: #{t(approval.status)}<br>
+Priority: #{t(approval.priority)}<br>
+Approver: #{approval.approver.fullname}<br>
+Requester: #{approval.requester.fullname}<br>
+<% if approval.message.present? %>
+Message: #{approval.message}<br>
+<% end %>
+</div>
+<br>
+<div>
+  <a href="#{config.http_type}://#{config.fqdn}/#ticket/zoom/#{ticket.id}" target="zammad_app">View this in #{config.product_name}</a>
 </div>
