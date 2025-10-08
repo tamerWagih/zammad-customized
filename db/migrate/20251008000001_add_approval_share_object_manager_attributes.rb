@@ -1,6 +1,6 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
-class AddApprovalShareObjectManagerAttributes < ActiveRecord::Migration[7.0]
+class AddApprovalShareObjectManagerAttributes < ActiveRecord::Migration[7.2]
   def up
     # return if it's a new setup
     return if !Setting.exists?(name: 'system_init_done')
