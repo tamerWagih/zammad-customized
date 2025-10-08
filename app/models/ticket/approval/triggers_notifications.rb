@@ -18,7 +18,7 @@ module Ticket::Approval::TriggersNotifications
     EventBuffer.add('transaction', {
       object:     'Ticket::Approval',
       type:       'create',
-      object_id:  id,
+      id:         id,  # FIX: Use :id not :object_id (Zammad's TransactionDispatcher expects :id)
       user_id:    user_id,
       created_at: Time.zone.now,
     })
@@ -46,7 +46,7 @@ module Ticket::Approval::TriggersNotifications
     EventBuffer.add('transaction', {
       object:     'Ticket::Approval',
       type:       type,
-      object_id:  id,
+      id:         id,  # FIX: Use :id not :object_id (Zammad's TransactionDispatcher expects :id)
       changes:    saved_changes,
       user_id:    user_id,
       created_at: Time.zone.now,

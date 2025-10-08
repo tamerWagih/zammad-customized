@@ -18,7 +18,7 @@ module Ticket::Share::TriggersNotifications
     EventBuffer.add('transaction', {
       object:     'Ticket::Share',
       type:       'create',
-      object_id:  id,
+      id:         id,  # FIX: Use :id not :object_id (Zammad's TransactionDispatcher expects :id)
       user_id:    user_id,
       created_at: Time.zone.now,
     })
@@ -39,7 +39,7 @@ module Ticket::Share::TriggersNotifications
     EventBuffer.add('transaction', {
       object:     'Ticket::Share',
       type:       type,
-      object_id:  id,
+      id:         id,  # FIX: Use :id not :object_id (Zammad's TransactionDispatcher expects :id)
       changes:    saved_changes,
       user_id:    user_id,
       created_at: Time.zone.now,
