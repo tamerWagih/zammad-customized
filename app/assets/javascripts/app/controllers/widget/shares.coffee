@@ -122,8 +122,7 @@ class App.WidgetShares extends App.Controller
             if ticket
               ticket._shares_cache = @localShares
             
-            # Trigger sidebar update for badge
-            App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
+            # Don't trigger sidebar rerender - WebSocket will handle it with fresh data
             
             # WebSocket will handle eventual consistency
           error: (xhr, status, error) =>
@@ -160,8 +159,7 @@ class App.WidgetShares extends App.Controller
             if ticket
               ticket._shares_cache = @localShares
             
-            # Trigger sidebar update for badge
-            App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
+            # Don't trigger sidebar rerender - WebSocket will handle it with fresh data
             
             # WebSocket will handle eventual consistency
           error: (xhr, status, error) =>
@@ -203,8 +201,7 @@ class App.WidgetShares extends App.Controller
             if ticket
               ticket._shares_cache = @localShares
             
-            # Trigger sidebar update for badge
-            App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
+            # Don't trigger sidebar rerender - WebSocket will handle it with fresh data
         # WebSocket will handle eventual consistency
     )
 

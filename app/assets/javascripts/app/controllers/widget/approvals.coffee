@@ -149,8 +149,8 @@ class App.WidgetApprovals extends App.Controller
         if ticket
           ticket._approvals_cache = @localApprovals
         
-        # Trigger sidebar update for badge (reload() will skip if within 3s)
-        App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
+        # Don't trigger sidebar rerender here - would reload with stale data causing blink
+        # WebSocket event will trigger it with fresh data (~1s later)
       error: (xhr, status, error) =>
         console.error "Failed to #{action} approval:", status, error
         @notify(
@@ -186,8 +186,7 @@ class App.WidgetApprovals extends App.Controller
             if ticket
               ticket._approvals_cache = @localApprovals
             
-            # Trigger sidebar update for badge
-            App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
+            # Don't trigger sidebar rerender - WebSocket will handle it with fresh data
         # WebSocket will handle eventual consistency
     )
 
@@ -215,8 +214,7 @@ class App.WidgetApprovals extends App.Controller
             if ticket
               ticket._approvals_cache = @localApprovals
             
-            # Trigger sidebar update for badge
-            App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
+            # Don't trigger sidebar rerender - WebSocket will handle it with fresh data
             
             # WebSocket will handle eventual consistency
           error: (xhr, status, error) =>
