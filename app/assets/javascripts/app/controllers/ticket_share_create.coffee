@@ -41,8 +41,8 @@ class App.TicketShareCreate extends App.ControllerModal
       nameB = (b.fullname || b.name || '').toLowerCase()
       if nameA < nameB then -1 else if nameA > nameB then 1 else 0
 
-    # Render modal with data
-    @render()
+    # Render modal with data (delay to ensure DOM is ready)
+    @delay(@render, 50)
 
   content: =>
     App.view('ticket_share_create')(
@@ -63,7 +63,7 @@ class App.TicketShareCreate extends App.ControllerModal
 
   renderError: (xhr, status, error) =>
     @error = true
-    @render()
+    @delay(@render, 50)
 
   submit: (e) =>
     e.preventDefault()

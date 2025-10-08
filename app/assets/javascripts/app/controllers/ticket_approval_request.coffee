@@ -43,8 +43,8 @@ class App.TicketApprovalRequest extends App.ControllerModal
         role = App.Role.find(role_id)
         role && (role.name == 'Agent' || role.name == 'Admin')
 
-    # Render modal with data
-    @render()
+    # Render modal with data (delay to ensure DOM is ready)
+    @delay(@render, 50)
 
   content: =>
     App.view('ticket_approval_request')(
@@ -62,7 +62,7 @@ class App.TicketApprovalRequest extends App.ControllerModal
 
   renderError: (xhr, status, error) =>
     @error = true
-    @render()
+    @delay(@render, 50)
 
   submit: (e) =>
     e.preventDefault()
