@@ -40,9 +40,14 @@ class App.WidgetApprovals extends App.Controller
     # This prevents WebSocket events from overwriting optimistic updates
     if @lastLocalUpdateTime
       timeSinceUpdate = Date.now() - @lastLocalUpdateTime
-      if timeSinceUpdate < 2000
+      if timeSinceUpdate < 3000
         console.log "[APPROVALS] Skipping reload - local update was #{timeSinceUpdate}ms ago"
         return
+    
+    # Skip if data is essentially the same (prevents unnecessary re-renders)
+    if @localApprovals && _.isEqual(@localApprovals, approvals)
+      console.log "[APPROVALS] Skipping reload - data unchanged"
+      return
     
     # Standard pattern: just update local data and re-render (like WidgetTag)
     @localApprovals = _.clone(approvals)
@@ -152,10 +157,8 @@ class App.WidgetApprovals extends App.Controller
         if ticket
           ticket._approvals_cache = @localApprovals
         
-        # Trigger sidebar update for badge
+        # Trigger sidebar update for badge (reload() will skip if within 3s)
         App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
-        
-        # WebSocket will handle eventual consistency
       error: (xhr, status, error) =>
         console.error "Failed to #{action} approval:", status, error
         @notify(

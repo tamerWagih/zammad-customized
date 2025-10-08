@@ -35,13 +35,18 @@ class App.WidgetShares extends App.Controller
     )
 
   reload: (shares) =>
-    # Skip reload if we just did a local update (within 2 seconds)
+    # Skip reload if we just did a local update (within 3 seconds)
     # This prevents WebSocket events from overwriting optimistic updates
     if @lastLocalUpdateTime
       timeSinceUpdate = Date.now() - @lastLocalUpdateTime
-      if timeSinceUpdate < 2000
+      if timeSinceUpdate < 3000
         console.log "[SHARES] Skipping reload - local update was #{timeSinceUpdate}ms ago"
         return
+    
+    # Skip if data is essentially the same (prevents unnecessary re-renders)
+    if @localShares && _.isEqual(@localShares, shares)
+      console.log "[SHARES] Skipping reload - data unchanged"
+      return
     
     # Standard pattern: just update local data and re-render (like WidgetTag)
     @localShares = _.clone(shares)

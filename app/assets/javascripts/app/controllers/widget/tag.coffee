@@ -53,13 +53,9 @@ class App.WidgetTag extends App.Controller
     @lastLocalTags = _.clone(@localTags)
 
     # Filter out system-reserved tags (approval/rejection tags managed by approval system)
-    reservedTags = ['approved', 'rejected']
-    visibleTags = _.filter(@localTags || [], (tag) -> !_.contains(reservedTags, tag))
-    systemTags = _.filter(@localTags || [], (tag) -> _.contains(reservedTags, tag))
-
+    # Note: We still render all tags, just hide reserved ones in the template
     @html App.view(@templateName)(
-      tags: visibleTags
-      systemTags: systemTags
+      tags: @localTags || []
       editable: @editable
     )
     source = "#{App.Config.get('api_path')}/tag_search"
