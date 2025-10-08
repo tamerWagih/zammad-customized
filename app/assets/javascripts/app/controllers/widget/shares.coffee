@@ -35,24 +35,15 @@ class App.WidgetShares extends App.Controller
     )
 
   reload: (shares) =>
-    # PRIMARY PROTECTION: Skip if data is unchanged (prevents unnecessary re-renders)
-    # This is the main guard - if data hasn't changed, never re-render
+    # ONLY PROTECTION: Skip if data is unchanged (Zammad WidgetTag pattern)
+    # This is sufficient - if data hasn't changed, no need to re-render
+    # If data HAS changed, always update (even if rapid)
     if @localShares && _.isEqual(@localShares, shares)
       console.log "[SHARES] Skipping reload - data unchanged"
       return
     
-    # SECONDARY PROTECTION: Skip very rapid successive updates (< 500ms)
-    # This only blocks if:
-    # 1. We just did a local update AND
-    # 2. New data is DIFFERENT but arrived too quickly (prevents flicker from race conditions)
-    # This allows WebSocket updates after ~1s to go through even after local action
-    if @lastLocalUpdateTime
-      timeSinceUpdate = Date.now() - @lastLocalUpdateTime
-      if timeSinceUpdate < 500
-        console.log "[SHARES] Skipping reload - too soon after local update (#{timeSinceUpdate}ms)"
-        return
-    
-    # Data is different AND enough time passed → update UI
+    # Data is different → update UI immediately
+    console.log "[SHARES] Reload triggered - data changed"
     @localShares = _.clone(shares)
     @render()
 
@@ -114,9 +105,6 @@ class App.WidgetShares extends App.Controller
           type: 'POST'
           url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}/revoke"
           success: (data) =>
-            # Mark that we just did a local update
-            @lastLocalUpdateTime = Date.now()
-            
             # Update local data immediately - set status to 'revoked'
             share = _.find(@localShares, (s) -> parseInt(s.id) is parseInt(share_id))
             if share
@@ -161,9 +149,6 @@ class App.WidgetShares extends App.Controller
           type: 'DELETE'
           url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}"
           success: =>
-            # Mark that we just did a local update
-            @lastLocalUpdateTime = Date.now()
-            
             # Remove from local data immediately
             @localShares = _.filter(@localShares, (s) -> parseInt(s.id) isnt parseInt(share_id))
             
@@ -207,9 +192,6 @@ class App.WidgetShares extends App.Controller
       callback: (updated_share) =>
         # Update local data immediately with response data
         if updated_share
-          # Mark that we just did a local update
-          @lastLocalUpdateTime = Date.now()
-          
           index = _.findIndex(@localShares, (s) -> parseInt(s.id) is parseInt(updated_share.id))
           if index >= 0
             @localShares[index] = updated_share

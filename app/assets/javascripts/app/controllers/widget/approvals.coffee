@@ -36,24 +36,15 @@ class App.WidgetApprovals extends App.Controller
     )
 
   reload: (approvals) =>
-    # PRIMARY PROTECTION: Skip if data is unchanged (prevents unnecessary re-renders)
-    # This is the main guard - if data hasn't changed, never re-render
+    # ONLY PROTECTION: Skip if data is unchanged (Zammad WidgetTag pattern)
+    # This is sufficient - if data hasn't changed, no need to re-render
+    # If data HAS changed, always update (even if rapid)
     if @localApprovals && _.isEqual(@localApprovals, approvals)
       console.log "[APPROVALS] Skipping reload - data unchanged"
       return
     
-    # SECONDARY PROTECTION: Skip very rapid successive updates (< 500ms)
-    # This only blocks if:
-    # 1. We just did a local update AND
-    # 2. New data is DIFFERENT but arrived too quickly (prevents flicker from race conditions)
-    # This allows WebSocket updates after ~1s to go through even after local action
-    if @lastLocalUpdateTime
-      timeSinceUpdate = Date.now() - @lastLocalUpdateTime
-      if timeSinceUpdate < 500
-        console.log "[APPROVALS] Skipping reload - too soon after local update (#{timeSinceUpdate}ms)"
-        return
-    
-    # Data is different AND enough time passed → update UI
+    # Data is different → update UI immediately
+    console.log "[APPROVALS] Reload triggered - data changed"
     @localApprovals = _.clone(approvals)
     @render()
 
@@ -139,9 +130,6 @@ class App.WidgetApprovals extends App.Controller
       url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/#{action}"
       processData: true
       success: (data) =>
-        # Mark that we just did a local update
-        @lastLocalUpdateTime = Date.now()
-        
         # Update local data immediately
         if data?.approval
           index = _.findIndex(@localApprovals, (a) -> parseInt(a.id) is parseInt(approval_id))
@@ -187,9 +175,6 @@ class App.WidgetApprovals extends App.Controller
       callback: (updated_approval) =>
         # Update local data immediately with response data
         if updated_approval
-          # Mark that we just did a local update to prevent WebSocket overwrites
-          @lastLocalUpdateTime = Date.now()
-          
           index = _.findIndex(@localApprovals, (a) -> parseInt(a.id) is parseInt(updated_approval.id))
           if index >= 0
             @localApprovals[index] = updated_approval
@@ -219,9 +204,6 @@ class App.WidgetApprovals extends App.Controller
           type: 'DELETE'
           url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
           success: =>
-            # Mark that we just did a local update
-            @lastLocalUpdateTime = Date.now()
-            
             # Remove from local data immediately
             @localApprovals = _.filter(@localApprovals, (a) -> parseInt(a.id) isnt parseInt(approval_id))
             

@@ -59,6 +59,7 @@ class App.WidgetTag extends App.Controller
       editable: @editable
     )
     source = "#{App.Config.get('api_path')}/tag_search"
+    reservedTags = ['approved', 'rejected']  # Define in this scope for autocomplete callback
     @$('.js-newTagInput').autocomplete(
       source: source
       minLength: 0
