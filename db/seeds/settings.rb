@@ -2687,30 +2687,6 @@ Setting.create_or_update(
         email:  true,
         online: true,
       }
-    },
-    approval:          {
-      criteria: {
-        owned_by_me:     true,
-        owned_by_nobody: true,
-        subscribed:      true,
-        no:              false,
-      },
-      channel:  {
-        email:  true,
-        online: true,
-      }
-    },
-    share:             {
-      criteria: {
-        owned_by_me:     true,
-        owned_by_nobody: true,
-        subscribed:      true,
-        no:              false,
-      },
-      channel:  {
-        email:  true,
-        online: true,
-      }
     }
   },
   frontend:    true
