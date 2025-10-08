@@ -26,8 +26,9 @@ class TransactionDispatcher
     list = EventBuffer.list('transaction')
     Rails.logger.info "[TRANSACTION_DISPATCHER] 📥 Processing #{list.count} events from EventBuffer"
     
-    # Log our specific events
-    list.each do |event|
+    # Log all events for debugging
+    list.each_with_index do |event, index|
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Event #{index + 1}: #{event[:object]} ##{event[:id]} (#{event[:type]}) - user_id: #{event[:user_id]}"
       if event[:object] == 'Ticket::Approval' || event[:object] == 'Ticket::Share'
         Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 Found our event: #{event[:object]} ##{event[:id]} (#{event[:type]})"
         Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Event details: #{event.inspect}"
@@ -200,6 +201,13 @@ class TransactionDispatcher
     # return if we run import mode
     return true if Setting.get('import_mode')
 
+    # Add debugging for our specific models
+    if record.class.name == 'Ticket::Approval' || record.class.name == 'Ticket::Share'
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 after_create called for #{record.class.name} ##{record.id}"
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 record.created_by_id: #{record.created_by_id}"
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 UserInfo.current_user_id: #{UserInfo.current_user_id}"
+    end
+
     e = {
       object:     record.class.name,
       type:       'create',
@@ -209,6 +217,11 @@ class TransactionDispatcher
       created_at: Time.zone.now,
     }
     EventBuffer.add('transaction', e)
+    
+    if record.class.name == 'Ticket::Approval' || record.class.name == 'Ticket::Share'
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📨 Event added to EventBuffer for #{record.class.name} ##{record.id} (create)"
+    end
+    
     true
   end
 
@@ -217,6 +230,14 @@ class TransactionDispatcher
 
     # return if we run import mode
     return true if Setting.get('import_mode')
+
+    # Add debugging for our specific models
+    if record.class.name == 'Ticket::Approval' || record.class.name == 'Ticket::Share'
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 after_update called for #{record.class.name} ##{record.id}"
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 record.updated_by_id: #{record.updated_by_id rescue 'N/A'}"
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 record.created_by_id: #{record.created_by_id rescue 'N/A'}"
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 UserInfo.current_user_id: #{UserInfo.current_user_id}"
+    end
 
     # ignore certain attributes
     real_changes = {}
@@ -230,13 +251,23 @@ class TransactionDispatcher
     end
 
     # do not send anything if nothing has changed
-    return true if real_changes.blank?
+    if real_changes.blank?
+      if record.class.name == 'Ticket::Approval' || record.class.name == 'Ticket::Share'
+        Rails.logger.info "[TRANSACTION_DISPATCHER] ⚠️ No real changes for #{record.class.name} ##{record.id} - skipping"
+      end
+      return true
+    end
 
     changed_by_id = if record.respond_to?(:updated_by_id)
                       record.updated_by_id
                     else
                       record.created_by_id
                     end
+
+    if record.class.name == 'Ticket::Approval' || record.class.name == 'Ticket::Share'
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Using changed_by_id: #{changed_by_id}"
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Real changes: #{real_changes.keys.join(', ')}"
+    end
 
     e = {
       object:     record.class.name,
@@ -248,6 +279,11 @@ class TransactionDispatcher
       created_at: Time.zone.now,
     }
     EventBuffer.add('transaction', e)
+    
+    if record.class.name == 'Ticket::Approval' || record.class.name == 'Ticket::Share'
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📨 Event added to EventBuffer for #{record.class.name} ##{record.id} (update)"
+    end
+    
     true
   end
 
