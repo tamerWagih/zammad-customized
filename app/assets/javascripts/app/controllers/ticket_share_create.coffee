@@ -45,11 +45,11 @@ class App.TicketShareCreate extends App.ControllerModal
     @render()
 
   content: =>
-    App.view('ticket_share_create')(
+    $( App.view('ticket_share_create')(
       ticket_id: @ticket_id
       groups: @groups || []
       error: @error
-    )
+    ))
 
   onShown: =>
     @toggleSubmit()

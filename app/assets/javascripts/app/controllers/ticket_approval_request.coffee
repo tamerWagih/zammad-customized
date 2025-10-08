@@ -47,11 +47,11 @@ class App.TicketApprovalRequest extends App.ControllerModal
     @render()
 
   content: =>
-    App.view('ticket_approval_request')(
+    $( App.view('ticket_approval_request')(
       ticket_id: @ticket_id
       approvers: @approvers || []
       error: @error
-    )
+    ))
 
   onShown: =>
     @toggleSubmit()
