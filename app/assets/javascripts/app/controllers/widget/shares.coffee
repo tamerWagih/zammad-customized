@@ -91,7 +91,7 @@ class App.WidgetShares extends App.Controller
     @html App.view('widget/shares')(
       shares: shares_data
       ticket_id: @ticket_id
-      current_user_id: current_user.id
+      current_user_id: current_user.id.toString()  # Convert to string to match backend format
     )
 
   revokeShare: (e) =>
