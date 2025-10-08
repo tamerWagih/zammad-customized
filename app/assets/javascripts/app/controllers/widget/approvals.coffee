@@ -141,6 +141,9 @@ class App.WidgetApprovals extends App.Controller
         if ticket
           ticket._approvals_cache = @localApprovals
         
+        # Trigger sidebar update for badge
+        App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
+        
         # WebSocket will handle eventual consistency
       error: (xhr, status, error) =>
         console.error "Failed to #{action} approval:", status, error
@@ -171,6 +174,14 @@ class App.WidgetApprovals extends App.Controller
             @localApprovals[index] = updated_approval
             # Re-render locally without API fetch
             @render()
+            
+            # Update permission cache
+            ticket = App.Ticket.findNative(@ticket_id)
+            if ticket
+              ticket._approvals_cache = @localApprovals
+            
+            # Trigger sidebar update for badge
+            App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
         # WebSocket will handle eventual consistency
     )
 
@@ -197,6 +208,9 @@ class App.WidgetApprovals extends App.Controller
             ticket = App.Ticket.findNative(@ticket_id)
             if ticket
               ticket._approvals_cache = @localApprovals
+            
+            # Trigger sidebar update for badge
+            App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
             
             # WebSocket will handle eventual consistency
           error: (xhr, status, error) =>

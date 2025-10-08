@@ -114,6 +114,9 @@ class App.WidgetShares extends App.Controller
             if ticket
               ticket._shares_cache = @localShares
             
+            # Trigger sidebar update for badge
+            App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
+            
             # WebSocket will handle eventual consistency
           error: (xhr, status, error) =>
             console.error 'Failed to revoke share:', status, error
@@ -149,6 +152,9 @@ class App.WidgetShares extends App.Controller
             if ticket
               ticket._shares_cache = @localShares
             
+            # Trigger sidebar update for badge
+            App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
+            
             # WebSocket will handle eventual consistency
           error: (xhr, status, error) =>
             # Only show error if not 404 (item might be already deleted)
@@ -183,6 +189,14 @@ class App.WidgetShares extends App.Controller
             @localShares[index] = updated_share
             # Re-render locally without API fetch
             @render()
+            
+            # Update permission cache
+            ticket = App.Ticket.findNative(@ticket_id)
+            if ticket
+              ticket._shares_cache = @localShares
+            
+            # Trigger sidebar update for badge
+            App.Event.trigger('ui::ticket::sidebarRerender', ticket_id: @ticket_id)
         # WebSocket will handle eventual consistency
     )
 
