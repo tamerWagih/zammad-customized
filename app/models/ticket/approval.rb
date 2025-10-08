@@ -12,9 +12,6 @@ class Ticket::Approval < ApplicationModel
   PRIORITIES = %w[low normal high urgent].freeze
   STATUSES   = %w[pending approved rejected].freeze
 
-  before_create :set_created_by
-  before_update :set_updated_by
-
   belongs_to :ticket
   belongs_to :approver, class_name: 'User'
   belongs_to :requester, class_name: 'User'
@@ -105,13 +102,4 @@ class Ticket::Approval < ApplicationModel
     end
   end
 
-  private
-
-  def set_created_by
-    self.created_by_id = UserInfo.current_user_id if created_by_id.nil?
-  end
-
-  def set_updated_by
-    self.updated_by_id = UserInfo.current_user_id
-  end
 end
