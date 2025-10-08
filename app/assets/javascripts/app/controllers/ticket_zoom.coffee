@@ -249,36 +249,42 @@ class App.TicketZoom extends App.Controller
       ticket_id = data?.approval?.ticket_id || data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
       
-      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approval event detected - reloading ticket data"
+      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approval event detected"
       
-      # Refresh ticket object with latest share permissions from server
-      @ajax(
-        id:    'ticket-approval-refresh'
-        type:  'GET'
-        url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
-        success: (ticketData) =>
-          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success (approval event)"
-          
-          # Update ticket object with fresh data
-          if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
-            App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]])
-          
-          @ticket = App.Ticket.findNative(@ticket_id)
-          
-          # Update instance variables (same pattern as tags/links)
-          @approvals = ticketData.approvals || []
-          @shares = ticketData.shares || []
-          
-          # Set cache on ticket object for permission checks
-          @ticket._approvals_cache = @approvals if @ticket
-          @ticket._shares_cache = @shares if @ticket
-          
-          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated approvals (#{@approvals.length}), shares (#{@shares.length})"
-          
-          # Trigger sidebar rerender for approval/share widgets
-          App.Event.trigger('ui::ticket::sidebarRerender')
-        error: (xhr, status, error) =>
-          console.error "[TICKET_ZOOM] Ticket ##{@ticket_id}: Failed to refresh ticket data:", status, error
+      # Delay the refresh to avoid race conditions with optimistic local updates
+      # This gives time for DB commit and prevents overwriting local changes with stale data
+      @delay(
+        =>
+          @ajax(
+            id:    'ticket-approval-refresh'
+            type:  'GET'
+            url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
+            success: (ticketData) =>
+              console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success (approval event)"
+              
+              # Update ticket object with fresh data
+              if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
+                App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]])
+              
+              @ticket = App.Ticket.findNative(@ticket_id)
+              
+              # Update instance variables (same pattern as tags/links)
+              @approvals = ticketData.approvals || []
+              @shares = ticketData.shares || []
+              
+              # Set cache on ticket object for permission checks
+              @ticket._approvals_cache = @approvals if @ticket
+              @ticket._shares_cache = @shares if @ticket
+              
+              console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated approvals (#{@approvals.length}), shares (#{@shares.length})"
+              
+              # Trigger sidebar rerender for approval/share widgets
+              App.Event.trigger('ui::ticket::sidebarRerender')
+            error: (xhr, status, error) =>
+              console.error "[TICKET_ZOOM] Ticket ##{@ticket_id}: Failed to refresh ticket data:", status, error
+          )
+        500  # 500ms delay ensures DB commit is complete and local UI has updated
+        'approval-websocket-refresh'
       )
     )
 
@@ -286,36 +292,42 @@ class App.TicketZoom extends App.Controller
       ticket_id = data?.share?.ticket_id || data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
       
-      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Share event detected - reloading ticket data"
+      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Share event detected"
       
-      # Refresh ticket object with latest share permissions from server
-      @ajax(
-        id:    'ticket-share-refresh'
-        type:  'GET'
-        url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
-        success: (ticketData) =>
-          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success (share event)"
-          
-          # Update ticket object with fresh data
-          if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
-            App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]])
-          
-          @ticket = App.Ticket.findNative(@ticket_id)
-          
-          # Update instance variables (same pattern as tags/links)
-          @approvals = ticketData.approvals || []
-          @shares = ticketData.shares || []
-          
-          # Set cache on ticket object for permission checks
-          @ticket._approvals_cache = @approvals if @ticket
-          @ticket._shares_cache = @shares if @ticket
-          
-          console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated approvals (#{@approvals.length}), shares (#{@shares.length})"
-          
-          # Trigger sidebar rerender for approval/share widgets
-          App.Event.trigger('ui::ticket::sidebarRerender')
-        error: (xhr, status, error) =>
-          console.error "[TICKET_ZOOM] Ticket ##{@ticket_id}: Failed to refresh ticket data:", status, error
+      # Delay the refresh to avoid race conditions with optimistic local updates
+      # This gives time for DB commit and prevents overwriting local changes with stale data
+      @delay(
+        =>
+          @ajax(
+            id:    'ticket-share-refresh'
+            type:  'GET'
+            url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
+            success: (ticketData) =>
+              console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success (share event)"
+              
+              # Update ticket object with fresh data
+              if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
+                App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]])
+              
+              @ticket = App.Ticket.findNative(@ticket_id)
+              
+              # Update instance variables (same pattern as tags/links)
+              @approvals = ticketData.approvals || []
+              @shares = ticketData.shares || []
+              
+              # Set cache on ticket object for permission checks
+              @ticket._approvals_cache = @approvals if @ticket
+              @ticket._shares_cache = @shares if @ticket
+              
+              console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated approvals (#{@approvals.length}), shares (#{@shares.length})"
+              
+              # Trigger sidebar rerender for approval/share widgets
+              App.Event.trigger('ui::ticket::sidebarRerender')
+            error: (xhr, status, error) =>
+              console.error "[TICKET_ZOOM] Ticket ##{@ticket_id}: Failed to refresh ticket data:", status, error
+          )
+        500  # 500ms delay ensures DB commit is complete and local UI has updated
+        'share-websocket-refresh'
       )
     )
 
