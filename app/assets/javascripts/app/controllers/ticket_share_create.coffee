@@ -5,17 +5,18 @@ class App.TicketShareCreate extends App.ControllerModal
   buttonClass: 'btn--primary'
   head: __('Share Ticket')
   buttonSubmitDisabled: true
-  shown: false
   
   events:
     'submit form': 'submit'
     'change select[name="group_id"]': 'toggleSubmit'
 
-  constructor: ->
-    super
-    @fetch()
+  content: ->
+    # Return loading placeholder initially
+    '<p class="loading">Loading groups...</p>'
 
-  fetch: =>
+  onShown: (e) =>
+    super
+    # Load data after modal is shown
     @ajax(
       id:          'groups_for_sharing'
       type:        'GET'
@@ -36,22 +37,18 @@ class App.TicketShareCreate extends App.ControllerModal
     if ticket?.group_id
       groups = groups.filter (group) -> group.id.toString() isnt ticket.group_id.toString()
     
-    @groups = groups.sort (a, b) ->
+    groups = groups.sort (a, b) ->
       nameA = (a.fullname || a.name || '').toLowerCase()
       nameB = (b.fullname || b.name || '').toLowerCase()
       if nameA < nameB then -1 else if nameA > nameB then 1 else 0
 
-    # Render modal with data (exact pattern from ticket_link_add)
-    @render()
-
-  content: =>
-    $( App.view('ticket_share_create')(
+    # Update modal body content (same pattern as Translation modal)
+    content = App.view('ticket_share_create')(
       ticket_id: @ticket_id
-      groups: @groups || []
-      error: @error
-    ))
-
-  onShown: =>
+      groups: groups
+      error: false
+    )
+    @el.find('.modal-body').html(content)
     @toggleSubmit()
 
   toggleSubmit: =>
@@ -62,8 +59,12 @@ class App.TicketShareCreate extends App.ControllerModal
       @$('.js-submit').addClass('is-disabled')
 
   renderError: (xhr, status, error) =>
-    @error = true
-    @render()
+    content = App.view('ticket_share_create')(
+      ticket_id: @ticket_id
+      groups: []
+      error: true
+    )
+    @el.find('.modal-body').html(content)
 
   submit: (e) =>
     e.preventDefault()

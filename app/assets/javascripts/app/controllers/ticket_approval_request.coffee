@@ -5,17 +5,18 @@ class App.TicketApprovalRequest extends App.ControllerModal
   buttonClass: 'btn--primary'
   head: __('Request Approval')
   buttonSubmitDisabled: true
-  shown: false
   
   events:
     'submit form': 'submit'
     'change select[name="approver_id"]': 'toggleSubmit'
 
-  constructor: ->
-    super
-    @fetch()
+  content: ->
+    # Return loading placeholder initially
+    '<p class="loading">Loading approvers...</p>'
 
-  fetch: =>
+  onShown: (e) =>
+    super
+    # Load data after modal is shown
     @ajax(
       id:          'users_for_approval'
       type:        'GET'
@@ -35,7 +36,7 @@ class App.TicketApprovalRequest extends App.ControllerModal
     
     # Filter to only show agents/admins from the same organization
     current_user_id = App.User.current()?.id
-    @approvers = users.filter (user) ->
+    approvers = users.filter (user) ->
       # Exclude current user
       return false if user.id is current_user_id
       # Only show agents and admins, regardless of org (admins may span orgs)
@@ -43,17 +44,13 @@ class App.TicketApprovalRequest extends App.ControllerModal
         role = App.Role.find(role_id)
         role && (role.name == 'Agent' || role.name == 'Admin')
 
-    # Render modal with data (exact pattern from ticket_link_add)
-    @render()
-
-  content: =>
-    $( App.view('ticket_approval_request')(
+    # Update modal body content (same pattern as Translation modal)
+    content = App.view('ticket_approval_request')(
       ticket_id: @ticket_id
-      approvers: @approvers || []
-      error: @error
-    ))
-
-  onShown: =>
+      approvers: approvers
+      error: false
+    )
+    @el.find('.modal-body').html(content)
     @toggleSubmit()
   
   toggleSubmit: =>
@@ -61,8 +58,12 @@ class App.TicketApprovalRequest extends App.ControllerModal
     if selected then @$('.js-submit').removeClass('is-disabled') else @$('.js-submit').addClass('is-disabled')
 
   renderError: (xhr, status, error) =>
-    @error = true
-    @render()
+    content = App.view('ticket_approval_request')(
+      ticket_id: @ticket_id
+      approvers: []
+      error: true
+    )
+    @el.find('.modal-body').html(content)
 
   submit: (e) =>
     e.preventDefault()
