@@ -17561,6 +17561,14 @@ msgstr ""
 msgid "Ticket escalation"
 msgstr ""
 
+#: app/assets/javascripts/app/controllers/_ui_element/notification_matrix.coffee:15
+msgid "Ticket approval"
+msgstr ""
+
+#: app/assets/javascripts/app/controllers/_ui_element/notification_matrix.coffee:17
+msgid "Ticket share"
+msgstr ""
+
 #: app/assets/javascripts/app/lib/mixins/ticket_mass_updatable.coffee:33
 msgid "Ticket failed to save: %s"
 msgstr ""
