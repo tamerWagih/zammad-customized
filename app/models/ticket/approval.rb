@@ -15,6 +15,8 @@ class Ticket::Approval < ApplicationModel
   belongs_to :ticket
   belongs_to :approver, class_name: 'User'
   belongs_to :requester, class_name: 'User'
+  belongs_to :created_by, class_name: 'User', optional: true
+  belongs_to :updated_by, class_name: 'User', optional: true
 
   validates :status, inclusion: { in: STATUSES }
   validates :ticket_id, presence: true

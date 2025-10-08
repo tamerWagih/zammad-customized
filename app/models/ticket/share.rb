@@ -16,6 +16,8 @@ class Ticket::Share < ApplicationModel
   belongs_to :ticket
   belongs_to :group
   belongs_to :shared_by, class_name: 'User'
+  belongs_to :created_by, class_name: 'User', optional: true
+  belongs_to :updated_by, class_name: 'User', optional: true
 
   validates :ticket_id, presence: true
   validates :group_id, presence: true
