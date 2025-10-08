@@ -24,6 +24,14 @@ class TransactionDispatcher
 
     # get buffer
     list = EventBuffer.list('transaction')
+    Rails.logger.info "[TRANSACTION_DISPATCHER] 📥 Processing #{list.count} events from EventBuffer"
+    
+    # Log our specific events
+    list.each do |event|
+      if event[:object] == 'Ticket::Approval' || event[:object] == 'Ticket::Share'
+        Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 Found our event: #{event[:object]} ##{event[:id]} (#{event[:type]})"
+      end
+    end
 
     # reset buffer
     EventBuffer.reset('transaction')
@@ -130,10 +138,15 @@ class TransactionDispatcher
         event[:changes] = nil
       end
 
-      # get current state of objects
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 🔍 Looking for #{event[:object]} with id: #{event[:id]}"
-      object = event[:object].constantize.find_by(id: event[:id])
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 📦 Found object: #{object.inspect}"
+    # get current state of objects
+    Rails.logger.info "[TRANSACTION_DISPATCHER] 🔍 Looking for #{event[:object]} with id: #{event[:id]}"
+    object = event[:object].constantize.find_by(id: event[:id])
+    Rails.logger.info "[TRANSACTION_DISPATCHER] 📦 Found object: #{object.inspect}"
+    
+    # Additional debugging for our specific events
+    if event[:object] == 'Ticket::Approval' || event[:object] == 'Ticket::Share'
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 Processing our custom event: #{event[:object]} ##{event[:id]} (#{event[:type]})"
+    end
 
       # next if object is already deleted
       if !object

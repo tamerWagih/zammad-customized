@@ -45,6 +45,10 @@ class AddApprovalShareToDefaultNotifications < ActiveRecord::Migration[7.2]
 
     # Update the setting
     setting.update!(state: current_state)
+    
+    # CRITICAL: Also update the initial state so "Reset to default" works correctly
+    # The initial state is what gets restored when users click "Reset to default"
+    setting.update!(state_initial: current_state)
   end
 
   def down
