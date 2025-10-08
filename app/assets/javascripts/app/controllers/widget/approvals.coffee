@@ -54,7 +54,9 @@ class App.WidgetApprovals extends App.Controller
     @lastLocalApprovals = _.clone(@localApprovals)
     
     current_user = App.User.current()
-    approvals_data = @localApprovals || []
+    # Clone data before modification to prevent mutation of @localApprovals
+    # This ensures _.isEqual() works correctly on next reload
+    approvals_data = _.map(@localApprovals || [], (a) -> _.clone(a))
     
     # Refresh ticket for permission checks
     if @ticket_id

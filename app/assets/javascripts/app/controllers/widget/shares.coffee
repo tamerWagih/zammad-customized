@@ -53,7 +53,9 @@ class App.WidgetShares extends App.Controller
     @lastLocalShares = _.clone(@localShares)
     
     current_user = App.User.current()
-    shares_data = @localShares || []
+    # Clone data before modification to prevent mutation of @localShares
+    # This ensures _.isEqual() works correctly on next reload
+    shares_data = _.map(@localShares || [], (s) -> _.clone(s))
     
     # Refresh ticket for permission checks
     if @ticket_id
