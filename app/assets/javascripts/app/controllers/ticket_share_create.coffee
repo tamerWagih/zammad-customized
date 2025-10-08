@@ -5,19 +5,17 @@ class App.TicketShareCreate extends App.ControllerModal
   buttonClass: 'btn--primary'
   head: __('Share Ticket')
   buttonSubmitDisabled: true
+  shown: false
   
   events:
     'submit form': 'submit'
     'change select[name="group_id"]': 'toggleSubmit'
 
-  content: ->
-    # Return loading placeholder (same pattern as other Zammad modals)
-    '<p class="loading">Loading groups...</p>'
-  
-  onShown: (e) =>
+  constructor: ->
     super
-    
-    # Load groups asynchronously after modal is shown
+    @fetch()
+
+  fetch: =>
     @ajax(
       id:          'groups_for_sharing'
       type:        'GET'
@@ -38,15 +36,22 @@ class App.TicketShareCreate extends App.ControllerModal
     if ticket?.group_id
       groups = groups.filter (group) -> group.id.toString() isnt ticket.group_id.toString()
     
-    groups = groups.sort (a, b) ->
+    @groups = groups.sort (a, b) ->
       nameA = (a.fullname || a.name || '').toLowerCase()
       nameB = (b.fullname || b.name || '').toLowerCase()
       if nameA < nameB then -1 else if nameA > nameB then 1 else 0
 
-    @el.find('.modal-body').html(App.view('ticket_share_create')({
+    # Render modal with data
+    @render()
+
+  content: =>
+    App.view('ticket_share_create')(
       ticket_id: @ticket_id
-      groups: groups
-    }))
+      groups: @groups || []
+      error: @error
+    )
+
+  onShown: =>
     @toggleSubmit()
 
   toggleSubmit: =>
@@ -57,11 +62,8 @@ class App.TicketShareCreate extends App.ControllerModal
       @$('.js-submit').addClass('is-disabled')
 
   renderError: (xhr, status, error) =>
-    @el.find('.modal-body').html(App.view('ticket_share_create')({
-      ticket_id: @ticket_id
-      groups: []
-      error: true
-    }))
+    @error = true
+    @render()
 
   submit: (e) =>
     e.preventDefault()
