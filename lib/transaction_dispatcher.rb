@@ -30,6 +30,7 @@ class TransactionDispatcher
     list.each do |event|
       if event[:object] == 'Ticket::Approval' || event[:object] == 'Ticket::Share'
         Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 Found our event: #{event[:object]} ##{event[:id]} (#{event[:type]})"
+        Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Event details: #{event.inspect}"
       end
     end
 

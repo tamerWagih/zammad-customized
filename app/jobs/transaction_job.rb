@@ -20,9 +20,16 @@ class TransactionJob < ApplicationJob
   def perform(item, params = {})
     Rails.logger.info "[TRANSACTION_JOB] 🔄 Processing item: #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
     
-    Setting.where(area: 'Transaction::Backend::Async').reorder(:name).each do |setting|
+    # Log all registered backends
+    backends = Setting.where(area: 'Transaction::Backend::Async').reorder(:name)
+    Rails.logger.info "[TRANSACTION_JOB] 📋 Total async backends found: #{backends.count}"
+    backends.each do |setting|
+      Rails.logger.info "[TRANSACTION_JOB] 📋 Backend: #{setting.name} = #{Setting.get(setting.name)}"
+    end
+    
+    backends.each do |setting|
       backend = Setting.get(setting.name)
-      Rails.logger.info "[TRANSACTION_JOB] 📋 Found backend: #{setting.name} = #{backend}"
+      Rails.logger.info "[TRANSACTION_JOB] 📋 Processing backend: #{setting.name} = #{backend}"
       next if params[:disable]&.include?(backend)
 
       Rails.logger.info "[TRANSACTION_JOB] 🚀 Executing backend: #{backend} for #{item[:object]} ##{item[:object_id]}"
