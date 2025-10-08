@@ -13,16 +13,19 @@ module Ticket::Approval::TriggersNotifications
   private
 
   def trigger_create_notification
+    user_id = UserInfo.current_user_id || 1
     EventBuffer.add('transaction', {
       object:     'Ticket::Approval',
       type:       'create',
       object_id:  id,
-      user_id:    created_by_id,
+      user_id:    user_id,
       created_at: Time.zone.now,
     })
   end
 
   def trigger_update_notification
+    user_id = UserInfo.current_user_id || 1
+    
     # Determine specific action type based on status changes
     type = if saved_change_to_status?
       case status
@@ -42,7 +45,7 @@ module Ticket::Approval::TriggersNotifications
       type:       type,
       object_id:  id,
       changes:    saved_changes,
-      user_id:    updated_by_id,
+      user_id:    user_id,
       created_at: Time.zone.now,
     })
   end
