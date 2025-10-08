@@ -34,10 +34,7 @@ class Service::Ticket::Approval::Create < Service::BaseWithCurrentUser
     # This prevents giving access to the entire group and maintains security.
     # Only the specific approver gets full access to the ticket.
 
-    # Send email notifications
-    Service::Ticket::Approval::EmailNotifier
-      .new(current_user: current_user)
-      .notify(approval: approval, action: :create)
+    # Transaction::ApprovalNotification will be triggered automatically via callbacks
 
     approval
   end

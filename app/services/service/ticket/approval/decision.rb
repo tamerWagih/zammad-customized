@@ -22,10 +22,8 @@ class Service::Ticket::Approval::Decision < Service::BaseWithCurrentUser
     approval.update!(status: new_status)
     approval.reload
 
-    # Send email notifications
-    Service::Ticket::Approval::EmailNotifier
-      .new(current_user: current_user)
-      .notify(approval: approval, action: decision_key)
+    # Transaction::ApprovalNotification will be triggered automatically via callbacks
+    # The callback will detect status change and send 'approve' or 'reject' notification
 
     approval
   end

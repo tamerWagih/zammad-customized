@@ -5,6 +5,7 @@ class Ticket::Share < ApplicationModel
   include HasSearchIndexBackend
   include ChecksClientNotification
   include HasTags
+  include Ticket::Share::TriggersNotifications
   include Ticket::Share::TriggersSubscriptions
 
   VALID_PERMISSIONS = %w[full].freeze

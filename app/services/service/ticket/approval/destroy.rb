@@ -7,10 +7,9 @@ class Service::Ticket::Approval::Destroy < Service::BaseWithCurrentUser
 
     serialized = serialize_approval(approval)
     
-    # Send email notifications before destroying
-    Service::Ticket::Approval::EmailNotifier
-      .new(current_user: current_user)
-      .notify(approval: approval, action: :delete)
+    # For destroy, we need to trigger notification BEFORE destroying
+    # because Transaction system can't look up destroyed records
+    trigger_destroy_notification(approval)
     
     approval.destroy!
 
@@ -18,6 +17,21 @@ class Service::Ticket::Approval::Destroy < Service::BaseWithCurrentUser
   end
 
   private
+
+  def trigger_destroy_notification(approval)
+    # Manually trigger notification before destroy
+    notification = Transaction::ApprovalNotification.new(
+      {
+        object:     'Ticket::Approval',
+        type:       'delete',
+        object_id:  approval.id,
+        user_id:    current_user.id,
+        created_at: Time.zone.now,
+      },
+      { interface_handle: 'application_server' }
+    )
+    notification.perform
+  end
 
   def ensure_requester_or_admin!(approval)
     return if approval.requester_id == current_user.id || current_user.permissions?('admin')

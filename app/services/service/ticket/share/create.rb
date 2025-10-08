@@ -26,9 +26,7 @@ class Service::Ticket::Share::Create < Service::BaseWithCurrentUser
       status:      'active'
     )
 
-    Service::Ticket::Share::EmailNotifier
-      .new(current_user: current_user)
-      .notify(share: share, action: :create)
+    # Transaction::ShareNotification will be triggered automatically via callbacks
 
     share
   end

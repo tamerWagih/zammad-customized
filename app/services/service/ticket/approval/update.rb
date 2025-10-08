@@ -17,12 +17,7 @@ class Service::Ticket::Approval::Update < Service::BaseWithCurrentUser
     approval.update!(updates) if updates.any?
     approval.reload
 
-    # Send email notifications if updates were made
-    if updates.any?
-      Service::Ticket::Approval::EmailNotifier
-        .new(current_user: current_user)
-        .notify(approval: approval, action: :update)
-    end
+    # Transaction::ApprovalNotification will be triggered automatically via callbacks
 
     approval
   end

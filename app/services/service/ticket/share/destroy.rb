@@ -7,9 +7,9 @@ class Service::Ticket::Share::Destroy < Service::BaseWithCurrentUser
 
     serialized = serialize_share(share)
 
-    Service::Ticket::Share::EmailNotifier
-      .new(current_user: current_user)
-      .notify(share: share, action: :delete)
+    # For destroy, we need to trigger notification BEFORE destroying
+    # because Transaction system can't look up destroyed records
+    trigger_destroy_notification(share)
 
     share.destroy!
 
@@ -17,6 +17,21 @@ class Service::Ticket::Share::Destroy < Service::BaseWithCurrentUser
   end
 
   private
+
+  def trigger_destroy_notification(share)
+    # Manually trigger notification before destroy
+    notification = Transaction::ShareNotification.new(
+      {
+        object:     'Ticket::Share',
+        type:       'delete',
+        object_id:  share.id,
+        user_id:    current_user.id,
+        created_at: Time.zone.now,
+      },
+      { interface_handle: 'application_server' }
+    )
+    notification.perform
+  end
 
   def ensure_manageable!(share)
     return if share.shared_by_id == current_user.id || current_user.permissions?('admin')

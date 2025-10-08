@@ -5,6 +5,7 @@ class Ticket::Approval < ApplicationModel
   include HasSearchIndexBackend
   include ChecksClientNotification
   include HasTags
+  include Ticket::Approval::TriggersNotifications
   include Ticket::Approval::TriggersSubscriptions
 
   PRIORITIES = %w[low normal high urgent].freeze

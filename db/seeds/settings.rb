@@ -5081,6 +5081,24 @@ Setting.create_if_not_exists(
 )
 Setting.create_if_not_exists(
   title:       __('Defines transaction backend.'),
+  name:        '0110_approval_notification',
+  area:        'Transaction::Backend::Async',
+  description: __('Defines the transaction backend to send approval notifications.'),
+  options:     {},
+  state:       'Transaction::ApprovalNotification',
+  frontend:    false
+)
+Setting.create_if_not_exists(
+  title:       __('Defines transaction backend.'),
+  name:        '0120_share_notification',
+  area:        'Transaction::Backend::Async',
+  description: __('Defines the transaction backend to send share notifications.'),
+  options:     {},
+  state:       'Transaction::ShareNotification',
+  frontend:    false
+)
+Setting.create_if_not_exists(
+  title:       __('Defines transaction backend.'),
   name:        '1000_signature_detection',
   area:        'Transaction::Backend::Async',
   description: __('Defines the transaction backend to detect customer signatures in emails.'),

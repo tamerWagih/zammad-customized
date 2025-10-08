@@ -18,11 +18,7 @@ class Service::Ticket::Share::Update < Service::BaseWithCurrentUser
     share.update!(updates) if updates.any?
     share.reload
 
-    if updates.any?
-      Service::Ticket::Share::EmailNotifier
-        .new(current_user: current_user)
-        .notify(share: share, action: :update)
-    end
+    # Transaction::ShareNotification will be triggered automatically via callbacks
 
     share
   end
