@@ -412,64 +412,6 @@ ObjectManager::Attribute.add(
   position:    900,
 )
 
-# Approval and Share attributes for Ticket object
-ObjectManager::Attribute.add(
-  force:       true,
-  object:      'Ticket',
-  name:        'approvals',
-  display:     __('Approvals'),
-  data_type:   'richtext',
-  data_option: {
-    type:      'text',
-    maxlength: 5000,
-    no_images: true,
-    null:      true,
-    translate: false,
-  },
-  editable:    false,
-  active:      true,
-  screens:     {
-    create_bottom: {
-      'ticket.agent' => {
-        null: true,
-      },
-    },
-    edit:          {},
-  },
-  to_create:   false,
-  to_migrate:  false,
-  to_delete:   false,
-  position:    910,
-)
-
-ObjectManager::Attribute.add(
-  force:       true,
-  object:      'Ticket',
-  name:        'shares',
-  display:     __('Shares'),
-  data_type:   'richtext',
-  data_option: {
-    type:      'text',
-    maxlength: 5000,
-    no_images: true,
-    null:      true,
-    translate: false,
-  },
-  editable:    false,
-  active:      true,
-  screens:     {
-    create_bottom: {
-      'ticket.agent' => {
-        null: true,
-      },
-    },
-    edit:          {},
-  },
-  to_create:   false,
-  to_migrate:  false,
-  to_delete:   false,
-  position:    920,
-)
 
 ObjectManager::Attribute.add(
   force:       true,
