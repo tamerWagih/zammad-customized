@@ -105,15 +105,15 @@ class Ticket::AssetsAll
 
   def approvals
     @approvals ||= if ticket.respond_to?(:approvals) && user.permissions?('ticket.agent')
-                     # Return all approvals for this ticket with user associations
+                     # Return all approvals for this ticket (same format as ApprovalController)
                      result = ticket.approvals.includes(:approver, :requester).map do |approval|
                        {
-                         id:           approval.id,
-                         ticket_id:    approval.ticket_id,
-                         approver_id:  approval.approver_id,
-                         approver:     approval.approver&.attributes&.slice('id', 'firstname', 'lastname', 'email'),
-                         requester_id: approval.requester_id,
-                         requester:    approval.requester&.attributes&.slice('id', 'firstname', 'lastname', 'email'),
+                         id:           approval.id.to_s,
+                         ticket_id:    approval.ticket_id.to_s,
+                         approver_id:  approval.approver_id.to_s,
+                         approver:     approval.approver&.fullname,
+                         requester_id: approval.requester_id.to_s,
+                         requester:    approval.requester&.fullname,
                          status:       approval.status,
                          message:      approval.message,
                          priority:     approval.priority,
@@ -131,21 +131,22 @@ class Ticket::AssetsAll
 
   def shares
     @shares ||= if ticket.respond_to?(:shares) && user.permissions?('ticket.agent')
-                  # Return all shares for this ticket with user and group associations
+                  # Return all shares for this ticket (same format as SharesController)
                   result = ticket.shares.includes(:shared_by, :group).map do |share|
                     {
-                      id:           share.id,
-                      ticket_id:    share.ticket_id,
-                      group_id:     share.group_id,
-                      group:        share.group&.attributes&.slice('id', 'name'),
-                      shared_by_id: share.shared_by_id,
-                      shared_by:    share.shared_by&.attributes&.slice('id', 'firstname', 'lastname', 'email'),
-                      status:       share.status,
-                      permissions:  share.permissions,
-                      message:      share.message,
-                      expires_at:   share.expires_at,
-                      created_at:   share.created_at,
-                      updated_at:   share.updated_at,
+                      id:              share.id.to_s,
+                      ticket_id:       share.ticket_id.to_s,
+                      group_id:        share.group_id.to_s,
+                      group_name:      share.group&.name,
+                      group:           share.group&.name,
+                      shared_by_id:    share.shared_by_id.to_s,
+                      shared_by_name:  share.shared_by&.fullname,
+                      status:          share.status,
+                      permissions:     Array(share.permissions),
+                      message:         share.message,
+                      expires_at:      share.expires_at,
+                      created_at:      share.created_at,
+                      updated_at:      share.updated_at,
                     }
                   end
                   Rails.logger.info "[SHARE_API] Ticket ##{ticket.id}: Returning #{result.size} shares for user ##{user.id} (#{user.email})"
