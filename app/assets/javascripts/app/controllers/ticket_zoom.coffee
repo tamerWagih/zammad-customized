@@ -239,10 +239,11 @@ class App.TicketZoom extends App.Controller
 
     App.Event.trigger('ui::ticket::all::loaded', data)
 
-    # Trigger sidebar rerender to update approval/share widgets
-    @delay =>
-      App.Event.trigger('ui::ticket::sidebarRerender')
-    , 200, 'trigger-sidebar-rerender'
+    # NOTE: Removed delayed sidebar rerender - was causing double reload with stale data
+    # The sidebar will be updated by:
+    # 1. Initial render() call which passes fresh @approvals/@shares data
+    # 2. WebSocket events (TicketApproval:*/TicketShare:*) which trigger fetch() and then sidebarRerender
+    # This prevents the blink issue where widgets reload twice (once with new, once with old data)
 
     # Listen for real-time approval/share changes to update UI permissions
     @controllerBind('TicketApproval:create TicketApproval:update TicketApproval:destroy', (data) =>
