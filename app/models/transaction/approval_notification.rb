@@ -36,11 +36,21 @@ class Transaction::ApprovalNotification
   end
 
   def approval
-    @approval ||= Ticket::Approval.find_by(id: @item[:object_id])
+    # For delete operations, record is already destroyed, use data from event
+    if @item[:type] == 'delete' && @item[:data]
+      @approval ||= OpenStruct.new(@item[:data])
+    else
+      @approval ||= Ticket::Approval.find_by(id: @item[:object_id])
+    end
   end
 
   def ticket
-    @ticket ||= approval&.ticket
+    # For delete operations, get ticket from data
+    if @item[:type] == 'delete' && @item[:data] && @item[:data][:ticket_id]
+      @ticket ||= Ticket.find_by(id: @item[:data][:ticket_id])
+    else
+      @ticket ||= approval&.ticket
+    end
   end
 
   def current_user

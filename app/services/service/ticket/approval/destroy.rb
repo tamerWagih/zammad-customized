@@ -20,14 +20,15 @@ class Service::Ticket::Approval::Destroy < Service::BaseWithCurrentUser
 
   def add_destroy_event_to_buffer(approval)
     # Add destroy event to EventBuffer before destroying the record
-    # This follows Zammad's pattern for destroy operations
+    # IMPORTANT: Must include serialized data since record won't exist when notification runs
     Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ DELETE event added to EventBuffer for approval ##{approval.id}"
     EventBuffer.add('transaction', {
       object:     'Ticket::Approval',
       type:       'delete',
-      id:         approval.id,
+      object_id:  approval.id,  # Fixed: was 'id', should be 'object_id'
       user_id:    current_user.id,
       created_at: Time.zone.now,
+      data:       serialize_approval(approval),  # Include data for notification to use
     })
   end
 

@@ -36,11 +36,21 @@ class Transaction::ShareNotification
   end
 
   def share
-    @share ||= Ticket::Share.find_by(id: @item[:object_id])
+    # For delete operations, record is already destroyed, use data from event
+    if @item[:type] == 'delete' && @item[:data]
+      @share ||= OpenStruct.new(@item[:data])
+    else
+      @share ||= Ticket::Share.find_by(id: @item[:object_id])
+    end
   end
 
   def ticket
-    @ticket ||= share&.ticket
+    # For delete operations, get ticket from data
+    if @item[:type] == 'delete' && @item[:data] && @item[:data][:ticket_id]
+      @ticket ||= Ticket.find_by(id: @item[:data][:ticket_id])
+    else
+      @ticket ||= share&.ticket
+    end
   end
 
   def current_user
