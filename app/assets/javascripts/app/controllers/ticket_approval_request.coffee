@@ -51,10 +51,6 @@ class App.TicketApprovalRequest extends App.ControllerModal
       error: false
     )
     @el.find('.modal-body').html(content)
-    
-    # Initialize searchable select for approver dropdown
-    @el.find('select[name="approver_id"]').searchableSelect()
-    
     @toggleSubmit()
   
   toggleSubmit: =>
