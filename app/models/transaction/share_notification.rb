@@ -185,17 +185,22 @@ class Transaction::ShareNotification
         ).where('created_at > ?', already_notified_cutoff).exists?(['value_to LIKE ?', "%#{SqlHelper.quote_like(identifier)}(#{SqlHelper.quote_like(@item[:type])}:%"])
       end
 
-      return if already_notified
+      if already_notified
+        Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped #{user.email}: already notified today for #{@item[:type]} on ticket ##{ticket.id}"
+        return
+      end
     end
 
     blocked_in_days = user.mail_delivery_failed_blocked_days
     if blocked_in_days.positive?
-      Rails.logger.info "Send no share notifications to #{user.email} because email is marked as mail_delivery_failed for #{blocked_in_days} day(s)"
+      Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped #{user.email}: email marked as mail_delivery_failed for #{blocked_in_days} day(s)"
       return
     end
 
     # create online notification
     used_channels = []
+    Rails.logger.info "[SHARE_NOTIFICATION] 📋 Channels for #{user.email}: #{channels.inspect}"
+    
     if channels['online']
       used_channels.push 'online'
 

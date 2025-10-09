@@ -173,7 +173,10 @@ class Transaction::ApprovalNotification
         ).where('created_at > ?', already_notified_cutoff).exists?(['value_to LIKE ?', "%#{SqlHelper.quote_like(identifier)}(#{SqlHelper.quote_like(@item[:type])}:%"])
       end
 
-      return if already_notified
+      if already_notified
+        Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped #{user.email}: already notified today for #{@item[:type]} on ticket ##{ticket.id}"
+        return
+      end
     end
 
     blocked_in_days = user.mail_delivery_failed_blocked_days
@@ -184,6 +187,8 @@ class Transaction::ApprovalNotification
 
     # create online notification
     used_channels = []
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Channels for #{user.email}: #{channels.inspect}"
+    
     if channels['online']
       used_channels.push 'online'
 
@@ -202,7 +207,7 @@ class Transaction::ApprovalNotification
 
     # ignore email channel notification and empty emails
     if !channels['email']
-      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Email skipped for #{user.email}: email channel not enabled"
+      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Email skipped for #{user.email}: email channel not enabled (channels: #{channels.inspect})"
       add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
       return
     end
