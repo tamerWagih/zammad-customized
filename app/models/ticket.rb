@@ -742,17 +742,33 @@ returns a hex color code
       # Only agents can access shared tickets
       return default unless user.permissions?('ticket.agent')
       
-      share_group_ids = shares.active_current.pluck(:group_id)
-      return default if share_group_ids.blank?
-
       user_group_ids = Array(user.group_ids_access('read'))
-      has_access = (share_group_ids & user_group_ids).present?
-
-      {
-        read: has_access,
-        comment: has_access,
-        edit: has_access
+      Rails.logger.info "[SHARE_PERMISSIONS] Checking permissions for user #{user.id} (#{user.email}) on ticket #{id}"
+      Rails.logger.info "[SHARE_PERMISSIONS] User group IDs: #{user_group_ids.inspect}"
+      return default if user_group_ids.blank?
+      
+      # Find matching share for user's groups
+      matching_share = shares.active_current.find do |share|
+        user_group_ids.include?(share.group_id)
+      end
+      
+      Rails.logger.info "[SHARE_PERMISSIONS] Matching share: #{matching_share.inspect}"
+      return default unless matching_share
+      
+      # Get the actual permissions from the share record
+      share_perms = Array(matching_share.permissions).map(&:to_s).map(&:downcase)
+      Rails.logger.info "[SHARE_PERMISSIONS] Share permissions array: #{share_perms.inspect}"
+      
+      has_full = share_perms.include?('full')
+      
+      result = {
+        read: has_full || share_perms.include?('read'),
+        comment: has_full || share_perms.include?('comment'),
+        edit: has_full || share_perms.include?('edit')
       }
+      
+      Rails.logger.info "[SHARE_PERMISSIONS] Computed permissions: #{result.inspect}"
+      result
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
       default
