@@ -6,12 +6,12 @@
 
 <div class="form-group">
   <label class="control-label col-sm-3">
-    <%- @T('Share with group') %>
+    <%- @T('Department') %>
   </label>
   <div class="col-sm-9">
     <select name="group_id" class="form-control" required>
       <option value="">
-        <%- @T('Select a group to share with...') %>
+        <%- @T('Select a department...') %>
       </option>
       <% for group in @groups: %>
         <option value="<%= group.id %>">
@@ -20,7 +20,7 @@
       <% end %>
     </select>
     <small class="help-block">
-      <%- @T('All agents and admins in the selected group receive full access') %>
+      <%- @T('All agents in the selected department will receive access based on permissions') %>
     </small>
   </div>
 </div>
@@ -30,7 +30,7 @@
     <%- @T('Message') %>
   </label>
   <div class="col-sm-9">
-    <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the group...') %>"></textarea>
+    <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the department...') %>"></textarea>
   </div>
 </div>
 

@@ -91,7 +91,7 @@ class App.TicketShareCreate extends App.ControllerModal
   submitSuccess: (data, status, xhr) =>
     share = data?.share
     message = if share?.group_name
-      __('Ticket shared with group %s').replace('%s', share.group_name)
+      __('Ticket shared with department %s').replace('%s', share.group_name)
     else
       __('Ticket shared successfully')
 

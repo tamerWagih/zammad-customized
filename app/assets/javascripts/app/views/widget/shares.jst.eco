@@ -4,7 +4,7 @@
       <div class="share-header">
         <div class="share-user">
           <% if share.shared_by_id is @current_user_id: %>
-            <strong><%- @T('Shared with group') %> <%- share.group_name || share.group || @T('Unknown group') %></strong>
+            <strong><%- @T('Shared with department') %> <%- share.group_name || share.group || @T('Unknown department') %></strong>
           <% else: %>
             <strong><%- @T('Shared by') %> <%- share.shared_by_name %></strong>
           <% end %>
@@ -18,7 +18,7 @@
       <div class="share-content">
         <div class="share-permissions">
           <span class="label label-success">
-            <%- @T('Full access for group') %>
+            <%- @T('Full access for department') %>
           </span>
         </div>
         <div class="share-message">
@@ -49,7 +49,7 @@
         </div>
       <% else: %>
         <div class="share-info">
-          <%- @T('Shared with your group by %s', share.shared_by_name || @T('another user')) %>
+          <%- @T('Shared with your department by %s', share.shared_by_name || @T('another user')) %>
         </div>
       <% end %>
     </div>
@@ -57,6 +57,6 @@
 <% else: %>
   <div class="shares-empty">
     <p><%- @T('No shares for this ticket yet.') %></p>
-    <small class="text-muted"><%- @T('Use the "Share Ticket" button to share this ticket with other groups.') %></small>
+    <small class="text-muted"><%- @T('Use the "Share Ticket" button to share this ticket with other departments.') %></small>
   </div>
 <% end %>
