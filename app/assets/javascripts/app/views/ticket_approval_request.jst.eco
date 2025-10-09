@@ -20,7 +20,7 @@
       <% end %>
     </select>
     <small class="help-block">
-      <%- @T('Only agents and admins are shown') %>
+      <%- @T('Only users with Approver role are shown') %>
     </small>
   </div>
 </div>
