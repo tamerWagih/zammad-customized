@@ -46,6 +46,7 @@ class App.WidgetApprovals extends App.Controller
     # Data is different → update UI immediately
     console.log "[APPROVALS] Reload triggered - data changed"
     @localApprovals = _.clone(approvals)
+    @stopLoading()  # Clear any loading state when fresh data arrives
     @render()
 
   render: =>
@@ -126,34 +127,20 @@ class App.WidgetApprovals extends App.Controller
     # Use the correct endpoint: POST to /approve or /reject
     action = if status is 'approved' then 'approve' else 'reject'
     
+    # Show loading state
+    @startLoading()
+    
     @ajax(
       id:   "#{action}_approval"
       type: 'POST'
       url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/#{action}"
       processData: true
       success: (data) =>
-        # Update local data immediately
-        if data?.approval
-          index = _.findIndex(@localApprovals, (a) -> parseInt(a.id) is parseInt(approval_id))
-          if index >= 0
-            @localApprovals[index] = data.approval
-        else
-          # Fallback: just update status
-          approval = _.find(@localApprovals, (a) -> parseInt(a.id) is parseInt(approval_id))
-          if approval
-            approval.status = status
-        
-        # Re-render locally without API fetch
-        @render()
-        
-        # Update permission cache
-        ticket = App.Ticket.findNative(@ticket_id)
-        if ticket
-          ticket._approvals_cache = @localApprovals
-        
-        # Don't trigger sidebar rerender here - would reload with stale data causing blink
-        # WebSocket event will trigger it with fresh data (~1s later)
+        # NO optimistic update - let WebSocket handle it
+        # Just stop loading and wait for real-time update
+        @stopLoading()
       error: (xhr, status, error) =>
+        @stopLoading()
         console.error "Failed to #{action} approval:", status, error
         @notify(
           type: 'error'
@@ -175,21 +162,9 @@ class App.WidgetApprovals extends App.Controller
       approval: approval
       container: @el.closest('.content')
       callback: (updated_approval) =>
-        # Update local data immediately with response data
-        if updated_approval
-          index = _.findIndex(@localApprovals, (a) -> parseInt(a.id) is parseInt(updated_approval.id))
-          if index >= 0
-            @localApprovals[index] = updated_approval
-            # Re-render locally without API fetch
-            @render()
-            
-            # Update permission cache
-            ticket = App.Ticket.findNative(@ticket_id)
-            if ticket
-              ticket._approvals_cache = @localApprovals
-            
-            # Don't trigger sidebar rerender - WebSocket will handle it with fresh data
-        # WebSocket will handle eventual consistency
+        # NO optimistic update - let WebSocket handle it
+        # Show loading while waiting for real-time update
+        @startLoading()
     )
 
   deleteApproval: (e) =>

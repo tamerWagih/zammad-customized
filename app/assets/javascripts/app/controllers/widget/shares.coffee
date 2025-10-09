@@ -45,6 +45,7 @@ class App.WidgetShares extends App.Controller
     # Data is different → update UI immediately
     console.log "[SHARES] Reload triggered - data changed"
     @localShares = _.clone(shares)
+    @stopLoading()  # Clear any loading state when fresh data arrives
     @render()
 
   render: =>
@@ -102,32 +103,19 @@ class App.WidgetShares extends App.Controller
     new App.ControllerConfirm(
       message: __('Are you sure you want to revoke this share?')
       callback: =>
+        # Show loading state
+        @startLoading()
+        
         @ajax(
           id:   'revoke_share'
           type: 'POST'
           url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}/revoke"
           success: (data) =>
-            # Update local data immediately - set status to 'revoked'
-            share = _.find(@localShares, (s) -> parseInt(s.id) is parseInt(share_id))
-            if share
-              share.status = 'revoked'
-              # Or use the response data if available
-              if data?.share
-                index = _.findIndex(@localShares, (s) -> parseInt(s.id) is parseInt(share_id))
-                @localShares[index] = data.share if index >= 0
-            
-            # Re-render locally without API fetch
-            @render()
-            
-            # Clear permission cache - will be updated by WebSocket event
-            ticket = App.Ticket.findNative(@ticket_id)
-            if ticket
-              ticket._shares_cache = @localShares
-            
-            # Don't trigger sidebar rerender - WebSocket will handle it with fresh data
-            
-            # WebSocket will handle eventual consistency
+            # NO optimistic update - let WebSocket handle it
+            # Just stop loading and wait for real-time update
+            @stopLoading()
           error: (xhr, status, error) =>
+            @stopLoading()
             console.error 'Failed to revoke share:', status, error
             @notify(
               type: 'error'
@@ -190,21 +178,9 @@ class App.WidgetShares extends App.Controller
       share: share
       container: @el.closest('.content')
       callback: (updated_share) =>
-        # Update local data immediately with response data
-        if updated_share
-          index = _.findIndex(@localShares, (s) -> parseInt(s.id) is parseInt(updated_share.id))
-          if index >= 0
-            @localShares[index] = updated_share
-            # Re-render locally without API fetch
-            @render()
-            
-            # Update permission cache
-            ticket = App.Ticket.findNative(@ticket_id)
-            if ticket
-              ticket._shares_cache = @localShares
-            
-            # Don't trigger sidebar rerender - WebSocket will handle it with fresh data
-        # WebSocket will handle eventual consistency
+        # NO optimistic update - let WebSocket handle it
+        # Show loading while waiting for real-time update
+        @startLoading()
     )
 
   openShareTicket: (e) =>
