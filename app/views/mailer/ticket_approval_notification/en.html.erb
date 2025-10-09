@@ -1,70 +1,70 @@
 <% case action %>
 <% when 'create' %>
-Approval request for ticket (<%= ticket.title %>)
+Approval request for ticket (#{ticket.title})
 <% when 'update' %>
-Approval request updated for ticket (<%= ticket.title %>)
+Approval request updated for ticket (#{ticket.title})
 <% when 'approve' %>
-Ticket approved (<%= ticket.title %>)
+Ticket approved (#{ticket.title})
 <% when 'reject' %>
-Ticket rejected (<%= ticket.title %>)
+Ticket rejected (#{ticket.title})
 <% when 'delete' %>
-Approval request deleted for ticket (<%= ticket.title %>)
+Approval request deleted for ticket (#{ticket.title})
 <% else %>
-Approval notification for ticket (<%= ticket.title %>)
+Approval notification for ticket (#{ticket.title})
 <% end %>
 
-<div>Hi <%= recipient.firstname %>,</div>
+<div>Hi #{recipient.firstname},</div>
 <br>
 <% case action %>
 <% when 'create' %>
   <% if recipient.id == approval.requester_id %>
-    <div>You have <b>sent</b> an approval request for ticket "<b><%= ticket.title %></b>" to "<b><%= approval.approver.fullname %></b>".</div>
+    <div>You have <b>sent</b> an approval request for ticket "<b>#{ticket.title}</b>" to "<b>#{approval.approver.fullname}</b>".</div>
   <% else %>
-    <div>You have <b>received</b> an approval request for ticket "<b><%= ticket.title %></b>" from "<b><%= approval.requester.fullname %></b>".</div>
+    <div>You have <b>received</b> an approval request for ticket "<b>#{ticket.title}</b>" from "<b>#{approval.requester.fullname}</b>".</div>
   <% end %>
 <% when 'update' %>
   <% if recipient.id == approval.requester_id %>
-    <div>Your approval request for ticket "<b><%= ticket.title %></b>" has been updated.</div>
+    <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been updated.</div>
   <% elsif recipient.id == approval.approver_id %>
-    <div>The approval request you received for ticket "<b><%= ticket.title %></b>" has been updated.</div>
+    <div>The approval request you received for ticket "<b>#{ticket.title}</b>" has been updated.</div>
   <% else %>
-    <div>The approval request for ticket "<b><%= ticket.title %></b>" has been updated by "<b><%= actor.longname %></b>".</div>
+    <div>The approval request for ticket "<b>#{ticket.title}</b>" has been updated by "<b>#{actor.longname}</b>".</div>
   <% end %>
 <% when 'approve' %>
   <% if recipient.id == approval.requester_id %>
-    <div>Your approval request for ticket "<b><%= ticket.title %></b>" has been <b>approved</b> by "<b><%= approval.approver.fullname %></b>".</div>
+    <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been <b>approved</b> by "<b>#{approval.approver.fullname}</b>".</div>
   <% else %>
-    <div>You have <b>approved</b> the request for ticket "<b><%= ticket.title %></b>".</div>
+    <div>You have <b>approved</b> the request for ticket "<b>#{ticket.title}</b>".</div>
   <% end %>
 <% when 'reject' %>
   <% if recipient.id == approval.requester_id %>
-    <div>Your approval request for ticket "<b><%= ticket.title %></b>" has been <b>rejected</b> by "<b><%= approval.approver.fullname %></b>".</div>
+    <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been <b>rejected</b> by "<b>#{approval.approver.fullname}</b>".</div>
   <% else %>
-    <div>You have <b>rejected</b> the request for ticket "<b><%= ticket.title %></b>".</div>
+    <div>You have <b>rejected</b> the request for ticket "<b>#{ticket.title}</b>".</div>
   <% end %>
 <% when 'delete' %>
   <% if recipient.id == approval.requester_id %>
-    <div>Your approval request for ticket "<b><%= ticket.title %></b>" has been deleted.</div>
+    <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been deleted.</div>
   <% else %>
-    <div>The approval request you received for ticket "<b><%= ticket.title %></b>" has been deleted.</div>
+    <div>The approval request you received for ticket "<b>#{ticket.title}</b>" has been deleted.</div>
   <% end %>
 <% else %>
-<div>There has been an update to the approval request for ticket "<b><%= ticket.title %></b>".</div>
+<div>There has been an update to the approval request for ticket "<b>#{ticket.title}</b>".</div>
 <% end %>
 <br>
 <div>
-Ticket: #<%= ticket.number %><br>
-Status: <%= t(approval.status) %><br>
-Priority: <%= t(approval.priority) %><br>
-Approver: <%= approval.approver.fullname %><br>
-Requester: <%= approval.requester.fullname %><br>
+Ticket: ##{ticket.number}<br>
+Status: #{t(approval.status)}<br>
+Priority: #{t(approval.priority)}<br>
+Approver: #{approval.approver.fullname}<br>
+Requester: #{approval.requester.fullname}<br>
 <% if approval.message.present? %>
-Message: <%= approval.message %><br>
+Message: #{approval.message}<br>
 <% end %>
 </div>
 <br>
 <% unless ['delete'].include?(action) %>
 <div>
-  <a href="<%= config.http_type %>://<%= config.fqdn %>/#ticket/zoom/<%= ticket.id %>" target="zammad_app">View this in <%= config.product_name %></a>
+  <a href="#{config.http_type}://#{config.fqdn}/#ticket/zoom/#{ticket.id}" target="zammad_app">View this in #{config.product_name}</a>
 </div>
 <% end %>

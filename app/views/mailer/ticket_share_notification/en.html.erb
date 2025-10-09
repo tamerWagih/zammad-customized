@@ -1,61 +1,61 @@
 <% case action %>
 <% when 'create' %>
-Ticket shared with your group (<%= ticket.title %>)
+Ticket shared with your group (#{ticket.title})
 <% when 'update' %>
-Ticket share updated (<%= ticket.title %>)
+Ticket share updated (#{ticket.title})
 <% when 'revoke' %>
-Ticket share revoked (<%= ticket.title %>)
+Ticket share revoked (#{ticket.title})
 <% when 'delete' %>
-Ticket share deleted (<%= ticket.title %>)
+Ticket share deleted (#{ticket.title})
 <% else %>
-Ticket share notification (<%= ticket.title %>)
+Ticket share notification (#{ticket.title})
 <% end %>
 
-<div>Hi <%= recipient.firstname %>,</div>
+<div>Hi #{recipient.firstname},</div>
 <br>
 <% case action %>
 <% when 'create' %>
   <% if recipient.id == share.shared_by_id %>
-    <div>You have <b>shared</b> ticket "<b><%= ticket.title %></b>" with group "<b><%= share.group.name %></b>".</div>
+    <div>You have <b>shared</b> ticket "<b>#{ticket.title}</b>" with group "<b>#{share.group.name}</b>".</div>
   <% else %>
-    <div>Ticket "<b><%= ticket.title %></b>" has been <b>shared</b> with your group "<b><%= share.group.name %></b>" by "<b><%= share.shared_by.fullname %></b>".</div>
+    <div>Ticket "<b>#{ticket.title}</b>" has been <b>shared</b> with your group "<b>#{share.group.name}</b>" by "<b>#{share.shared_by.fullname}</b>".</div>
   <% end %>
 <% when 'update' %>
   <% if recipient.id == share.shared_by_id %>
-    <div>Your share settings for ticket "<b><%= ticket.title %></b>" have been updated.</div>
+    <div>Your share settings for ticket "<b>#{ticket.title}</b>" have been updated.</div>
   <% else %>
-    <div>The share settings for ticket "<b><%= ticket.title %></b>" (shared with your group) have been updated.</div>
+    <div>The share settings for ticket "<b>#{ticket.title}</b>" (shared with your group) have been updated.</div>
   <% end %>
 <% when 'revoke' %>
   <% if recipient.id == share.shared_by_id %>
-    <div>You have <b>revoked</b> access to ticket "<b><%= ticket.title %></b>" for group "<b><%= share.group.name %></b>".</div>
+    <div>You have <b>revoked</b> access to ticket "<b>#{ticket.title}</b>" for group "<b>#{share.group.name}</b>".</div>
   <% else %>
-    <div>Access to ticket "<b><%= ticket.title %></b>" has been <b>revoked</b>.</div>
+    <div>Access to ticket "<b>#{ticket.title}</b>" has been <b>revoked</b>.</div>
   <% end %>
 <% when 'delete' %>
   <% if recipient.id == share.shared_by_id %>
-    <div>Your share for ticket "<b><%= ticket.title %></b>" has been deleted.</div>
+    <div>Your share for ticket "<b>#{ticket.title}</b>" has been deleted.</div>
   <% else %>
-    <div>The share for ticket "<b><%= ticket.title %></b>" (with your group) has been deleted.</div>
+    <div>The share for ticket "<b>#{ticket.title}</b>" (with your group) has been deleted.</div>
   <% end %>
 <% else %>
-<div>There has been an update to the share for ticket "<b><%= ticket.title %></b>".</div>
+<div>There has been an update to the share for ticket "<b>#{ticket.title}</b>".</div>
 <% end %>
 <br>
 <div>
-Ticket: #<%= ticket.number %><br>
-Group: <%= share.group.name %><br>
-Shared by: <%= share.shared_by.fullname %><br>
+Ticket: ##{ticket.number}<br>
+Group: #{share.group.name}<br>
+Shared by: #{share.shared_by.fullname}<br>
 <% if share.message.present? %>
-Message: <%= share.message %><br>
+Message: #{share.message}<br>
 <% end %>
 <% if share.expires_at.present? %>
-Expires: <%= share.expires_at.strftime('%Y-%m-%d') %><br>
+Expires: #{share.expires_at.strftime('%Y-%m-%d')}<br>
 <% end %>
 </div>
 <br>
 <% unless ['revoke', 'delete'].include?(action) %>
 <div>
-  <a href="<%= config.http_type %>://<%= config.fqdn %>/#ticket/zoom/<%= ticket.id %>" target="zammad_app">View this in <%= config.product_name %></a>
+  <a href="#{config.http_type}://#{config.fqdn}/#ticket/zoom/#{ticket.id}" target="zammad_app">View this in #{config.product_name}</a>
 </div>
 <% end %>
