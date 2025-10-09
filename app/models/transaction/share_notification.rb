@@ -115,13 +115,16 @@ class Transaction::ShareNotification
       recipients << user
     end
 
-    # Add the user who shared the ticket if they're an agent
+    # ALWAYS add the user who shared the ticket (even if they're the current user)
+    # This ensures the sharer gets confirmation emails for all their share actions
     if share.shared_by&.active? && share.shared_by.permissions?('ticket.agent')
       recipients << share.shared_by
     end
 
-    # Remove duplicates and current user
-    recipients.compact.uniq.reject { |user| user.id == @item[:user_id] }
+    Rails.logger.info "[SHARE_NOTIFICATION] 📋 Action: #{@item[:type]} - Sending to group members + sharer"
+
+    # Remove duplicates but DON'T exclude current user - they should get notification too
+    recipients.compact.uniq
   rescue => e
     Rails.logger.warn "Failed to get share recipients: #{e.message}"
     []
@@ -150,11 +153,12 @@ class Transaction::ShareNotification
 
     Rails.logger.info "[SHARE_NOTIFICATION] 👤 Processing recipient: #{user.email} (channels: #{channels.keys.join(', ')})"
 
-    # ignore user who changed it by him self via web
-    if recipient_myself?(user)
-      Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped #{user.email}: recipient is sender (myself)"
-      return
-    end
+    # NOTE: We want ALL group members AND the sharer to get emails for ALL actions
+    # So we don't skip the person who performed the action
+    # if recipient_myself?(user)
+    #   Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped #{user.email}: recipient is sender (myself)"
+    #   return
+    # end
 
     # ignore inactive users
     if !user.active?

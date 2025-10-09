@@ -107,27 +107,15 @@ class Transaction::ApprovalNotification
   def get_recipients
     recipients = []
 
-    case @item[:type]
-    when 'create'
-      # Send to approver and requester
-      recipients << approval.approver if approval.approver_id.present?
-      recipients << approval.requester if approval.requester_id.present?
-    when 'update'
-      # Send to approver and requester
-      recipients << approval.approver if approval.approver_id.present?
-      recipients << approval.requester if approval.requester_id.present?
-    when 'approve', 'reject'
-      # Send to requester
-      recipients << approval.requester if approval.requester_id.present?
-    when 'delete'
-      # Send to approver if it was pending
-      if approval.status == 'pending' && approval.approver_id.present?
-        recipients << approval.approver
-      end
-    end
+    # ALWAYS send to BOTH approver and requester for ALL actions
+    # This ensures both parties stay informed about any changes
+    recipients << approval.approver if approval.approver_id.present?
+    recipients << approval.requester if approval.requester_id.present?
 
-    # Remove duplicates and current user
-    recipients.compact.uniq.reject { |user| user.id == @item[:user_id] }
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Action: #{@item[:type]} - Sending to BOTH approver and requester"
+
+    # Remove duplicates but DON'T exclude current user - they should get notification too
+    recipients.compact.uniq
   end
 
   def recipients_reason_by_notifications_settings(possible_recipients)
@@ -153,11 +141,12 @@ class Transaction::ApprovalNotification
 
     Rails.logger.info "[APPROVAL_NOTIFICATION] 👤 Processing recipient: #{user.email} (channels: #{channels.keys.join(', ')})"
 
-    # ignore user who changed it by him self via web
-    if recipient_myself?(user)
-      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped #{user.email}: recipient is sender (myself)"
-      return
-    end
+    # NOTE: We want BOTH approver and requester to get emails for ALL actions
+    # So we don't skip the person who performed the action
+    # if recipient_myself?(user)
+    #   Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped #{user.email}: recipient is sender (myself)"
+    #   return
+    # end
 
     # ignore inactive users
     if !user.active?
