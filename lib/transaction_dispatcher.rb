@@ -58,20 +58,12 @@ class TransactionDispatcher
         end
 
         # execute async backends
-        async_backends = []
-        Setting.where(area: 'Transaction::Backend::Async').reorder(:name).each do |setting|
-          backend = Setting.get(setting.name)
-          next if params[:disable]&.include?(backend)
-
-          async_backends.push backend.constantize
+        Rails.logger.info "[TRANSACTION_DISPATCHER] 📤 Queuing TransactionJob for #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
+        ApplicationModel.current_transaction.after_commit do
+          Rails.logger.info "[TRANSACTION_DISPATCHER] 🚀 TransactionJob queued after transaction commit"
+          TransactionJob.perform_later(item, params)
         end
-        
-        Rails.logger.info "[TRANSACTION_DISPATCHER] 📤 Executing #{async_backends.count} async backends for #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
-        async_backends.each do |backend|
-          Rails.logger.info "[TRANSACTION_DISPATCHER] 🚀 Executing async backend: #{backend}"
-          execute_single_backend(backend, item, params)
-        end
-        Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ Async backends executed successfully"
+        Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ TransactionJob scheduled to run after commit"
       end
     end
   end
