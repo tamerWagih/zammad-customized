@@ -1,6 +1,9 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
 class TransactionJob < ApplicationJob
+  # Override the global setting to ensure TransactionJob is always enqueued
+  # even when called from within or after database transactions
+  self.enqueue_after_transaction_commit = :default
 
 =begin
   {

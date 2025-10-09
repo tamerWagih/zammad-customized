@@ -58,12 +58,11 @@ class TransactionDispatcher
         end
 
         # execute async backends
+        # NOTE: TransactionDispatcher.commit is called AFTER the DB transaction completes (from around_action)
+        # So we can safely queue the job directly without wrapping in after_commit
         Rails.logger.info "[TRANSACTION_DISPATCHER] 📤 Queuing TransactionJob for #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
-        ApplicationModel.current_transaction.after_commit do
-          Rails.logger.info "[TRANSACTION_DISPATCHER] 🚀 TransactionJob queued after transaction commit"
-          TransactionJob.perform_later(item, params)
-        end
-        Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ TransactionJob scheduled to run after commit"
+        TransactionJob.perform_later(item, params)
+        Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ TransactionJob queued successfully"
       end
     end
   end
