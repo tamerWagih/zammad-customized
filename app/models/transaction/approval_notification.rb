@@ -96,9 +96,12 @@ class Transaction::ApprovalNotification
   def prepare_recipients_and_reasons
     # get recipients based on approval type
     possible_recipients = get_recipients
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Possible recipients (before settings filter): #{possible_recipients.map(&:email).join(', ')}"
 
     # apply notification settings filter
     recipients_reason_by_notifications_settings(possible_recipients)
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Final recipients (after settings filter): #{@recipients_and_channels.map { |r| r[:user].email }.join(', ')}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Channels for each: #{@recipients_and_channels.map { |r| "#{r[:user].email}=#{r[:channels].inspect}" }.join(', ')}"
   end
 
   def get_recipients
@@ -219,8 +222,15 @@ class Transaction::ApprovalNotification
     add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
 
     # send email notification
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📧 Sending email to #{user.email} (template: ticket_approval_notification, action: #{@item[:type]}, ticket: ##{ticket.id})"
-    NotificationFactory::Mailer.notification(
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📧 Sending email to #{user.email}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Template: ticket_approval_notification"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Action: #{@item[:type]}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Ticket: ##{ticket.id} (#{ticket.title})"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Approval: ##{approval.id} (status: #{approval.status})"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Approver: #{approval.approver&.email}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Requester: #{approval.requester&.email}"
+    
+    result = NotificationFactory::Mailer.notification(
       template:    'ticket_approval_notification',
       user:        user,
       objects:     build_objects(user),
@@ -228,7 +238,11 @@ class Transaction::ApprovalNotification
       references:  ticket.get_references,
       main_object: ticket,
     )
-    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ Email sent successfully to #{user.email} (#{@item[:type]}/#{ticket.id})"
+    
+    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ Email sent successfully to #{user.email}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Subject: #{result[:subject] rescue 'N/A'}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    From: #{Setting.get('notification_sender')}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Message ID: #{result[:message_id] rescue 'N/A'}"
   rescue Channel::DeliveryError => e
     status_code = begin
       e.original_error.response.status.to_i
