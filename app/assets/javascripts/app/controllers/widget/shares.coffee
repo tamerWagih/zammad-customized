@@ -103,19 +103,30 @@ class App.WidgetShares extends App.Controller
     new App.ControllerConfirm(
       message: __('Are you sure you want to revoke this share?')
       callback: =>
-        # Show loading state
-        @startLoading()
-        
         @ajax(
           id:   'revoke_share'
           type: 'POST'
           url:  "#{@apiPath}/tickets/#{@ticket_id}/shares/#{share_id}/revoke"
           success: (data) =>
-            # NO optimistic update - let WebSocket handle it
-            # Just stop loading and wait for real-time update
-            @stopLoading()
+            # Update local data immediately - set status to 'revoked'
+            share = _.find(@localShares, (s) -> parseInt(s.id) is parseInt(share_id))
+            if share
+              share.status = 'revoked'
+              # Or use response data if available
+              if data?.share
+                index = _.findIndex(@localShares, (s) -> parseInt(s.id) is parseInt(share_id))
+                @localShares[index] = data.share if index >= 0
+            
+            # Re-render locally without API fetch
+            @render()
+            
+            # Update permission cache
+            ticket = App.Ticket.findNative(@ticket_id)
+            if ticket
+              ticket._shares_cache = @localShares
+            
+            # WebSocket will handle receiver updates
           error: (xhr, status, error) =>
-            @stopLoading()
             console.error 'Failed to revoke share:', status, error
             @notify(
               type: 'error'

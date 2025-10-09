@@ -248,9 +248,13 @@ class App.TicketZoom extends App.Controller
     # Listen for real-time approval/share changes to update UI permissions
     @controllerBind('TicketApproval:create TicketApproval:update TicketApproval:destroy', (data) =>
       ticket_id = data?.approval?.ticket_id || data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
+      
+      console.log "[TICKET_ZOOM] TicketApproval WebSocket event received:", data
+      console.log "[TICKET_ZOOM] Event ticket_id:", ticket_id, "My ticket_id:", @ticket_id
+      
       return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
       
-      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approval event detected"
+      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approval event detected (matched)"
       
       # Delay the refresh to avoid race conditions with optimistic local updates
       # This gives time for DB commit and prevents overwriting local changes with stale data
@@ -291,9 +295,13 @@ class App.TicketZoom extends App.Controller
 
     @controllerBind('TicketShare:create TicketShare:update TicketShare:destroy', (data) =>
       ticket_id = data?.share?.ticket_id || data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
+      
+      console.log "[TICKET_ZOOM] TicketShare WebSocket event received:", data
+      console.log "[TICKET_ZOOM] Event ticket_id:", ticket_id, "My ticket_id:", @ticket_id
+      
       return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
       
-      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Share event detected"
+      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Share event detected (matched)"
       
       # Delay the refresh to avoid race conditions with optimistic local updates
       # This gives time for DB commit and prevents overwriting local changes with stale data
