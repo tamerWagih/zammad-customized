@@ -47,9 +47,11 @@ class Ticket::AssetsAll
     
     approvals_data = approvals
     shares_data = shares
+    share_perms = share_permissions
     
     Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Approvals data size: #{approvals_data.size}"
     Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Shares data size: #{shares_data.size}"
+    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Share permissions for user: #{share_perms.inspect}"
     
     response_data = {
       ticket_id:          ticket.id,
@@ -62,10 +64,26 @@ class Ticket::AssetsAll
       form_meta:          attributes_to_change[:form_meta],
       approvals:          approvals_data,
       shares:             shares_data,
+      share_permissions:  share_perms,
     }
     
     Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: API response built successfully"
     response_data
+  end
+  
+  def share_permissions
+    return { read: false, comment: false, edit: false } unless user
+    
+    begin
+      if ticket.respond_to?(:share_permissions_for)
+        ticket.share_permissions_for(user)
+      else
+        { read: false, comment: false, edit: false }
+      end
+    rescue StandardError => e
+      Rails.logger.warn "Failed to get share permissions for ticket #{ticket.id}, user #{user.id}: #{e.message}"
+      { read: false, comment: false, edit: false }
+    end
   end
 
   def get_attributes_to_change(assets)
