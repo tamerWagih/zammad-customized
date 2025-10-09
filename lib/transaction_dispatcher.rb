@@ -143,19 +143,28 @@ class TransactionDispatcher
       end
 
     # get current state of objects
-    Rails.logger.info "[TRANSACTION_DISPATCHER] 🔍 Looking for #{event[:object]} with id: #{event[:id]}"
-    object = event[:object].constantize.find_by(id: event[:id])
+    # For delete events, use object_id instead of id, and use data from event
+    event_id = event[:type] == 'delete' ? event[:object_id] : event[:id]
+    Rails.logger.info "[TRANSACTION_DISPATCHER] 🔍 Looking for #{event[:object]} with id: #{event_id}"
+    object = event[:object].constantize.find_by(id: event_id)
     Rails.logger.info "[TRANSACTION_DISPATCHER] 📦 Found object: #{object.inspect}"
     
     # Additional debugging for our specific events
     if event[:object] == 'Ticket::Approval' || event[:object] == 'Ticket::Share'
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 Processing our custom event: #{event[:object]} ##{event[:id]} (#{event[:type]})"
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 Processing our custom event: #{event[:object]} ##{event_id} (#{event[:type]})"
     end
 
-      # next if object is already deleted
+      # For delete events, the object won't exist (already destroyed)
+      # Use the serialized data from the event instead
       if !object
-        Rails.logger.warn "[TRANSACTION_DISPATCHER] ⚠️  Object not found: #{event[:object]} ##{event[:id]} - skipping"
-        next
+        if event[:type] == 'delete' && event[:data]
+          Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ Using serialized data for delete event: #{event[:object]} ##{event_id}"
+          # Create a minimal struct to satisfy the rest of the logic
+          object = OpenStruct.new(id: event_id)
+        else
+          Rails.logger.warn "[TRANSACTION_DISPATCHER] ⚠️  Object not found: #{event[:object]} ##{event_id} - skipping"
+          next
+        end
       end
 
       if !list_objects[event[:object]]
@@ -187,6 +196,11 @@ class TransactionDispatcher
         else
           store[:changes] = event[:changes]
         end
+      end
+
+      # For delete events, include serialized data
+      if event[:type] == 'delete' && event[:data]
+        store[:data] = event[:data]
       end
 
       # remember article id if exists
