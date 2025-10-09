@@ -130,7 +130,9 @@ class Transaction::ApprovalNotification
   def recipients_reason_by_notifications_settings(possible_recipients)
     already_checked_recipient_ids = {}
     possible_recipients.each do |user|
-      result = NotificationFactory::Mailer.notification_settings(user, ticket, @item[:type])
+      # Use 'approval' as the notification type (not the action type)
+      # This matches the user's notification preferences matrix
+      result = NotificationFactory::Mailer.notification_settings(user, ticket, 'approval')
       next if !result
       next if already_checked_recipient_ids[user.id]
 
