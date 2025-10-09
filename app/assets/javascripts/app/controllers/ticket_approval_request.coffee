@@ -34,15 +34,15 @@ class App.TicketApprovalRequest extends App.ControllerModal
     ticket = App.Ticket.find(@ticket_id)
     ticket_org_id = ticket?.organization_id
     
-    # Filter to only show agents/admins from the same organization
+    # Filter to only show users with "Approver" role
     current_user_id = App.User.current()?.id
     approvers = users.filter (user) ->
       # Exclude current user
       return false if user.id is current_user_id
-      # Only show agents and admins, regardless of org (admins may span orgs)
+      # Only show users with "Approver" role
       user.role_ids && user.role_ids.some (role_id) ->
         role = App.Role.find(role_id)
-        role && (role.name == 'Agent' || role.name == 'Admin')
+        role && role.name == 'Approver'
 
     # Update modal body content (same pattern as Translation modal)
     content = App.view('ticket_approval_request')(
