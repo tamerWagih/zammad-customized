@@ -58,7 +58,13 @@ class Transaction::ShareNotification
   end
 
   def perform
-    Rails.logger.info "[SHARE_NOTIFICATION] 🔄 Backend perform() called for #{@item[:type]} on share ##{@item[:object_id]}"
+    Rails.logger.info "[SHARE_NOTIFICATION] 🔄 Backend perform() called for #{@item[:type]} on #{@item[:object]} ##{@item[:object_id]}"
+    
+    # Only process Ticket::Share objects
+    if @item[:object] != 'Ticket::Share'
+      Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped: object type is #{@item[:object]}, not Ticket::Share"
+      return
+    end
     
     # return if we run import mode
     if Setting.get('import_mode')

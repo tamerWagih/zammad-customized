@@ -58,7 +58,13 @@ class Transaction::ApprovalNotification
   end
 
   def perform
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 🔄 Backend perform() called for #{@item[:type]} on approval ##{@item[:object_id]}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 🔄 Backend perform() called for #{@item[:type]} on #{@item[:object]} ##{@item[:object_id]}"
+    
+    # Only process Ticket::Approval objects
+    if @item[:object] != 'Ticket::Approval'
+      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped: object type is #{@item[:object]}, not Ticket::Approval"
+      return
+    end
     
     # return if we run import mode
     if Setting.get('import_mode')
