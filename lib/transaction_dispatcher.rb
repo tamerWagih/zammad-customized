@@ -58,11 +58,25 @@ class TransactionDispatcher
         end
 
         # execute async backends
-        # NOTE: TransactionDispatcher.commit is called AFTER the DB transaction completes (from around_action)
-        # So we can safely queue the job directly without wrapping in after_commit
-        Rails.logger.info "[TRANSACTION_DISPATCHER] 📤 Queuing TransactionJob for #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
-        TransactionJob.perform_later(item, params)
-        Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ TransactionJob queued successfully"
+        # Get all async backends
+        async_backends = []
+        Setting.where(area: 'Transaction::Backend::Async').reorder(:name).each do |setting|
+          backend = Setting.get(setting.name)
+          next if params[:disable]&.include?(backend)
+
+          async_backends.push backend.constantize
+        end
+        
+        Rails.logger.info "[TRANSACTION_DISPATCHER] 📤 Executing #{async_backends.count} async backends for #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
+        
+        # Execute backends directly - they're called "async" because they run after the HTTP response
+        # not because they use background jobs. This matches Zammad's original pattern.
+        async_backends.each do |backend|
+          Rails.logger.info "[TRANSACTION_DISPATCHER] 🚀 Executing backend: #{backend}"
+          execute_single_backend(backend, item, params)
+        end
+        
+        Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ Async backends executed successfully"
       end
     end
   end
