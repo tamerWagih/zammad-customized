@@ -53,6 +53,9 @@ module Ticket::Approval::TriggersSubscriptions
       }
     }
     
+    Rails.logger.info "[APPROVAL_WEBSOCKET] Broadcasting TicketApproval:#{action} for approval ##{id} (ticket ##{ticket_id})"
+    Rails.logger.info "[APPROVAL_WEBSOCKET] Event data: #{event_data.inspect}"
     Sessions.broadcast("TicketApproval:#{action}", event_data)
+    Rails.logger.info "[APPROVAL_WEBSOCKET] Broadcast completed for TicketApproval:#{action}"
   end
 end
