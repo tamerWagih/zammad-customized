@@ -58,7 +58,9 @@ class TransactionDispatcher
         end
 
         # execute async backends
+        Rails.logger.info "[TRANSACTION_DISPATCHER] 📤 Queuing TransactionJob for #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
         TransactionJob.perform_later(item, params)
+        Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ TransactionJob queued successfully"
       end
     end
   end
