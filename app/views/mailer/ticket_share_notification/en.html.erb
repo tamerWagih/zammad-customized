@@ -15,13 +15,29 @@ Ticket share notification (<%= ticket.title %>)
 <br>
 <% case action %>
 <% when 'create' %>
-<div>Ticket "<b><%= ticket.title %></b>" has been shared with your group "<b><%= share.group.name %></b>" by "<b><%= share.shared_by.fullname %></b>".</div>
+  <% if recipient.id == share.shared_by_id %>
+    <div>You have <b>shared</b> ticket "<b><%= ticket.title %></b>" with group "<b><%= share.group.name %></b>".</div>
+  <% else %>
+    <div>Ticket "<b><%= ticket.title %></b>" has been <b>shared</b> with your group "<b><%= share.group.name %></b>" by "<b><%= share.shared_by.fullname %></b>".</div>
+  <% end %>
 <% when 'update' %>
-<div>The share settings for ticket "<b><%= ticket.title %></b>" have been updated by "<b><%= actor.longname %></b>".</div>
+  <% if recipient.id == share.shared_by_id %>
+    <div>Your share settings for ticket "<b><%= ticket.title %></b>" have been updated.</div>
+  <% else %>
+    <div>The share settings for ticket "<b><%= ticket.title %></b>" (shared with your group) have been updated.</div>
+  <% end %>
 <% when 'revoke' %>
-<div>Access to ticket "<b><%= ticket.title %></b>" has been revoked by "<b><%= actor.longname %></b>".</div>
+  <% if recipient.id == share.shared_by_id %>
+    <div>You have <b>revoked</b> access to ticket "<b><%= ticket.title %></b>" for group "<b><%= share.group.name %></b>".</div>
+  <% else %>
+    <div>Access to ticket "<b><%= ticket.title %></b>" has been <b>revoked</b>.</div>
+  <% end %>
 <% when 'delete' %>
-<div>The share for ticket "<b><%= ticket.title %></b>" has been deleted.</div>
+  <% if recipient.id == share.shared_by_id %>
+    <div>Your share for ticket "<b><%= ticket.title %></b>" has been deleted.</div>
+  <% else %>
+    <div>The share for ticket "<b><%= ticket.title %></b>" (with your group) has been deleted.</div>
+  <% end %>
 <% else %>
 <div>There has been an update to the share for ticket "<b><%= ticket.title %></b>".</div>
 <% end %>

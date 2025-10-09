@@ -17,15 +17,37 @@ Approval notification for ticket (<%= ticket.title %>)
 <br>
 <% case action %>
 <% when 'create' %>
-<div>You have received an approval request for ticket "<b><%= ticket.title %></b>" from "<b><%= approval.requester.fullname %></b>".</div>
+  <% if recipient.id == approval.requester_id %>
+    <div>You have <b>sent</b> an approval request for ticket "<b><%= ticket.title %></b>" to "<b><%= approval.approver.fullname %></b>".</div>
+  <% else %>
+    <div>You have <b>received</b> an approval request for ticket "<b><%= ticket.title %></b>" from "<b><%= approval.requester.fullname %></b>".</div>
+  <% end %>
 <% when 'update' %>
-<div>The approval request for ticket "<b><%= ticket.title %></b>" has been updated by "<b><%= actor.longname %></b>".</div>
+  <% if recipient.id == approval.requester_id %>
+    <div>Your approval request for ticket "<b><%= ticket.title %></b>" has been updated.</div>
+  <% elsif recipient.id == approval.approver_id %>
+    <div>The approval request you received for ticket "<b><%= ticket.title %></b>" has been updated.</div>
+  <% else %>
+    <div>The approval request for ticket "<b><%= ticket.title %></b>" has been updated by "<b><%= actor.longname %></b>".</div>
+  <% end %>
 <% when 'approve' %>
-<div>Your approval request for ticket "<b><%= ticket.title %></b>" has been approved by "<b><%= actor.longname %></b>".</div>
+  <% if recipient.id == approval.requester_id %>
+    <div>Your approval request for ticket "<b><%= ticket.title %></b>" has been <b>approved</b> by "<b><%= approval.approver.fullname %></b>".</div>
+  <% else %>
+    <div>You have <b>approved</b> the request for ticket "<b><%= ticket.title %></b>".</div>
+  <% end %>
 <% when 'reject' %>
-<div>Your approval request for ticket "<b><%= ticket.title %></b>" has been rejected by "<b><%= actor.longname %></b>".</div>
+  <% if recipient.id == approval.requester_id %>
+    <div>Your approval request for ticket "<b><%= ticket.title %></b>" has been <b>rejected</b> by "<b><%= approval.approver.fullname %></b>".</div>
+  <% else %>
+    <div>You have <b>rejected</b> the request for ticket "<b><%= ticket.title %></b>".</div>
+  <% end %>
 <% when 'delete' %>
-<div>The approval request for ticket "<b><%= ticket.title %></b>" has been deleted.</div>
+  <% if recipient.id == approval.requester_id %>
+    <div>Your approval request for ticket "<b><%= ticket.title %></b>" has been deleted.</div>
+  <% else %>
+    <div>The approval request you received for ticket "<b><%= ticket.title %></b>" has been deleted.</div>
+  <% end %>
 <% else %>
 <div>There has been an update to the approval request for ticket "<b><%= ticket.title %></b>".</div>
 <% end %>
