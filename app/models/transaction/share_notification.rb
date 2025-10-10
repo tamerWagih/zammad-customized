@@ -177,24 +177,9 @@ class Transaction::ShareNotification
       return
     end
 
-    # check if today already notified (for specific notification types)
-    if %w[create update revoke delete].include?(@item[:type])
-      identifier = user.email.presence || user.login
-      if identifier.present?
-        already_notified_cutoff = Time.use_zone(Setting.get('timezone_default')) { Time.current.beginning_of_day }
-
-        already_notified = ::History.where(
-          history_type_id:   ::History.type_lookup('notification').id,
-          history_object_id: ::History.object_lookup('Ticket').id,
-          o_id:              ticket.id
-        ).where('created_at > ?', already_notified_cutoff).exists?(['value_to LIKE ?', "%#{SqlHelper.quote_like(identifier)}(#{SqlHelper.quote_like(@item[:type])}:%"])
-      end
-
-      if already_notified
-        Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped #{user.email}: already notified today for #{@item[:type]} on ticket ##{ticket.id}"
-        return
-      end
-    end
+    # NOTE: We do NOT check "already notified today" for share notifications
+    # Every share action (create, update, revoke, delete) should send a notification
+    # This is different from regular ticket notifications where deduplication is desired
 
     blocked_in_days = user.mail_delivery_failed_blocked_days
     if blocked_in_days.positive?
