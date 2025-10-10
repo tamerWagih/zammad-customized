@@ -106,4 +106,13 @@ class Ticket::Share < ApplicationModel
     end
   end
 
+  # Override to include ticket_id in WebSocket events (for frontend routing)
+  def notify_clients_data_attributes
+    {
+      id:         id,
+      ticket_id:  ticket_id,
+      updated_at: updated_at
+    }
+  end
+
 end
