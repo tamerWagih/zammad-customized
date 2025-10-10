@@ -1,14 +1,4 @@
-<% if action == 'create' %>
-Ticket shared with your group (#{ticket.title})
-<% elsif action == 'update' %>
-Ticket share updated (#{ticket.title})
-<% elsif action == 'revoke' %>
-Ticket share revoked (#{ticket.title})
-<% elsif action == 'delete' %>
-Ticket share deleted (#{ticket.title})
-<% else %>
-Ticket share notification (#{ticket.title})
-<% end %>
+<% case action when 'create' %>Ticket shared with your group (#{ticket.title})<% when 'update' %>Ticket share updated (#{ticket.title})<% when 'revoke' %>Ticket share revoked (#{ticket.title})<% when 'delete' %>Ticket share deleted (#{ticket.title})<% else %>Ticket share notification (#{ticket.title})<% end %>
 
 <div>Hi #{recipient.firstname},</div>
 <br>

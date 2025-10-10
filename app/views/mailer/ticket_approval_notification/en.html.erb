@@ -1,16 +1,4 @@
-<% if action == 'create' %>
-Approval request for ticket (#{ticket.title})
-<% elsif action == 'update' %>
-Approval request updated for ticket (#{ticket.title})
-<% elsif action == 'approve' %>
-Ticket approved (#{ticket.title})
-<% elsif action == 'reject' %>
-Ticket rejected (#{ticket.title})
-<% elsif action == 'delete' %>
-Approval request deleted for ticket (#{ticket.title})
-<% else %>
-Approval notification for ticket (#{ticket.title})
-<% end %>
+<% case action when 'create' %>Approval request for ticket (#{ticket.title})<% when 'update' %>Approval request updated for ticket (#{ticket.title})<% when 'approve' %>Ticket approved (#{ticket.title})<% when 'reject' %>Ticket rejected (#{ticket.title})<% when 'delete' %>Approval request deleted for ticket (#{ticket.title})<% else %>Approval notification for ticket (#{ticket.title})<% end %>
 
 <div>Hi #{recipient.firstname},</div>
 <br>
