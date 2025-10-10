@@ -7,7 +7,7 @@ class Ticket::Share < ApplicationModel
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Share::TriggersNotifications
-  include Ticket::Share::TriggersSubscriptions
+  # NOTE: TriggersSubscriptions removed - ChecksClientNotification handles WebSocket broadcasts
 
   VALID_PERMISSIONS = %w[full].freeze
 
@@ -103,6 +103,16 @@ class Ticket::Share < ApplicationModel
     else
       "Share status changed to #{status}"
     end
+  end
+
+  # Override ChecksClientNotification to include ticket_id in WebSocket broadcasts
+  # This allows the frontend to filter events by ticket
+  def notify_clients_data_attributes
+    {
+      id:         id,
+      ticket_id:  ticket_id,
+      updated_at: updated_at
+    }
   end
 
 end
