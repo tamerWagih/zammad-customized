@@ -187,25 +187,10 @@ class Transaction::ShareNotification
       return
     end
 
-    # create online notification
+    # NOTE: Online notifications are handled by ChecksClientNotification (WebSocket broadcasts)
+    # This backend is ONLY responsible for EMAIL notifications
     used_channels = []
     Rails.logger.info "[SHARE_NOTIFICATION] 📋 Channels for #{user.email}: #{channels.inspect}"
-    
-    if channels['online']
-      used_channels.push 'online'
-
-      created_by_id = @item[:user_id] || 1
-
-      ::OnlineNotification.add(
-        type:          get_notification_type,
-        object:        'Ticket',
-        o_id:          ticket.id,
-        seen:          false,
-        created_by_id: created_by_id,
-        user_id:       user.id,
-      )
-      Rails.logger.info "[SHARE_NOTIFICATION] ✅ Online notification sent to #{user.email} (#{@item[:type]}/#{ticket.id})"
-    end
 
     # ignore email channel notification and empty emails
     if !channels['email']
