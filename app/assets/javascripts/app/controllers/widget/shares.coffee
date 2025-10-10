@@ -189,9 +189,19 @@ class App.WidgetShares extends App.Controller
       share: share
       container: @el.closest('.content')
       callback: (updated_share) =>
-        # NO optimistic update - let WebSocket handle it
-        # Show loading while waiting for real-time update
+        # Optimistic update: immediately update local data
+        index = _.findIndex(@localShares, (s) -> parseInt(s.id) is parseInt(updated_share.id))
+        if index >= 0
+          @localShares[index] = updated_share
+          @render()  # Re-render with updated data
+        
+        # Show brief loading indicator while waiting for WebSocket confirmation
         @startLoading()
+        
+        # Stop loading after 1 second (WebSocket should arrive by then)
+        setTimeout =>
+          @stopLoading()
+        , 1000
     )
 
   openShareTicket: (e) =>

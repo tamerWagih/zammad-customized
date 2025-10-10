@@ -162,9 +162,19 @@ class App.WidgetApprovals extends App.Controller
       approval: approval
       container: @el.closest('.content')
       callback: (updated_approval) =>
-        # NO optimistic update - let WebSocket handle it
-        # Show loading while waiting for real-time update
+        # Optimistic update: immediately update local data
+        index = _.findIndex(@localApprovals, (a) -> parseInt(a.id) is parseInt(updated_approval.id))
+        if index >= 0
+          @localApprovals[index] = updated_approval
+          @render()  # Re-render with updated data
+        
+        # Show brief loading indicator while waiting for WebSocket confirmation
         @startLoading()
+        
+        # Stop loading after 1 second (WebSocket should arrive by then)
+        setTimeout =>
+          @stopLoading()
+        , 1000
     )
 
   deleteApproval: (e) =>
