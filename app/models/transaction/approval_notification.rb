@@ -115,8 +115,16 @@ class Transaction::ApprovalNotification
 
     # ALWAYS send to BOTH approver and requester for ALL actions
     # This ensures both parties stay informed about any changes
-    recipients << approval.approver if approval.approver_id.present?
-    recipients << approval.requester if approval.requester_id.present?
+    # For DELETE events, approver/requester are strings, so we need to look up by ID
+    if approval.approver_id.present?
+      approver_user = ::User.find_by(id: approval.approver_id)
+      recipients << approver_user if approver_user
+    end
+    
+    if approval.requester_id.present?
+      requester_user = ::User.find_by(id: approval.requester_id)
+      recipients << requester_user if requester_user
+    end
 
     Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Action: #{@item[:type]} - Sending to BOTH approver and requester"
 

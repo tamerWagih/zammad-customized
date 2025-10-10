@@ -113,8 +113,11 @@ class Transaction::ShareNotification
   def get_recipients
     recipients = []
 
+    # Get group_id - for DELETE events, it's in the serialized data
+    group_id = share.group_id
+    
     # Get all active agents and admins in the shared group
-    group_users = ::User.group_access(share.group_id, 'read').select(&:active?)
+    group_users = ::User.group_access(group_id, 'read').select(&:active?)
     agent_users = group_users.select { |user| user.permissions?('ticket.agent') }
     
     agent_users.each do |user|
@@ -123,8 +126,10 @@ class Transaction::ShareNotification
 
     # ALWAYS add the user who shared the ticket (even if they're the current user)
     # This ensures the sharer gets confirmation emails for all their share actions
-    if share.shared_by&.active? && share.shared_by.permissions?('ticket.agent')
-      recipients << share.shared_by
+    # For DELETE events, shared_by is a string, so we need to look up by ID
+    if share.shared_by_id.present?
+      sharer = ::User.find_by(id: share.shared_by_id)
+      recipients << sharer if sharer&.active? && sharer.permissions?('ticket.agent')
     end
 
     Rails.logger.info "[SHARE_NOTIFICATION] 📋 Action: #{@item[:type]} - Sending to group members + sharer"
