@@ -24,23 +24,13 @@ class TransactionDispatcher
 
     # get buffer
     list = EventBuffer.list('transaction')
-    Rails.logger.info "[TRANSACTION_DISPATCHER] 📥 Processing #{list.count} events from EventBuffer"
-    
-    # Log all events for debugging
-    list.each_with_index do |event, index|
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Event #{index + 1}: #{event[:object]} ##{event[:id]} (#{event[:type]}) - user_id: #{event[:user_id]}"
-      if event[:object] == 'Ticket::Approval' || event[:object] == 'Ticket::Share'
-        Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 Found our event: #{event[:object]} ##{event[:id]} (#{event[:type]})"
-        Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Event details: #{event.inspect}"
-      end
-    end
 
     # reset buffer
     EventBuffer.reset('transaction')
 
     # get async backends
     sync_backends = []
-    Setting.where(area: 'Transaction::Backend::Sync').reorder(:name).each do |setting|
+    Setting.where(area: 'Transaction::Backend::Async').reorder(:name).each do |setting|
       backend = Setting.get(setting.name)
       next if params[:disable]&.include?(backend)
 
@@ -58,13 +48,7 @@ class TransactionDispatcher
         end
 
         # execute async backends
-        Rails.logger.info "[TRANSACTION_DISPATCHER] 📤 Queuing TransactionJob for #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
-        
-        # Use set(wait: 0.seconds) to force immediate enqueueing
-        # This bypasses ActiveJob's transaction detection while properly serializing arguments
-        TransactionJob.set(wait: 0.seconds).perform_later(item, params)
-        
-        Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ TransactionJob queued successfully"
+        TransactionJob.perform_later(item, params)
       end
     end
   end
@@ -146,27 +130,19 @@ class TransactionDispatcher
         event[:changes] = nil
       end
 
-    # get current state of objects
-    # For delete events, use object_id instead of id, and use data from event
-    event_id = event[:type] == 'delete' ? event[:object_id] : event[:id]
-    Rails.logger.info "[TRANSACTION_DISPATCHER] 🔍 Looking for #{event[:object]} with id: #{event_id}"
-    object = event[:object].constantize.find_by(id: event_id)
-    Rails.logger.info "[TRANSACTION_DISPATCHER] 📦 Found object: #{object.inspect}"
-    
-    # Additional debugging for our specific events
-    if event[:object] == 'Ticket::Approval' || event[:object] == 'Ticket::Share'
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 Processing our custom event: #{event[:object]} ##{event_id} (#{event[:type]})"
-    end
+      # get current state of objects
+      # For delete events, use object_id instead of id
+      event_id = event[:type] == 'delete' ? event[:object_id] : event[:id]
+      object = event[:object].constantize.find_by(id: event_id)
 
       # For delete events, the object won't exist (already destroyed)
       # Use the serialized data from the event instead
       if !object
         if event[:type] == 'delete' && event[:data]
-          Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ Using serialized data for delete event: #{event[:object]} ##{event_id}"
           # Create a minimal struct to satisfy the rest of the logic
           object = OpenStruct.new(id: event_id)
         else
-          Rails.logger.warn "[TRANSACTION_DISPATCHER] ⚠️  Object not found: #{event[:object]} ##{event_id} - skipping"
+          # next if object is already deleted
           next
         end
       end
@@ -221,13 +197,6 @@ class TransactionDispatcher
     # return if we run import mode
     return true if Setting.get('import_mode')
 
-    # Add debugging for our specific models
-    if record.class.name == 'Ticket::Approval' || record.class.name == 'Ticket::Share'
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 after_create called for #{record.class.name} ##{record.id}"
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 record.created_by_id: #{record.created_by_id}"
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 UserInfo.current_user_id: #{UserInfo.current_user_id}"
-    end
-
     e = {
       object:     record.class.name,
       type:       'create',
@@ -237,11 +206,6 @@ class TransactionDispatcher
       created_at: Time.zone.now,
     }
     EventBuffer.add('transaction', e)
-    
-    if record.class.name == 'Ticket::Approval' || record.class.name == 'Ticket::Share'
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 📨 Event added to EventBuffer for #{record.class.name} ##{record.id} (create)"
-    end
-    
     true
   end
 
@@ -250,14 +214,6 @@ class TransactionDispatcher
 
     # return if we run import mode
     return true if Setting.get('import_mode')
-
-    # Add debugging for our specific models
-    if record.class.name == 'Ticket::Approval' || record.class.name == 'Ticket::Share'
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 after_update called for #{record.class.name} ##{record.id}"
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 record.updated_by_id: #{record.updated_by_id rescue 'N/A'}"
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 record.created_by_id: #{record.created_by_id rescue 'N/A'}"
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 UserInfo.current_user_id: #{UserInfo.current_user_id}"
-    end
 
     # ignore certain attributes
     real_changes = {}
@@ -271,23 +227,13 @@ class TransactionDispatcher
     end
 
     # do not send anything if nothing has changed
-    if real_changes.blank?
-      if record.class.name == 'Ticket::Approval' || record.class.name == 'Ticket::Share'
-        Rails.logger.info "[TRANSACTION_DISPATCHER] ⚠️ No real changes for #{record.class.name} ##{record.id} - skipping"
-      end
-      return true
-    end
+    return true if real_changes.blank?
 
     changed_by_id = if record.respond_to?(:updated_by_id)
                       record.updated_by_id
                     else
                       record.created_by_id
                     end
-
-    if record.class.name == 'Ticket::Approval' || record.class.name == 'Ticket::Share'
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Using changed_by_id: #{changed_by_id}"
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Real changes: #{real_changes.keys.join(', ')}"
-    end
 
     e = {
       object:     record.class.name,
@@ -299,11 +245,6 @@ class TransactionDispatcher
       created_at: Time.zone.now,
     }
     EventBuffer.add('transaction', e)
-    
-    if record.class.name == 'Ticket::Approval' || record.class.name == 'Ticket::Share'
-      Rails.logger.info "[TRANSACTION_DISPATCHER] 📨 Event added to EventBuffer for #{record.class.name} ##{record.id} (update)"
-    end
-    
     true
   end
 
