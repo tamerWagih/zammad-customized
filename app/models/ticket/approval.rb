@@ -3,16 +3,15 @@
 class Ticket::Approval < ApplicationModel
   include HasActivityStreamLog
   include HasSearchIndexBackend
-  include ChecksClientNotification
+  # NOTE: ChecksClientNotification removed - parent Ticket model handles WebSocket via TriggersSubscriptions
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Approval::TriggersNotifications
-  # NOTE: TriggersSubscriptions removed - ChecksClientNotification handles WebSocket broadcasts
 
   PRIORITIES = %w[low normal high urgent].freeze
   STATUSES   = %w[pending approved rejected].freeze
 
-  belongs_to :ticket
+  belongs_to :ticket, touch: true  # Touch parent ticket to trigger its TriggersSubscriptions
   belongs_to :approver, class_name: 'User'
   belongs_to :requester, class_name: 'User'
   belongs_to :created_by, class_name: 'User', optional: true
@@ -100,16 +99,6 @@ class Ticket::Approval < ApplicationModel
     else
       "Approval request status changed to #{status}"
     end
-  end
-
-  # Override ChecksClientNotification to include ticket_id in WebSocket broadcasts
-  # This allows the frontend to filter events by ticket
-  def notify_clients_data_attributes
-    {
-      id:         id,
-      ticket_id:  ticket_id,
-      updated_at: updated_at
-    }
   end
 
 end

@@ -3,17 +3,16 @@
 class Ticket::Share < ApplicationModel
   include HasActivityStreamLog
   include HasSearchIndexBackend
-  include ChecksClientNotification
+  # NOTE: ChecksClientNotification removed - parent Ticket model handles WebSocket via TriggersSubscriptions
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Share::TriggersNotifications
-  # NOTE: TriggersSubscriptions removed - ChecksClientNotification handles WebSocket broadcasts
 
   VALID_PERMISSIONS = %w[full].freeze
 
   before_validation :ensure_full_permission
 
-  belongs_to :ticket
+  belongs_to :ticket, touch: true  # Touch parent ticket to trigger its TriggersSubscriptions
   belongs_to :group
   belongs_to :shared_by, class_name: 'User'
   belongs_to :created_by, class_name: 'User', optional: true
@@ -103,16 +102,6 @@ class Ticket::Share < ApplicationModel
     else
       "Share status changed to #{status}"
     end
-  end
-
-  # Override ChecksClientNotification to include ticket_id in WebSocket broadcasts
-  # This allows the frontend to filter events by ticket
-  def notify_clients_data_attributes
-    {
-      id:         id,
-      ticket_id:  ticket_id,
-      updated_at: updated_at
-    }
   end
 
 end
