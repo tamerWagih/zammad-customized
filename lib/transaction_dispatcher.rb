@@ -58,25 +58,15 @@ class TransactionDispatcher
         end
 
         # execute async backends
-        # Get all async backends
-        async_backends = []
-        Setting.where(area: 'Transaction::Backend::Async').reorder(:name).each do |setting|
-          backend = Setting.get(setting.name)
-          next if params[:disable]&.include?(backend)
-
-          async_backends.push backend.constantize
-        end
+        Rails.logger.info "[TRANSACTION_DISPATCHER] 📤 Queuing TransactionJob for #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
         
-        Rails.logger.info "[TRANSACTION_DISPATCHER] 📤 Executing #{async_backends.count} async backends for #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
+        # Use Delayed::Job.enqueue directly instead of relying on perform_later
+        # This bypasses ActiveJob's transaction detection issues
+        job = TransactionJob.new
+        job.arguments = [item, params]
         
-        # Execute backends directly - they're called "async" because they run after the HTTP response
-        # not because they use background jobs. This matches Zammad's original pattern.
-        async_backends.each do |backend|
-          Rails.logger.info "[TRANSACTION_DISPATCHER] 🚀 Executing backend: #{backend}"
-          execute_single_backend(backend, item, params)
-        end
-        
-        Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ Async backends executed successfully"
+        Delayed::Job.enqueue(job, queue: 'default', priority: 0)
+        Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ TransactionJob enqueued to Delayed::Job successfully"
       end
     end
   end
