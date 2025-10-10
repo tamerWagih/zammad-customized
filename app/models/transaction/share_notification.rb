@@ -263,12 +263,22 @@ class Transaction::ShareNotification
     end
 
     if SILENCABLE_SMTP_ERROR_CODES.any? { |elem| elem.include? status_code }
+      Rails.logger.info "[SHARE_NOTIFICATION] ⚠️  Email delivery failed (silenced SMTP error)"
+      Rails.logger.info "[SHARE_NOTIFICATION]    Status code: #{status_code}"
       Rails.logger.info do
         "could not send share email notification to agent (#{@item[:type]}/#{ticket.id}/#{user.email}) #{e.original_error}"
       end
       return
     end
 
+    Rails.logger.error "[SHARE_NOTIFICATION] ❌ Email delivery failed (critical error)"
+    Rails.logger.error "[SHARE_NOTIFICATION]    Error: #{e.message}"
+    raise e
+  rescue StandardError => e
+    Rails.logger.error "[SHARE_NOTIFICATION] ❌ Unexpected error sending email to #{user.email}"
+    Rails.logger.error "[SHARE_NOTIFICATION]    Error class: #{e.class.name}"
+    Rails.logger.error "[SHARE_NOTIFICATION]    Error message: #{e.message}"
+    Rails.logger.error "[SHARE_NOTIFICATION]    Backtrace: #{e.backtrace.first(5).join("\n")}"
     raise e
   end
 
