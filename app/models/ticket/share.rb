@@ -7,7 +7,8 @@ class Ticket::Share < ApplicationModel
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Share::TriggersNotifications
-  include Ticket::Share::TriggersSubscriptions
+  # NOTE: TriggersSubscriptions removed - ChecksClientNotification handles WebSocket broadcasts
+  # including both caused duplicate WebSocket events (3x broadcasts for 1 action)
 
   VALID_PERMISSIONS = %w[full].freeze
 

@@ -7,7 +7,8 @@ class Ticket::Approval < ApplicationModel
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Approval::TriggersNotifications
-  include Ticket::Approval::TriggersSubscriptions
+  # NOTE: TriggersSubscriptions removed - ChecksClientNotification handles WebSocket broadcasts
+  # including both caused duplicate WebSocket events (3x broadcasts for 1 action)
 
   PRIORITIES = %w[low normal high urgent].freeze
   STATUSES   = %w[pending approved rejected].freeze
