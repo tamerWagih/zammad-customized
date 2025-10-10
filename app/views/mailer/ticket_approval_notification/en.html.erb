@@ -1,13 +1,12 @@
-<% case action %>
-<% when 'create' %>
+<% if action == 'create' %>
 Approval request for ticket (#{ticket.title})
-<% when 'update' %>
+<% elsif action == 'update' %>
 Approval request updated for ticket (#{ticket.title})
-<% when 'approve' %>
+<% elsif action == 'approve' %>
 Ticket approved (#{ticket.title})
-<% when 'reject' %>
+<% elsif action == 'reject' %>
 Ticket rejected (#{ticket.title})
-<% when 'delete' %>
+<% elsif action == 'delete' %>
 Approval request deleted for ticket (#{ticket.title})
 <% else %>
 Approval notification for ticket (#{ticket.title})
@@ -15,14 +14,13 @@ Approval notification for ticket (#{ticket.title})
 
 <div>Hi #{recipient.firstname},</div>
 <br>
-<% case action %>
-<% when 'create' %>
+<% if action == 'create' %>
   <% if recipient.id == approval.requester_id %>
     <div>You have <b>sent</b> an approval request for ticket "<b>#{ticket.title}</b>" to "<b>#{approval.approver.fullname}</b>".</div>
   <% else %>
     <div>You have <b>received</b> an approval request for ticket "<b>#{ticket.title}</b>" from "<b>#{approval.requester.fullname}</b>".</div>
   <% end %>
-<% when 'update' %>
+<% elsif action == 'update' %>
   <% if recipient.id == approval.requester_id %>
     <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been updated.</div>
   <% elsif recipient.id == approval.approver_id %>
@@ -30,19 +28,19 @@ Approval notification for ticket (#{ticket.title})
   <% else %>
     <div>The approval request for ticket "<b>#{ticket.title}</b>" has been updated by "<b>#{actor.longname}</b>".</div>
   <% end %>
-<% when 'approve' %>
+<% elsif action == 'approve' %>
   <% if recipient.id == approval.requester_id %>
     <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been <b>approved</b> by "<b>#{approval.approver.fullname}</b>".</div>
   <% else %>
     <div>You have <b>approved</b> the request for ticket "<b>#{ticket.title}</b>".</div>
   <% end %>
-<% when 'reject' %>
+<% elsif action == 'reject' %>
   <% if recipient.id == approval.requester_id %>
     <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been <b>rejected</b> by "<b>#{approval.approver.fullname}</b>".</div>
   <% else %>
     <div>You have <b>rejected</b> the request for ticket "<b>#{ticket.title}</b>".</div>
   <% end %>
-<% when 'delete' %>
+<% elsif action == 'delete' %>
   <% if recipient.id == approval.requester_id %>
     <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been deleted.</div>
   <% else %>
