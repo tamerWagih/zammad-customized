@@ -60,13 +60,11 @@ class TransactionDispatcher
         # execute async backends
         Rails.logger.info "[TRANSACTION_DISPATCHER] 📤 Queuing TransactionJob for #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
         
-        # Use Delayed::Job.enqueue directly instead of relying on perform_later
-        # This bypasses ActiveJob's transaction detection issues
-        job = TransactionJob.new
-        job.arguments = [item, params]
+        # Use set(wait: 0.seconds) to force immediate enqueueing
+        # This bypasses ActiveJob's transaction detection while properly serializing arguments
+        TransactionJob.set(wait: 0.seconds).perform_later(item, params)
         
-        Delayed::Job.enqueue(job, queue: 'default', priority: 0)
-        Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ TransactionJob enqueued to Delayed::Job successfully"
+        Rails.logger.info "[TRANSACTION_DISPATCHER] ✅ TransactionJob queued successfully"
       end
     end
   end
