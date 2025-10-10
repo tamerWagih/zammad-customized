@@ -235,8 +235,11 @@ class Transaction::ApprovalNotification
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Action: #{@item[:type]}"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Ticket: ##{ticket.id} (#{ticket.title})"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Approval: ##{approval.id} (status: #{approval.status})"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Approver: #{approval.approver&.email}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Requester: #{approval.requester&.email}"
+    # For DELETE events, approver/requester are strings, not User objects
+    approver_info = approval.approver.respond_to?(:email) ? approval.approver.email : approval.approver.to_s
+    requester_info = approval.requester.respond_to?(:email) ? approval.requester.email : approval.requester.to_s
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Approver: #{approver_info}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Requester: #{requester_info}"
     
     result = NotificationFactory::Mailer.notification(
       template:    'ticket_approval_notification',

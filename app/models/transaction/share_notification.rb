@@ -244,8 +244,11 @@ class Transaction::ShareNotification
     Rails.logger.info "[SHARE_NOTIFICATION]    Action: #{@item[:type]}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Ticket: ##{ticket.id} (#{ticket.title})"
     Rails.logger.info "[SHARE_NOTIFICATION]    Share: ##{share.id} (status: #{share.status})"
-    Rails.logger.info "[SHARE_NOTIFICATION]    Group: #{share.group&.name}"
-    Rails.logger.info "[SHARE_NOTIFICATION]    Shared by: #{share.shared_by&.email}"
+    # For DELETE events, group/shared_by might be strings, not objects
+    group_info = share.group.respond_to?(:name) ? share.group.name : (share.group_name || share.group.to_s)
+    shared_by_info = share.shared_by.respond_to?(:email) ? share.shared_by.email : (share.shared_by_name || share.shared_by.to_s)
+    Rails.logger.info "[SHARE_NOTIFICATION]    Group: #{group_info}"
+    Rails.logger.info "[SHARE_NOTIFICATION]    Shared by: #{shared_by_info}"
     
     result = NotificationFactory::Mailer.notification(
       template:    'ticket_share_notification',
