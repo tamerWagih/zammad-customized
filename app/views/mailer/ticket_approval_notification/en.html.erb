@@ -54,8 +54,16 @@ Approval notification for ticket (#{ticket.title})
 Ticket: ##{ticket.number}<br>
 Status: #{t(approval.status)}<br>
 Priority: #{t(approval.priority)}<br>
+<% if approval.approver.respond_to?(:fullname) %>
 Approver: #{approval.approver.fullname}<br>
+<% elsif approval.approver.is_a?(String) %>
+Approver: #{approval.approver}<br>
+<% end %>
+<% if approval.requester.respond_to?(:fullname) %>
 Requester: #{approval.requester.fullname}<br>
+<% elsif approval.requester.is_a?(String) %>
+Requester: #{approval.requester}<br>
+<% end %>
 <% if approval.message.present? %>
 Message: #{approval.message}<br>
 <% end %>

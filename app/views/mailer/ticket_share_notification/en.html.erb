@@ -42,8 +42,16 @@ Ticket share notification (#{ticket.title})
 <br>
 <div>
 Ticket: ##{ticket.number}<br>
+<% if share.group.respond_to?(:name) %>
 Group: #{share.group.name}<br>
+<% elsif share.group_name.present? %>
+Group: #{share.group_name}<br>
+<% end %>
+<% if share.shared_by.respond_to?(:fullname) %>
 Shared by: #{share.shared_by.fullname}<br>
+<% elsif share.shared_by_name.present? %>
+Shared by: #{share.shared_by_name}<br>
+<% end %>
 <% if share.message.present? %>
 Message: #{share.message}<br>
 <% end %>
