@@ -16,9 +16,11 @@ Approval notification for ticket (#{ticket.title})
 <br>
 <% if action == 'create' %>
   <% if recipient.id == approval.requester_id %>
-    <div>You have <b>sent</b> an approval request for ticket "<b>#{ticket.title}</b>" to "<b>#{approval.approver.fullname}</b>".</div>
+    <% approver_name = approval.approver.respond_to?(:fullname) ? approval.approver.fullname : approval.approver.to_s %>
+    <div>You have <b>sent</b> an approval request for ticket "<b>#{ticket.title}</b>" to "<b>#{approver_name}</b>".</div>
   <% else %>
-    <div>You have <b>received</b> an approval request for ticket "<b>#{ticket.title}</b>" from "<b>#{approval.requester.fullname}</b>".</div>
+    <% requester_name = approval.requester.respond_to?(:fullname) ? approval.requester.fullname : approval.requester.to_s %>
+    <div>You have <b>received</b> an approval request for ticket "<b>#{ticket.title}</b>" from "<b>#{requester_name}</b>".</div>
   <% end %>
 <% elsif action == 'update' %>
   <% if recipient.id == approval.requester_id %>
@@ -30,13 +32,15 @@ Approval notification for ticket (#{ticket.title})
   <% end %>
 <% elsif action == 'approve' %>
   <% if recipient.id == approval.requester_id %>
-    <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been <b>approved</b> by "<b>#{approval.approver.fullname}</b>".</div>
+    <% approver_name = approval.approver.respond_to?(:fullname) ? approval.approver.fullname : approval.approver.to_s %>
+    <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been <b>approved</b> by "<b>#{approver_name}</b>".</div>
   <% else %>
     <div>You have <b>approved</b> the request for ticket "<b>#{ticket.title}</b>".</div>
   <% end %>
 <% elsif action == 'reject' %>
   <% if recipient.id == approval.requester_id %>
-    <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been <b>rejected</b> by "<b>#{approval.approver.fullname}</b>".</div>
+    <% approver_name = approval.approver.respond_to?(:fullname) ? approval.approver.fullname : approval.approver.to_s %>
+    <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been <b>rejected</b> by "<b>#{approver_name}</b>".</div>
   <% else %>
     <div>You have <b>rejected</b> the request for ticket "<b>#{ticket.title}</b>".</div>
   <% end %>

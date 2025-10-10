@@ -14,9 +14,12 @@ Ticket share notification (#{ticket.title})
 <br>
 <% if action == 'create' %>
   <% if recipient.id == share.shared_by_id %>
-    <div>You have <b>shared</b> ticket "<b>#{ticket.title}</b>" with group "<b>#{share.group.name}</b>".</div>
+    <% group_name = share.group.respond_to?(:name) ? share.group.name : (share.group_name || share.group.to_s) %>
+    <div>You have <b>shared</b> ticket "<b>#{ticket.title}</b>" with group "<b>#{group_name}</b>".</div>
   <% else %>
-    <div>Ticket "<b>#{ticket.title}</b>" has been <b>shared</b> with your group "<b>#{share.group.name}</b>" by "<b>#{share.shared_by.fullname}</b>".</div>
+    <% group_name = share.group.respond_to?(:name) ? share.group.name : (share.group_name || share.group.to_s) %>
+    <% shared_by_name = share.shared_by.respond_to?(:fullname) ? share.shared_by.fullname : (share.shared_by_name || share.shared_by.to_s) %>
+    <div>Ticket "<b>#{ticket.title}</b>" has been <b>shared</b> with your group "<b>#{group_name}</b>" by "<b>#{shared_by_name}</b>".</div>
   <% end %>
 <% elsif action == 'update' %>
   <% if recipient.id == share.shared_by_id %>
@@ -26,7 +29,8 @@ Ticket share notification (#{ticket.title})
   <% end %>
 <% elsif action == 'revoke' %>
   <% if recipient.id == share.shared_by_id %>
-    <div>You have <b>revoked</b> access to ticket "<b>#{ticket.title}</b>" for group "<b>#{share.group.name}</b>".</div>
+    <% group_name = share.group.respond_to?(:name) ? share.group.name : (share.group_name || share.group.to_s) %>
+    <div>You have <b>revoked</b> access to ticket "<b>#{ticket.title}</b>" for group "<b>#{group_name}</b>".</div>
   <% else %>
     <div>Access to ticket "<b>#{ticket.title}</b>" has been <b>revoked</b>.</div>
   <% end %>
