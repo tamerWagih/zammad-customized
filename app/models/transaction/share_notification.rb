@@ -134,6 +134,8 @@ class Transaction::ShareNotification
     # ALWAYS add the user who shared the ticket (even if they're the current user)
     # This ensures the sharer gets confirmation emails for all their share actions
     # For DELETE events, shared_by is a string, so we need to look up by ID
+    Rails.logger.info "[SHARE_NOTIFICATION] 🔍 Debug - Action user: #{@item[:user_id]}, Share shared_by_id: #{share.shared_by_id}"
+    
     if share.shared_by_id.present?
       sharer = ::User.find_by(id: share.shared_by_id)
       if sharer&.active? && sharer.permissions?('ticket.agent')
@@ -142,6 +144,8 @@ class Transaction::ShareNotification
       else
         Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Sharer not eligible: #{sharer&.email}(#{sharer&.id}) - active: #{sharer&.active?}, agent: #{sharer&.permissions?('ticket.agent')}"
       end
+    else
+      Rails.logger.warn "[SHARE_NOTIFICATION] ⚠️  No shared_by_id found in share object"
     end
 
     Rails.logger.info "[SHARE_NOTIFICATION] 📋 Action: #{@item[:type]} - Final recipients: #{recipients.map { |u| "#{u.email}(#{u.id})" }.join(', ')}"

@@ -5103,15 +5103,8 @@ Setting.create_if_not_exists(
   state:       'Transaction::Notification',
   frontend:    false
 )
-Setting.create_if_not_exists(
-  title:       __('Defines transaction backend.'),
-  name:        '0110_approval_notification',
-  area:        'Transaction::Backend::Async',
-  description: __('Defines the transaction backend to send approval notifications.'),
-  options:     {},
-  state:       'Transaction::ApprovalNotification',
-  frontend:    false
-)
+# REMOVED: Duplicate approval notification backend setting
+# The 9100_approval_notification setting from migration is the active one
 # REMOVED: Duplicate share notification backend setting
 # The 9200_share_notification setting from migration is the active one
 Setting.create_if_not_exists(

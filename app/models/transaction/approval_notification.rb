@@ -116,17 +116,29 @@ class Transaction::ApprovalNotification
     # ALWAYS send to BOTH approver and requester for ALL actions
     # This ensures both parties stay informed about any changes
     # For DELETE events, approver/requester are strings, so we need to look up by ID
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 🔍 Debug - Action user: #{@item[:user_id]}, Approver: #{approval.approver_id}, Requester: #{approval.requester_id}"
+    
     if approval.approver_id.present?
       approver_user = ::User.find_by(id: approval.approver_id)
-      recipients << approver_user if approver_user
+      if approver_user
+        recipients << approver_user
+        Rails.logger.info "[APPROVAL_NOTIFICATION] 📤 Added approver: #{approver_user.email}(#{approver_user.id})"
+      else
+        Rails.logger.warn "[APPROVAL_NOTIFICATION] ⚠️  Approver user not found: #{approval.approver_id}"
+      end
     end
     
     if approval.requester_id.present?
       requester_user = ::User.find_by(id: approval.requester_id)
-      recipients << requester_user if requester_user
+      if requester_user
+        recipients << requester_user
+        Rails.logger.info "[APPROVAL_NOTIFICATION] 📤 Added requester: #{requester_user.email}(#{requester_user.id})"
+      else
+        Rails.logger.warn "[APPROVAL_NOTIFICATION] ⚠️  Requester user not found: #{approval.requester_id}"
+      end
     end
 
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Action: #{@item[:type]} - Sending to BOTH approver and requester"
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Action: #{@item[:type]} - Final recipients: #{recipients.map { |u| "#{u.email}(#{u.id})" }.join(', ')}"
 
     # Remove duplicates but DON'T exclude current user - they should get notification too
     recipients.compact.uniq
