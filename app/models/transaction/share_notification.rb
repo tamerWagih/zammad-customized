@@ -95,6 +95,9 @@ class Transaction::ShareNotification
       send_to_single_recipient(recipient_settings)
     end
 
+    # send online notifications
+    send_online_notifications
+
     Rails.logger.info "[SHARE_NOTIFICATION] ✅ Backend perform() completed for share ##{@item[:object_id]}"
     true
   end
@@ -360,6 +363,75 @@ class Transaction::ShareNotification
 
   def ticket_url
     "#{Setting.get('http_type')}://#{Setting.get('fqdn')}/#/ticket/zoom/#{ticket.id}"
+  end
+
+  def send_online_notifications
+    Rails.logger.info "[SHARE_NOTIFICATION] 🔔 Sending online notifications to #{@recipients_and_channels.count} recipients"
+    
+    @recipients_and_channels.each do |recipient_settings|
+      user = recipient_settings[:user]
+      channels = recipient_settings[:channels]
+      
+      if channels['online'] == true
+        Rails.logger.info "[SHARE_NOTIFICATION] 📱 Sending online notification to #{user.email}"
+        
+        # Create online notification
+        notification_data = {
+          type: 'share',
+          title: get_notification_title,
+          message: get_notification_message(user),
+          url: ticket_url,
+          ticket_id: ticket.id,
+          share_id: share.id,
+          action: @item[:type].to_s
+        }
+        
+        # Send via WebSocket or notification system
+        begin
+          # Use Zammad's notification system
+          NotificationFactory::Mailer.notification(
+            template: 'share_online_notification',
+            user: user,
+            objects: build_objects(user),
+            notification: notification_data
+          )
+          
+          Rails.logger.info "[SHARE_NOTIFICATION] ✅ Online notification sent to #{user.email}"
+        rescue => e
+          Rails.logger.error "[SHARE_NOTIFICATION] ❌ Failed to send online notification to #{user.email}: #{e.message}"
+        end
+      end
+    end
+  end
+
+  def get_notification_title
+    case @item[:type].to_s
+    when 'create'
+      "New ticket share"
+    when 'update'
+      "Ticket share updated"
+    when 'revoke'
+      "Ticket share revoked"
+    when 'delete'
+      "Ticket share deleted"
+    else
+      "Ticket share notification"
+    end
+  end
+
+  def get_notification_message(user)
+    case @item[:type].to_s
+    when 'create'
+      "A ticket has been shared with your group: ##{ticket.number}"
+    when 'update'
+      "A ticket share has been updated: ##{ticket.number}"
+    when 'revoke'
+      "A ticket share has been revoked: ##{ticket.number}"
+    when 'delete'
+      "A ticket share has been deleted: ##{ticket.number}"
+    else
+      "You have received a ticket share notification for ticket ##{ticket.number}"
+    end
   end
 
   def get_notification_type
