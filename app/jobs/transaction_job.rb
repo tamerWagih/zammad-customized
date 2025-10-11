@@ -36,6 +36,12 @@ class TransactionJob < ApplicationJob
       next if params[:disable]&.include?(backend)
 
       Rails.logger.info "[TRANSACTION_JOB] 🚀 Executing backend: #{backend} for #{item[:object]} ##{item[:object_id]}"
+      
+      # Add detailed logging for notification backends
+      if backend == 'Transaction::Notification' || backend == 'Transaction::ApprovalNotification' || backend == 'Transaction::ShareNotification'
+        Rails.logger.info "[TRANSACTION_JOB] 📧 NOTIFICATION BACKEND: #{backend} processing #{item[:object]} #{item[:type]} event"
+      end
+      
       TransactionDispatcher.execute_single_backend(backend.constantize, item, params)
     end
   end

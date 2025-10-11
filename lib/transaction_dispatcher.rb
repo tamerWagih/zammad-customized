@@ -39,15 +39,23 @@ class TransactionDispatcher
 
     # get uniq objects
     list_objects = get_uniq_changes(list)
+    Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Processing #{list_objects.size} object types"
+    
     list_objects.each_value do |objects|
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Processing #{objects.size} objects"
+      
       objects.each_value do |item|
+        Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 Processing item: #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
 
         # execute sync backends
+        Rails.logger.info "[TRANSACTION_DISPATCHER] 🔄 Executing #{sync_backends.size} sync backends"
         sync_backends.each do |backend|
+          Rails.logger.info "[TRANSACTION_DISPATCHER] 🔄 Sync backend: #{backend}"
           execute_single_backend(backend, item, params)
         end
 
         # execute async backends
+        Rails.logger.info "[TRANSACTION_DISPATCHER] 🔄 Queuing async backends via TransactionJob"
         TransactionJob.perform_later(item, params)
       end
     end
