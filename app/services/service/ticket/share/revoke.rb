@@ -3,7 +3,8 @@ class Service::Ticket::Share::Revoke < Service::BaseWithCurrentUser
     Pundit.authorize current_user, share.ticket, :update?
     ensure_manageable!(share)
 
-    share.update!(status: 'revoked') unless share.status == 'revoked'
+    # Use specific method to trigger proper action type
+    share.revoke! unless share.status == 'revoked'
     share.reload
 
     # Transaction::ShareNotification will be triggered automatically via callbacks

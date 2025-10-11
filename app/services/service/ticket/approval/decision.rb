@@ -19,7 +19,15 @@ class Service::Ticket::Approval::Decision < Service::BaseWithCurrentUser
       return approval
     end
 
-    approval.update!(status: new_status)
+    # Use specific methods to trigger proper action types
+    if decision_key == :approve
+      approval.approve!
+    elsif decision_key == :reject
+      approval.reject!
+    else
+      approval.update!(status: new_status)
+    end
+    
     approval.reload
 
     # Transaction::ApprovalNotification will be triggered automatically via callbacks

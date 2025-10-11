@@ -251,6 +251,7 @@ class Transaction::ShareNotification
     Rails.logger.info "[SHARE_NOTIFICATION]    Share ID: #{template_objects[:share]&.id}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Share Group: #{template_objects[:share]&.group&.name || 'N/A'}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Group Name: #{template_objects[:group_name]}"
+    Rails.logger.info "[SHARE_NOTIFICATION]    Expires At: #{template_objects[:expires_at_formatted]}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Share Shared By: #{template_objects[:shared_by]&.email || 'N/A'}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Shared By Name: #{template_objects[:shared_by_name]}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Action: #{template_objects[:action]}"
@@ -381,6 +382,7 @@ class Transaction::ShareNotification
       shared_by:     shared_by_user,
       shared_by_name: shared_by_user&.fullname || shared_by_user&.email || 'Unknown User',
       group_name:    share_obj.group&.name || 'Unknown Group',
+      expires_at_formatted: share_obj.expires_at&.strftime('%Y-%m-%d') || 'No expiry',
       recipient:     user,
       current_user:  current_user,
       changes:       human_changes(@item[:changes], ticket, user),
