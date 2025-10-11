@@ -58,39 +58,28 @@ class Transaction::ApprovalNotification
   end
 
   def perform
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 🔄 Backend perform() called for #{@item[:type]} on #{@item[:object]} ##{@item[:object_id]}"
-    
     # Only process Ticket::Approval objects
     if @item[:object] != 'Ticket::Approval'
-      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped: object type is #{@item[:object]}, not Ticket::Approval"
       return
     end
     
-    # Log the specific action type
-    action_type = @item[:type]
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 🎯 Processing #{action_type} action for approval ##{@item[:object_id]}"
-    
     # return if we run import mode
     if Setting.get('import_mode')
-      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped: import_mode enabled"
       return
     end
     
     if approval.blank? || ticket.blank?
-      Rails.logger.warn "[APPROVAL_NOTIFICATION] ⚠️  Skipped: approval or ticket not found (approval: #{approval.inspect}, ticket: #{ticket.inspect})"
       return
     end
     
     if @params[:disable_notification]
-      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped: disable_notification param"
       return
     end
     
     if @params[:send_notification] == false
-      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped: send_notification=false param"
       return
     end
-
+    
     prepare_recipients_and_reasons
     Rails.logger.info "[APPROVAL_NOTIFICATION] 📬 Recipients prepared: #{recipients_and_channels.count} recipient(s)"
 
@@ -155,12 +144,13 @@ class Transaction::ApprovalNotification
       # This matches the user's notification preferences matrix
       result = NotificationFactory::Mailer.notification_settings(user, ticket, 'approval')
       
-      Rails.logger.info "[APPROVAL_NOTIFICATION] 🔍 Notification settings check for #{user.email}: #{result ? 'PASSED' : 'FILTERED OUT'}"
-      Rails.logger.info "[APPROVAL_NOTIFICATION]    Settings result: #{result.inspect}" if result
       
       next if !result
       next if already_checked_recipient_ids[user.id]
 
+      Rails.logger.info "[APPROVAL_NOTIFICATION] 🔍 Notification settings check for #{user.email}: #{result ? 'PASSED' : 'FILTERED OUT'}"
+      Rails.logger.info "[APPROVAL_NOTIFICATION]    Settings result: #{result.inspect}" if result
+      
       already_checked_recipient_ids[user.id] = true
       @recipients_and_channels.push result
       next if recipients_reason[user.id]
@@ -173,14 +163,9 @@ class Transaction::ApprovalNotification
     user     = recipient_settings[:user]
     channels = recipient_settings[:channels]
 
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 👤 Processing recipient: #{user.email} (channels: #{channels.keys.join(', ')})"
 
     # NOTE: We want BOTH approver and requester to get emails for ALL actions
     # So we don't skip the person who performed the action
-    # if recipient_myself?(user)
-    #   Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped #{user.email}: recipient is sender (myself)"
-    #   return
-    # end
 
     # ignore inactive users
     if !user.active?

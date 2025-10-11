@@ -47,7 +47,6 @@ class Ticket::Approval < ApplicationModel
       created_at: Time.zone.now,
     })
     
-    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ APPROVE event added to EventBuffer for approval ##{id}"
   end
 
   def reject!
@@ -70,7 +69,6 @@ class Ticket::Approval < ApplicationModel
       created_at: Time.zone.now,
     })
     
-    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ REJECT event added to EventBuffer for approval ##{id}"
   end
 
   def pending?

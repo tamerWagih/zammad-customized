@@ -62,17 +62,12 @@ class Transaction::ShareNotification
     
     # Only process Ticket::Share objects
     if @item[:object] != 'Ticket::Share'
-      Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped: object type is #{@item[:object]}, not Ticket::Share"
       return
     end
     
-    # Log the specific action type
-    action_type = @item[:type]
-    Rails.logger.info "[SHARE_NOTIFICATION] 🎯 Processing #{action_type} action for share ##{@item[:object_id]}"
     
     # return if we run import mode
     if Setting.get('import_mode')
-      Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped: import_mode enabled"
       return
     end
     

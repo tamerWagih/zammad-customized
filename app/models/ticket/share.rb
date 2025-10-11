@@ -50,7 +50,6 @@ class Ticket::Share < ApplicationModel
       created_at: Time.zone.now,
     })
     
-    Rails.logger.info "[SHARE_NOTIFICATION] ✅ REVOKE event added to EventBuffer for share ##{id}"
   end
 
   def group_name
