@@ -81,6 +81,12 @@ class Transaction::Notification
       return
     end
     
+    # Skip approval and share events - they have dedicated notification backends
+    if %w[Ticket::Approval Ticket::Share].include?(@item[:object])
+      Rails.logger.info "[NOTIFICATION] ⏭️  Skipping: #{@item[:object]} events handled by dedicated backend"
+      return
+    end
+    
     if @params[:disable_notification]
       Rails.logger.info "[NOTIFICATION] ⏭️  Skipping: notifications disabled via params"
       return

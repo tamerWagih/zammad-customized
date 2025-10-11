@@ -29,10 +29,48 @@ class Ticket::Approval < ApplicationModel
 
   def approve!
     update!(status: 'approved')
+    
+    # Trigger specific 'approve' action type for notifications
+    EventBuffer.add('transaction', {
+      object:     'Ticket::Approval',
+      type:       'approve',
+      object_id:  id,
+      data:       {
+        ticket_id: ticket_id,
+        approver_id: approver_id,
+        requester_id: requester_id,
+        status: 'approved',
+        message: message,
+        priority: priority
+      },
+      user_id:    UserInfo.current_user_id,
+      created_at: Time.zone.now,
+    })
+    
+    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ APPROVE event added to EventBuffer for approval ##{id}"
   end
 
   def reject!
     update!(status: 'rejected')
+    
+    # Trigger specific 'reject' action type for notifications
+    EventBuffer.add('transaction', {
+      object:     'Ticket::Approval',
+      type:       'reject',
+      object_id:  id,
+      data:       {
+        ticket_id: ticket_id,
+        approver_id: approver_id,
+        requester_id: requester_id,
+        status: 'rejected',
+        message: message,
+        priority: priority
+      },
+      user_id:    UserInfo.current_user_id,
+      created_at: Time.zone.now,
+    })
+    
+    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ REJECT event added to EventBuffer for approval ##{id}"
   end
 
   def pending?

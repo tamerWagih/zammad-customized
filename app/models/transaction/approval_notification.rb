@@ -66,6 +66,10 @@ class Transaction::ApprovalNotification
       return
     end
     
+    # Log the specific action type
+    action_type = @item[:type]
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 🎯 Processing #{action_type} action for approval ##{@item[:object_id]}"
+    
     # return if we run import mode
     if Setting.get('import_mode')
       Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped: import_mode enabled"

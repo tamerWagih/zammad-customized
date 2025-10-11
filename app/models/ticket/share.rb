@@ -32,6 +32,25 @@ class Ticket::Share < ApplicationModel
 
   def revoke!
     update!(status: 'revoked')
+    
+    # Trigger specific 'revoke' action type for notifications
+    EventBuffer.add('transaction', {
+      object:     'Ticket::Share',
+      type:       'revoke',
+      object_id:  id,
+      data:       {
+        ticket_id: ticket_id,
+        group_id: group_id,
+        shared_by_id: shared_by_id,
+        status: 'revoked',
+        message: message,
+        permissions: permissions
+      },
+      user_id:    UserInfo.current_user_id,
+      created_at: Time.zone.now,
+    })
+    
+    Rails.logger.info "[SHARE_NOTIFICATION] ✅ REVOKE event added to EventBuffer for share ##{id}"
   end
 
   def group_name
