@@ -168,13 +168,8 @@ class App.WidgetApprovals extends App.Controller
           @localApprovals[index] = updated_approval
           @render()  # Re-render with updated data
         
-        # Show brief loading indicator while waiting for WebSocket confirmation
-        @startLoading()
-        
-        # Stop loading after 1 second (WebSocket should arrive by then)
-        setTimeout =>
-          @stopLoading()
-        , 1000
+        # No loading spinner needed - optimistic update shows change immediately
+        # WebSocket will provide final confirmation when it arrives
     )
 
   deleteApproval: (e) =>
