@@ -311,9 +311,15 @@ class Transaction::ShareNotification
   end
 
   def build_objects(user)
+    # Ensure share object has associations loaded for template
+    share_obj = share
+    if share_obj.respond_to?(:group) && !share_obj.association(:group).loaded?
+      share_obj = Ticket::Share.includes(:group, :shared_by).find(share_obj.id)
+    end
+    
     objects = {
       ticket:       ticket,
-      share:        share,
+      share:        share_obj,
       recipient:    user,
       current_user: current_user,
       changes:      human_changes(@item[:changes], ticket, user),

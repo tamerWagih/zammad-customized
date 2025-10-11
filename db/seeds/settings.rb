@@ -5112,15 +5112,8 @@ Setting.create_if_not_exists(
   state:       'Transaction::ApprovalNotification',
   frontend:    false
 )
-Setting.create_if_not_exists(
-  title:       __('Defines transaction backend.'),
-  name:        '0120_share_notification',
-  area:        'Transaction::Backend::Async',
-  description: __('Defines the transaction backend to send share notifications.'),
-  options:     {},
-  state:       'Transaction::ShareNotification',
-  frontend:    false
-)
+# REMOVED: Duplicate share notification backend setting
+# The 9200_share_notification setting from migration is the active one
 Setting.create_if_not_exists(
   title:       __('Defines transaction backend.'),
   name:        '1000_signature_detection',
