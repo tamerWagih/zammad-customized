@@ -95,9 +95,6 @@ class Transaction::ApprovalNotification
       send_to_single_recipient(recipient_settings)
     end
 
-    # send online notifications
-    send_online_notifications
-
     Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ Backend perform() completed for approval ##{@item[:object_id]}"
     true
   end
@@ -253,10 +250,17 @@ class Transaction::ApprovalNotification
     Rails.logger.info "[APPROVAL_NOTIFICATION]    From: #{Setting.get('notification_sender')}"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Message ID: #{result[:message_id] rescue 'N/A'}"
     
-    # Log the actual email content
+    # Log the actual email content - check all possible body fields
     Rails.logger.info "[APPROVAL_NOTIFICATION] 📧 EMAIL CONTENT for #{user.email}:"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    =========================================="
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    #{result[:body] rescue 'N/A'}"
+    if result.is_a?(Hash)
+      body_content = result[:body] || result['body'] || result[:content_type] || result[:text] || 'Body field not found in result'
+      Rails.logger.info "[APPROVAL_NOTIFICATION]    Body type: #{result.keys.inspect}"
+      Rails.logger.info "[APPROVAL_NOTIFICATION]    #{body_content}"
+    else
+      Rails.logger.info "[APPROVAL_NOTIFICATION]    Result type: #{result.class}"
+      Rails.logger.info "[APPROVAL_NOTIFICATION]    #{result.inspect}"
+    end
     Rails.logger.info "[APPROVAL_NOTIFICATION]    =========================================="
   rescue Channel::DeliveryError => e
     status_code = begin
@@ -392,79 +396,6 @@ class Transaction::ApprovalNotification
     end
     
     objects
-  end
-
-  def send_online_notifications
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 🔔 Sending online notifications to #{@recipients_and_channels.count} recipients"
-    
-    @recipients_and_channels.each do |recipient_settings|
-      user = recipient_settings[:user]
-      channels = recipient_settings[:channels]
-      
-      if channels['online'] == true
-        Rails.logger.info "[APPROVAL_NOTIFICATION] 📱 Sending online notification to #{user.email}"
-        
-        # Create online notification
-        notification_data = {
-          type: 'approval',
-          title: get_notification_title,
-          message: get_notification_message(user),
-          url: ticket_url,
-          ticket_id: ticket.id,
-          approval_id: approval.id,
-          action: @item[:type].to_s
-        }
-        
-        # Send via WebSocket or notification system
-        begin
-          # Use Zammad's notification system
-          NotificationFactory::Mailer.notification(
-            template: 'approval_online_notification',
-            user: user,
-            objects: build_objects(user),
-            notification: notification_data
-          )
-          
-          Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ Online notification sent to #{user.email}"
-        rescue => e
-          Rails.logger.error "[APPROVAL_NOTIFICATION] ❌ Failed to send online notification to #{user.email}: #{e.message}"
-        end
-      end
-    end
-  end
-
-  def get_notification_title
-    case @item[:type].to_s
-    when 'create'
-      "New approval request"
-    when 'update'
-      "Approval request updated"
-    when 'approve'
-      "Approval request approved"
-    when 'reject'
-      "Approval request rejected"
-    when 'delete'
-      "Approval request deleted"
-    else
-      "Approval notification"
-    end
-  end
-
-  def get_notification_message(user)
-    case @item[:type].to_s
-    when 'create'
-      "A new approval request has been created for ticket ##{ticket.number}"
-    when 'update'
-      "An approval request has been updated for ticket ##{ticket.number}"
-    when 'approve'
-      "An approval request has been approved for ticket ##{ticket.number}"
-    when 'reject'
-      "An approval request has been rejected for ticket ##{ticket.number}"
-    when 'delete'
-      "An approval request has been deleted for ticket ##{ticket.number}"
-    else
-      "You have received an approval notification for ticket ##{ticket.number}"
-    end
   end
 
   def ticket_url
