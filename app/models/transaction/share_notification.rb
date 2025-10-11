@@ -164,6 +164,10 @@ class Transaction::ShareNotification
       # Use 'share' as the notification type (not the action type)
       # This matches the user's notification preferences matrix
       result = NotificationFactory::Mailer.notification_settings(user, ticket, 'share')
+      
+      Rails.logger.info "[SHARE_NOTIFICATION] 🔍 Notification settings check for #{user.email}: #{result ? 'PASSED' : 'FILTERED OUT'}"
+      Rails.logger.info "[SHARE_NOTIFICATION]    Settings result: #{result.inspect}" if result
+      
       next if !result
       next if already_checked_recipient_ids[user.id]
 
@@ -237,10 +241,19 @@ class Transaction::ShareNotification
     Rails.logger.info "[SHARE_NOTIFICATION]    Group: #{group_info}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Shared by: #{shared_by_info}"
     
+    # Log the objects being passed to the template
+    template_objects = build_objects(user)
+    Rails.logger.info "[SHARE_NOTIFICATION] 📧 Email template objects for #{user.email}:"
+    Rails.logger.info "[SHARE_NOTIFICATION]    Share ID: #{template_objects[:share]&.id}"
+    Rails.logger.info "[SHARE_NOTIFICATION]    Share Group: #{template_objects[:share]&.group&.name || 'N/A'}"
+    Rails.logger.info "[SHARE_NOTIFICATION]    Share Shared By: #{template_objects[:share]&.shared_by&.email || 'N/A'}"
+    Rails.logger.info "[SHARE_NOTIFICATION]    Action: #{template_objects[:action]}"
+    Rails.logger.info "[SHARE_NOTIFICATION]    Recipient ID: #{template_objects[:recipient]&.id}"
+    
     result = NotificationFactory::Mailer.notification(
       template:    'ticket_share_notification',
       user:        user,
-      objects:     build_objects(user),
+      objects:     template_objects,
       message_id:  "<share.#{DateTime.current.to_fs(:number)}.#{ticket.id}.#{user.id}.#{SecureRandom.uuid}@#{Setting.get('fqdn')}>",
       references:  ticket.get_references,
       main_object: ticket,

@@ -150,6 +150,10 @@ class Transaction::ApprovalNotification
       # Use 'approval' as the notification type (not the action type)
       # This matches the user's notification preferences matrix
       result = NotificationFactory::Mailer.notification_settings(user, ticket, 'approval')
+      
+      Rails.logger.info "[APPROVAL_NOTIFICATION] 🔍 Notification settings check for #{user.email}: #{result ? 'PASSED' : 'FILTERED OUT'}"
+      Rails.logger.info "[APPROVAL_NOTIFICATION]    Settings result: #{result.inspect}" if result
+      
       next if !result
       next if already_checked_recipient_ids[user.id]
 
@@ -223,10 +227,19 @@ class Transaction::ApprovalNotification
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Approver: #{approver_info}"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Requester: #{requester_info}"
     
+    # Log the objects being passed to the template
+    template_objects = build_objects(user)
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📧 Email template objects for #{user.email}:"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Approval ID: #{template_objects[:approval]&.id}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Approver: #{template_objects[:approval]&.approver&.email || 'N/A'}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Requester: #{template_objects[:approval]&.requester&.email || 'N/A'}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Action: #{template_objects[:action]}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Recipient ID: #{template_objects[:recipient]&.id}"
+    
     result = NotificationFactory::Mailer.notification(
       template:    'ticket_approval_notification',
       user:        user,
-      objects:     build_objects(user),
+      objects:     template_objects,
       message_id:  "<approval.#{DateTime.current.to_fs(:number)}.#{ticket.id}.#{user.id}.#{SecureRandom.uuid}@#{Setting.get('fqdn')}>",
       references:  ticket.get_references,
       main_object: ticket,
