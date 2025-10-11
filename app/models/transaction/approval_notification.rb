@@ -250,16 +250,35 @@ class Transaction::ApprovalNotification
     Rails.logger.info "[APPROVAL_NOTIFICATION]    From: #{Setting.get('notification_sender')}"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Message ID: #{result[:message_id] rescue 'N/A'}"
     
-    # Log the actual email content - check all possible body fields
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📧 EMAIL CONTENT for #{user.email}:"
+    # Log the actual email content - extract from Mail::Message object
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📧 EMAIL BODY for #{user.email}:"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    =========================================="
-    if result.is_a?(Hash)
-      body_content = result[:body] || result['body'] || result[:content_type] || result[:text] || 'Body field not found in result'
-      Rails.logger.info "[APPROVAL_NOTIFICATION]    Body type: #{result.keys.inspect}"
-      Rails.logger.info "[APPROVAL_NOTIFICATION]    #{body_content}"
-    else
-      Rails.logger.info "[APPROVAL_NOTIFICATION]    Result type: #{result.class}"
-      Rails.logger.info "[APPROVAL_NOTIFICATION]    #{result.inspect}"
+    begin
+      if result.respond_to?(:body)
+        # Extract body from Mail::Message
+        if result.multipart?
+          # Get text/plain part if multipart
+          text_part = result.text_part
+          html_part = result.html_part
+          if text_part
+            Rails.logger.info "[APPROVAL_NOTIFICATION]    TEXT PART:"
+            Rails.logger.info "[APPROVAL_NOTIFICATION]    #{text_part.body.decoded}"
+          end
+          if html_part
+            Rails.logger.info "[APPROVAL_NOTIFICATION]    HTML PART (first 500 chars):"
+            html_body = html_part.body.decoded
+            Rails.logger.info "[APPROVAL_NOTIFICATION]    #{html_body[0..500]}..."
+          end
+        else
+          # Single part message
+          Rails.logger.info "[APPROVAL_NOTIFICATION]    BODY:"
+          Rails.logger.info "[APPROVAL_NOTIFICATION]    #{result.body.decoded}"
+        end
+      else
+        Rails.logger.info "[APPROVAL_NOTIFICATION]    Result type: #{result.class}, no body method"
+      end
+    rescue => e
+      Rails.logger.error "[APPROVAL_NOTIFICATION]    Failed to extract body: #{e.message}"
     end
     Rails.logger.info "[APPROVAL_NOTIFICATION]    =========================================="
   rescue Channel::DeliveryError => e
