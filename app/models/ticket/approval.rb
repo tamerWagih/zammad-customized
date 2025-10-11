@@ -28,15 +28,10 @@ class Ticket::Approval < ApplicationModel
   scope :rejected, -> { where(status: 'rejected') }
 
   def approve!
-    # Temporarily disable automatic transaction dispatcher to prevent double events
-    self.class.skip_callback(:update, :after, TransactionDispatcher)
+    # Use update_columns to skip callbacks and prevent automatic update event
+    update_columns(status: 'approved', updated_at: Time.zone.now)
     
-    update!(status: 'approved')
-    
-    # Re-enable the callback
-    self.class.set_callback(:update, :after, TransactionDispatcher)
-    
-    # Trigger specific 'approve' action type for notifications
+    # Manually trigger specific 'approve' action type for notifications
     EventBuffer.add('transaction', {
       object:     'Ticket::Approval',
       type:       'approve',
@@ -53,18 +48,16 @@ class Ticket::Approval < ApplicationModel
       created_at: Time.zone.now,
     })
     
+    # Manually touch the parent ticket to trigger its TriggersSubscriptions
+    ticket.touch if ticket
+    
   end
 
   def reject!
-    # Temporarily disable automatic transaction dispatcher to prevent double events
-    self.class.skip_callback(:update, :after, TransactionDispatcher)
+    # Use update_columns to skip callbacks and prevent automatic update event
+    update_columns(status: 'rejected', updated_at: Time.zone.now)
     
-    update!(status: 'rejected')
-    
-    # Re-enable the callback
-    self.class.set_callback(:update, :after, TransactionDispatcher)
-    
-    # Trigger specific 'reject' action type for notifications
+    # Manually trigger specific 'reject' action type for notifications
     EventBuffer.add('transaction', {
       object:     'Ticket::Approval',
       type:       'reject',
@@ -80,6 +73,9 @@ class Ticket::Approval < ApplicationModel
       user_id:    UserInfo.current_user_id,
       created_at: Time.zone.now,
     })
+    
+    # Manually touch the parent ticket to trigger its TriggersSubscriptions
+    ticket.touch if ticket
     
   end
 
