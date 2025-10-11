@@ -246,6 +246,7 @@ class Transaction::ShareNotification
     Rails.logger.info "[SHARE_NOTIFICATION] 📧 Email template objects for #{user.email}:"
     Rails.logger.info "[SHARE_NOTIFICATION]    Share ID: #{template_objects[:share]&.id}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Share Group: #{template_objects[:share]&.group&.name || 'N/A'}"
+    Rails.logger.info "[SHARE_NOTIFICATION]    Group Name: #{template_objects[:group_name]}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Share Shared By: #{template_objects[:shared_by]&.email || 'N/A'}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Shared By Name: #{template_objects[:shared_by_name]}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Action: #{template_objects[:action]}"
@@ -375,6 +376,7 @@ class Transaction::ShareNotification
       share:         share_obj,
       shared_by:     shared_by_user,
       shared_by_name: shared_by_user&.fullname || shared_by_user&.email || 'Unknown User',
+      group_name:    share_obj.group&.name || 'Unknown Group',
       recipient:     user,
       current_user:  current_user,
       changes:       human_changes(@item[:changes], ticket, user),
