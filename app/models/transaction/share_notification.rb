@@ -263,6 +263,12 @@ class Transaction::ShareNotification
     Rails.logger.info "[SHARE_NOTIFICATION]    Subject: #{result[:subject] rescue 'N/A'}"
     Rails.logger.info "[SHARE_NOTIFICATION]    From: #{Setting.get('notification_sender')}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Message ID: #{result[:message_id] rescue 'N/A'}"
+    
+    # Log the actual email content
+    Rails.logger.info "[SHARE_NOTIFICATION] 📧 EMAIL CONTENT for #{user.email}:"
+    Rails.logger.info "[SHARE_NOTIFICATION]    =========================================="
+    Rails.logger.info "[SHARE_NOTIFICATION]    #{result[:body] rescue 'N/A'}"
+    Rails.logger.info "[SHARE_NOTIFICATION]    =========================================="
   rescue Channel::DeliveryError => e
     status_code = begin
       e.original_error.response.status.to_i

@@ -249,6 +249,12 @@ class Transaction::ApprovalNotification
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Subject: #{result[:subject] rescue 'N/A'}"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    From: #{Setting.get('notification_sender')}"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Message ID: #{result[:message_id] rescue 'N/A'}"
+    
+    # Log the actual email content
+    Rails.logger.info "[APPROVAL_NOTIFICATION] 📧 EMAIL CONTENT for #{user.email}:"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    =========================================="
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    #{result[:body] rescue 'N/A'}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    =========================================="
   rescue Channel::DeliveryError => e
     status_code = begin
       e.original_error.response.status.to_i
