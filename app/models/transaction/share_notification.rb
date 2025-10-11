@@ -246,7 +246,8 @@ class Transaction::ShareNotification
     Rails.logger.info "[SHARE_NOTIFICATION] 📧 Email template objects for #{user.email}:"
     Rails.logger.info "[SHARE_NOTIFICATION]    Share ID: #{template_objects[:share]&.id}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Share Group: #{template_objects[:share]&.group&.name || 'N/A'}"
-    Rails.logger.info "[SHARE_NOTIFICATION]    Share Shared By: #{template_objects[:share]&.shared_by&.email || 'N/A'}"
+    Rails.logger.info "[SHARE_NOTIFICATION]    Share Shared By: #{template_objects[:shared_by]&.email || 'N/A'}"
+    Rails.logger.info "[SHARE_NOTIFICATION]    Shared By Name: #{template_objects[:shared_by_name]}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Action: #{template_objects[:action]}"
     Rails.logger.info "[SHARE_NOTIFICATION]    Recipient ID: #{template_objects[:recipient]&.id}"
     
@@ -366,15 +367,20 @@ class Transaction::ShareNotification
       share_obj = Ticket::Share.includes(:group, :shared_by).find(share_obj.id)
     end
     
+    # Get the user who shared the ticket
+    shared_by_user = share_obj.shared_by
+    
     objects = {
-      ticket:       ticket,
-      share:        share_obj,
-      recipient:    user,
-      current_user: current_user,
-      changes:      human_changes(@item[:changes], ticket, user),
-      reason:       recipients_reason[user.id],
-      action:       @item[:type].to_s,
-      url:          ticket_url
+      ticket:        ticket,
+      share:         share_obj,
+      shared_by:     shared_by_user,
+      shared_by_name: shared_by_user&.fullname || shared_by_user&.email || 'Unknown User',
+      recipient:     user,
+      current_user:  current_user,
+      changes:       human_changes(@item[:changes], ticket, user),
+      reason:        recipients_reason[user.id],
+      action:        @item[:type].to_s,
+      url:           ticket_url
     }
     
     if @item[:user_id]

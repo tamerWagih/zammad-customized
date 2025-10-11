@@ -232,7 +232,9 @@ class Transaction::ApprovalNotification
     Rails.logger.info "[APPROVAL_NOTIFICATION] 📧 Email template objects for #{user.email}:"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Approval ID: #{template_objects[:approval]&.id}"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Approver: #{template_objects[:approver]&.email || template_objects[:approver] || 'N/A'}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Approver Name: #{template_objects[:approver_name]}"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Requester: #{template_objects[:requester]&.email || template_objects[:requester] || 'N/A'}"
+    Rails.logger.info "[APPROVAL_NOTIFICATION]    Requester Name: #{template_objects[:requester_name]}"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Action: #{template_objects[:action]}"
     Rails.logger.info "[APPROVAL_NOTIFICATION]    Recipient ID: #{template_objects[:recipient]&.id}"
     
@@ -398,16 +400,18 @@ class Transaction::ApprovalNotification
     end
     
     objects = {
-      ticket:       ticket,
-      approval:     approval_obj,
-      approver:     approver_user,
-      requester:    requester_user,
-      recipient:    user,
-      current_user: current_user,
-      changes:      human_changes(@item[:changes], ticket, user),
-      reason:       recipients_reason[user.id],
-      action:       @item[:type].to_s,
-      url:          ticket_url
+      ticket:         ticket,
+      approval:       approval_obj,
+      approver:       approver_user,
+      requester:      requester_user,
+      approver_name:  approver_user&.fullname || approver_user&.email || 'Unknown Approver',
+      requester_name: requester_user&.fullname || requester_user&.email || 'Unknown Requester',
+      recipient:      user,
+      current_user:   current_user,
+      changes:        human_changes(@item[:changes], ticket, user),
+      reason:         recipients_reason[user.id],
+      action:         @item[:type].to_s,
+      url:            ticket_url
     }
     
     if @item[:user_id]
