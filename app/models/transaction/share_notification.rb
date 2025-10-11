@@ -115,10 +115,17 @@ class Transaction::ShareNotification
 
     # Get group_id - for DELETE events, it's in the serialized data
     group_id = share.group_id
+    Rails.logger.info "[SHARE_NOTIFICATION] 🎯 Target group ID: #{group_id}"
     
-    # Get all active agents and admins in the shared group
-    group_users = ::User.group_access(group_id, 'read').select(&:active?)
+    # Get only users who are EXPLICITLY assigned to this specific group
+    # This prevents admin users with global access from being included
+    group_users = ::User.joins(:user_groups)
+                       .where(user_groups: { group_id: group_id, access: ['read', 'full'] })
+                       .where(active: true)
+    Rails.logger.info "[SHARE_NOTIFICATION] 👥 Group users (explicitly assigned): #{group_users.map { |u| "#{u.email}(#{u.id})" }.join(', ')}"
+    
     agent_users = group_users.select { |user| user.permissions?('ticket.agent') }
+    Rails.logger.info "[SHARE_NOTIFICATION] 👮 Agent users in group: #{agent_users.map { |u| "#{u.email}(#{u.id})" }.join(', ')}"
     
     agent_users.each do |user|
       recipients << user
@@ -129,15 +136,21 @@ class Transaction::ShareNotification
     # For DELETE events, shared_by is a string, so we need to look up by ID
     if share.shared_by_id.present?
       sharer = ::User.find_by(id: share.shared_by_id)
-      recipients << sharer if sharer&.active? && sharer.permissions?('ticket.agent')
+      if sharer&.active? && sharer.permissions?('ticket.agent')
+        recipients << sharer
+        Rails.logger.info "[SHARE_NOTIFICATION] 📤 Added sharer: #{sharer.email}(#{sharer.id})"
+      else
+        Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Sharer not eligible: #{sharer&.email}(#{sharer&.id}) - active: #{sharer&.active?}, agent: #{sharer&.permissions?('ticket.agent')}"
+      end
     end
 
-    Rails.logger.info "[SHARE_NOTIFICATION] 📋 Action: #{@item[:type]} - Sending to group members + sharer"
+    Rails.logger.info "[SHARE_NOTIFICATION] 📋 Action: #{@item[:type]} - Final recipients: #{recipients.map { |u| "#{u.email}(#{u.id})" }.join(', ')}"
 
     # Remove duplicates but DON'T exclude current user - they should get notification too
     recipients.compact.uniq
   rescue => e
     Rails.logger.warn "Failed to get share recipients: #{e.message}"
+    Rails.logger.warn e.backtrace.first(5).join("\n")
     []
   end
 
