@@ -28,7 +28,13 @@ class Ticket::Approval < ApplicationModel
   scope :rejected, -> { where(status: 'rejected') }
 
   def approve!
+    # Temporarily disable automatic transaction dispatcher to prevent double events
+    self.class.skip_callback(:update, :after, TransactionDispatcher)
+    
     update!(status: 'approved')
+    
+    # Re-enable the callback
+    self.class.set_callback(:update, :after, TransactionDispatcher)
     
     # Trigger specific 'approve' action type for notifications
     EventBuffer.add('transaction', {
@@ -50,7 +56,13 @@ class Ticket::Approval < ApplicationModel
   end
 
   def reject!
+    # Temporarily disable automatic transaction dispatcher to prevent double events
+    self.class.skip_callback(:update, :after, TransactionDispatcher)
+    
     update!(status: 'rejected')
+    
+    # Re-enable the callback
+    self.class.set_callback(:update, :after, TransactionDispatcher)
     
     # Trigger specific 'reject' action type for notifications
     EventBuffer.add('transaction', {

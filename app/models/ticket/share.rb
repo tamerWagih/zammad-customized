@@ -31,7 +31,13 @@ class Ticket::Share < ApplicationModel
   end
 
   def revoke!
+    # Temporarily disable automatic transaction dispatcher to prevent double events
+    self.class.skip_callback(:update, :after, TransactionDispatcher)
+    
     update!(status: 'revoked')
+    
+    # Re-enable the callback
+    self.class.set_callback(:update, :after, TransactionDispatcher)
     
     # Trigger specific 'revoke' action type for notifications
     EventBuffer.add('transaction', {
