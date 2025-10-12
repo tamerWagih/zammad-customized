@@ -194,10 +194,45 @@ class Transaction::ApprovalNotification
       return
     end
 
-    # NOTE: Online notifications are handled by ChecksClientNotification (WebSocket broadcasts)
-    # This backend is ONLY responsible for EMAIL notifications
+    # create online notification
+    # RULES: 
+    # - For create/update/delete: notify approver (receiver) only
+    # - For approve/reject: notify requester (sender) only
     used_channels = []
     Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Channels for #{user.email}: #{channels.inspect}"
+    
+    if channels['online']
+      should_send_online = false
+      
+      # Determine if this user should get online notification based on action
+      if %w[create update delete].include?(@item[:type])
+        # Notify approver (receiver) only
+        should_send_online = (user.id == approval.approver_id)
+        Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Online notification check (#{@item[:type]}): user=#{user.id}, approver=#{approval.approver_id}, should_send=#{should_send_online}"
+      elsif %w[approve reject].include?(@item[:type])
+        # Notify requester (sender) only
+        should_send_online = (user.id == approval.requester_id)
+        Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Online notification check (#{@item[:type]}): user=#{user.id}, requester=#{approval.requester_id}, should_send=#{should_send_online}"
+      end
+      
+      if should_send_online
+        used_channels.push 'online'
+
+        created_by_id = @item[:user_id] || 1
+
+        ::OnlineNotification.add(
+          type:          get_notification_type,
+          object:        'Ticket',
+          o_id:          ticket.id,
+          seen:          false,
+          created_by_id: created_by_id,
+          user_id:       user.id,
+        )
+        Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ Online notification sent to #{user.email} (#{@item[:type]}/#{ticket.id})"
+      else
+        Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Online notification skipped for #{user.email}: not the target for #{@item[:type]} action"
+      end
+    end
 
     # ignore email channel notification and empty emails
     if !channels['email']
