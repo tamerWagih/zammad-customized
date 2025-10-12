@@ -4,56 +4,54 @@
   </div>
 <% end %>
 
-<form class="form-horizontal">
-  <div class="form-group">
-    <label class="control-label col-sm-3">
-      <%- @T('Approver') %>
-    </label>
-    <div class="col-sm-9">
-      <select name="approver_id" class="form-control" required>
-        <option value="">
-          <%- @T('Select an approver...') %>
+<div class="form-group">
+  <label class="control-label col-sm-3">
+    <%- @T('Approver') %>
+  </label>
+  <div class="col-sm-9">
+    <select name="approver_id" class="form-control" required>
+      <option value="">
+        <%- @T('Select an approver...') %>
+      </option>
+      <% for approver in @approvers: %>
+        <option value="<%= approver.id %>">
+          <%- approver.firstname %> <%- approver.lastname %> (<%- approver.email %>)
         </option>
-        <% for approver in @approvers: %>
-          <option value="<%= approver.id %>">
-            <%- approver.firstname %> <%- approver.lastname %> (<%- approver.email %>)
-          </option>
-        <% end %>
-      </select>
-      <small class="help-block">
-        <%- @T('Only agents and admins are shown') %>
-      </small>
-    </div>
+      <% end %>
+    </select>
+    <small class="help-block">
+      <%- @T('Only users with Approver role are shown') %>
+    </small>
   </div>
+</div>
 
-  <div class="form-group">
-    <label class="control-label col-sm-3">
-      <%- @T('Message') %>
-    </label>
-    <div class="col-sm-9">
-      <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the approver...') %>"></textarea>
-    </div>
+<div class="form-group">
+  <label class="control-label col-sm-3">
+    <%- @T('Message') %>
+  </label>
+  <div class="col-sm-9">
+    <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the approver...') %>"></textarea>
   </div>
+</div>
 
-  <div class="form-group">
-    <label class="control-label col-sm-3">
-      <%- @T('Priority') %>
-    </label>
-    <div class="col-sm-9">
-      <select name="priority" class="form-control">
-        <option value="low">
-          <%- @T('Low') %>
-        </option>
-        <option value="normal" selected>
-          <%- @T('Normal') %>
-        </option>
-        <option value="high">
-          <%- @T('High') %>
-        </option>
-        <option value="urgent">
-          <%- @T('Urgent') %>
-        </option>
-      </select>
-    </div>
+<div class="form-group">
+  <label class="control-label col-sm-3">
+    <%- @T('Priority') %>
+  </label>
+  <div class="col-sm-9">
+    <select name="priority" class="form-control">
+      <option value="low">
+        <%- @T('Low') %>
+      </option>
+      <option value="normal" selected>
+        <%- @T('Normal') %>
+      </option>
+      <option value="high">
+        <%- @T('High') %>
+      </option>
+      <option value="urgent">
+        <%- @T('Urgent') %>
+      </option>
+    </select>
   </div>
-</form>
+</div>

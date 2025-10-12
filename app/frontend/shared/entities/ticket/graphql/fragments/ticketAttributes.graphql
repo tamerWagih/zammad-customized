@@ -80,6 +80,7 @@ fragment ticketAttributes on Ticket {
   policy {
     update
     agentReadAccess
+    agentUpdateAccess
   }
   tags
   timeUnit

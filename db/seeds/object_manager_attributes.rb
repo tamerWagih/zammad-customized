@@ -412,6 +412,7 @@ ObjectManager::Attribute.add(
   position:    900,
 )
 
+
 ObjectManager::Attribute.add(
   force:       true,
   object:      'TicketArticle',

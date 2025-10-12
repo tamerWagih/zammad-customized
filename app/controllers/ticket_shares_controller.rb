@@ -4,203 +4,77 @@ class TicketSharesController < ApplicationController
   before_action :authenticate_and_authorize!
   before_action :set_ticket
   before_action :check_permissions
+  before_action :set_share, only: %i[revoke update destroy]
 
   def index
-    # Only show active shares, or all shares for the person who created them (for management)
-    @shares = @ticket.shares.includes(:shared_with, :shared_by).where(
-      "status = 'active' OR shared_by_id = ?", current_user.id
-    ).order(created_at: :desc)
-    render json: { shares: @shares.map { |s| {
-      id: s.id,
-      user: s.shared_with&.fullname,
-      shared_by_id: s.shared_by_id.to_s,
-      shared_by_name: s.shared_by&.fullname,
-      permissions: s.permissions,
-      message: s.message,
-      status: s.status,
-      created_at: s.created_at,
-      expires_at: s.expires_at,
-    } } }
+    shares = Service::Ticket::Share::List
+      .new(current_user:)
+      .execute(ticket: @ticket)
+
+    render json: { shares: shares.map { |share| serialize_share(share) } }
   end
 
   def create
-    shared_with = User.find(params[:shared_with_id])
-    
-    # Check if share already exists
-    existing_share = @ticket.shares.find_by(shared_with_id: shared_with.id, status: 'active')
-    if existing_share
-      render json: { 
-        error: "This ticket is already shared with #{shared_with.fullname}. Please use the edit option to modify the existing share.",
-        existing_share: {
-          id: existing_share.id,
-          permissions: existing_share.permissions,
-          message: existing_share.message,
-          expires_at: existing_share.expires_at,
-        }
-      }, status: :unprocessable_entity
-      return
-    end
+    share = Service::Ticket::Share::Create
+      .new(current_user:)
+      .execute(
+        ticket:     @ticket,
+        group_id:   share_create_params[:group_id],
+        message:    share_create_params[:message],
+        expires_at: share_create_params[:expires_at]
+      )
 
-    # Debug permissions first
-    Rails.logger.info "Share create - Raw params: #{params.inspect}"
-    Rails.logger.info "Share create - Raw permissions: #{params[:permissions].inspect}"
-    
-    # Process permissions like approval does - directly from params
-    permissions = Array(params[:permissions]).map(&:to_s) if params[:permissions].present?
-    permissions ||= ['read']  # Default to read if no permissions specified
-    
-    Rails.logger.info "Share create - Processed permissions: #{permissions.inspect}"
-    
-    # Create share directly like approval does
-    share = @ticket.shares.create!(
-      shared_with: shared_with,
-      shared_by: current_user,
-      message: params[:message],
-      expires_at: params[:expires_at],
-      permissions: permissions,
-      status: 'active'
-    )
-    
-    Rails.logger.info "Share create - Created share with permissions: #{share.permissions.inspect}"
+    notify_shared_group(share, __('Ticket shared with your group'))
 
-    # Notify the shared user with a link to the ticket (ensures click opens ticket)
-    OnlineNotification.add(
-      type:          'Ticket shared with you',
-      object:        'Ticket',
-      o_id:          @ticket.id,
-      seen:          false,
-      user_id:       shared_with.id,
-      created_by_id: current_user.id,
-    ) rescue nil
-
-    # Real-time updates are handled automatically by Ticket::Share::TriggersSubscriptions
-
-    render json: { share: {
-      id: share.id,
-      user: share.shared_with&.fullname,
-      permissions: share.permissions,
-      message: share.message,
-      status: share.status,
-      created_at: share.created_at,
-      expires_at: share.expires_at,
-    } }, status: :created
+    render json: { share: serialize_share(share) }, status: :created
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'User not found' }, status: :not_found
-  rescue StandardError => e
+    render json: { error: __('Group not found') }, status: :not_found
+  rescue Exceptions::UnprocessableEntity => e
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
   def revoke
-    share = @ticket.shares.find(params[:id])
-    
-    # Only the person who shared or admin can revoke
-    unless share.shared_by == current_user || current_user.role?('Admin')
-      render json: { error: 'You can only revoke shares you created' }, status: :forbidden
-      return
-    end
+    share = Service::Ticket::Share::Revoke
+      .new(current_user:)
+      .execute(share: @share)
 
-    begin
-      share.revoke!
-      
-      # Notify the shared user about revocation
-      OnlineNotification.add(
-        type:          'Share revoked',
-        object:        'Ticket',
-        o_id:          @ticket.id,
-        seen:          false,
-        user_id:       share.shared_with_id,
-        created_by_id: current_user.id,
-      )
-    rescue StandardError => e
-      render json: { error: "Failed to revoke share: #{e.message}" }, status: :unprocessable_entity
-      return
-    end
+    notify_shared_group(share, __('Share revoked'))
 
-    # Real-time updates are handled automatically by Ticket::Share::TriggersSubscriptions
-
-    render json: { share: {
-      id: share.id,
-      user: share.shared_with&.fullname,
-      permissions: share.permissions,
-      message: share.message,
-      status: share.status,
-      created_at: share.created_at,
-      expires_at: share.expires_at,
-    } }
+    render json: { share: serialize_share(share) }
+  rescue Exceptions::Forbidden => e
+    render json: { error: e.message }, status: :forbidden
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   def update
-    share = @ticket.shares.find(params[:id])
+    share = Service::Ticket::Share::Update
+      .new(current_user:)
+      .execute(share: @share, attributes: share_update_params)
 
-    # Only the person who shared or admin can update
-    unless share.shared_by == current_user || current_user.role?('Admin')
-      render json: { error: 'You can only update shares you created' }, status: :forbidden
-      return
-    end
+    notify_shared_group(share, __('Share updated'))
 
-    # Use permitted parameters
-    attrs = share_params.to_h
-    attrs[:permissions] = Array(attrs[:permissions]).map(&:to_s) if attrs[:permissions].present?
-
-    share.update!(attrs)
-
-    # Notify shared user about update
-    begin
-      OnlineNotification.add(
-        type:          'Share updated',
-        object:        'Ticket',
-        o_id:          @ticket.id,
-        seen:          false,
-        user_id:       share.shared_with_id,
-        created_by_id: current_user.id,
-      ) if share.shared_with_id.present?
-    rescue StandardError
-    end
-
-    # Real-time updates are handled automatically by Ticket::Share::TriggersSubscriptions
-
-    render json: { share: {
-      id: share.id,
-      user: share.shared_with&.fullname,
-      permissions: share.permissions,
-      message: share.message,
-      status: share.status,
-      created_at: share.created_at,
-      expires_at: share.expires_at,
-    } }
+    render json: { share: serialize_share(share) }
+  rescue Exceptions::Forbidden => e
+    render json: { error: e.message }, status: :forbidden
+  rescue Exceptions::UnprocessableEntity => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   def destroy
-    share = @ticket.shares.find(params[:id])
-    
-    # Only the person who shared or admin can delete
-    unless share.shared_by == current_user || current_user.role?('Admin')
-      render json: { error: 'You can only delete shares you created' }, status: :forbidden
-      return
-    end
+    share_data = Service::Ticket::Share::Destroy
+      .new(current_user:)
+      .execute(share: @share)
 
-    begin
-      # Store share data before deletion for frontend event
-      share_data = {
-        id: share.id,
-        user: share.shared_with&.fullname,
-        permissions: share.permissions,
-        message: share.message,
-        status: share.status,
-        created_at: share.created_at,
-        expires_at: share.expires_at,
-      }
-      
-      share.destroy!
+    notify_shared_group(share_data, __('Share deleted'))
 
-      # Real-time updates are handled automatically by Ticket::Share::TriggersSubscriptions
-
-      render json: { success: true }
-    rescue ActiveRecord::RecordNotDestroyed => e
-      render json: { error: "Failed to delete share: #{e.message}" }, status: :unprocessable_entity
-    rescue StandardError => e
-      render json: { error: "An error occurred: #{e.message}" }, status: :internal_server_error
-    end
+    render json: { success: true, share: serialize_share(share_data) }
+  rescue Exceptions::Forbidden => e
+    render json: { error: e.message }, status: :forbidden
+  rescue ActiveRecord::RecordNotDestroyed => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   private
@@ -209,12 +83,88 @@ class TicketSharesController < ApplicationController
     @ticket = Ticket.find(params[:ticket_id])
   end
 
+  def set_share
+    @share = @ticket.shares.find(params[:id])
+  end
+
   def check_permissions
-    # Check if user can access the ticket (same as show action)
     authorize!(@ticket, :show?)
   end
 
-  def share_params
-    params.permit(:shared_with_id, :message, :expires_at, permissions: [])
+  def share_create_params
+    params.permit(:group_id, :message, :expires_at)
+  end
+
+  def share_update_params
+    params.permit(:message, :expires_at)
+  end
+
+  def serialize_share(share)
+    group_id = extract_attribute(share, :group_id)
+    group_name = extract_attribute(share, :group_name) || share.try(:group)&.fullname || share.try(:group)&.name
+
+    {
+      id:               stringify_id(extract_attribute(share, :id)),
+      ticket_id:        stringify_id(extract_attribute(share, :ticket_id)),
+      group_id:         stringify_id(group_id),
+      group_name:       group_name,
+      group:            group_name,
+      shared_by_id:     stringify_id(extract_attribute(share, :shared_by_id)),
+      shared_by_name:   share.respond_to?(:shared_by) ? share.shared_by&.fullname : share[:shared_by_name],
+      permissions:      Array(extract_attribute(share, :permissions)),
+      message:          extract_attribute(share, :message),
+      status:           extract_attribute(share, :status),
+      created_at:       extract_attribute(share, :created_at),
+      updated_at:       extract_attribute(share, :updated_at),
+      expires_at:       extract_attribute(share, :expires_at)
+    }
+  end
+
+  def notify_shared_group(share_data, notification_type)
+    group_id = extract_attribute(share_data, :group_id)
+    return if group_id.blank?
+
+    member_ids = group_member_ids(group_id)
+    member_ids << extract_attribute(share_data, :shared_by_id)
+
+    member_ids.compact.uniq.each do |user_id|
+      next if user_id.to_i == current_user.id
+
+      OnlineNotification.add(
+        type:          notification_type,
+        object:        'Ticket',
+        o_id:          @ticket.id,
+        seen:          false,
+        user_id:       user_id,
+        created_by_id: current_user.id,
+      )
+    end
+  rescue StandardError => e
+    Rails.logger.warn "Failed to create share notification: #{e.message}"
+    nil
+  end
+
+  def group_member_ids(group_id)
+    # Only include agents and admins, not customers
+    group_users = Array(User.group_access(group_id, 'read')).select(&:active?)
+    agent_users = group_users.select { |user| user.permissions?('ticket.agent') }
+    agent_users.map(&:id)
+  rescue StandardError => e
+    Rails.logger.warn "Failed to resolve group members for share notification: #{e.message}"
+    []
+  end
+
+  def extract_attribute(source, key)
+    if source.respond_to?(key)
+      source.public_send(key)
+    elsif source.respond_to?(:[])
+      source[key]
+    end
+  end
+
+  def stringify_id(value)
+    value.present? ? value.to_s : nil
   end
 end
+
+

@@ -30,7 +30,7 @@ class TransactionDispatcher
 
     # get async backends
     sync_backends = []
-    Setting.where(area: 'Transaction::Backend::Sync').reorder(:name).each do |setting|
+    Setting.where(area: 'Transaction::Backend::Async').reorder(:name).each do |setting|
       backend = Setting.get(setting.name)
       next if params[:disable]&.include?(backend)
 
@@ -131,10 +131,21 @@ class TransactionDispatcher
       end
 
       # get current state of objects
-      object = event[:object].constantize.find_by(id: event[:id])
+      # For delete events, use object_id instead of id
+      event_id = event[:type] == 'delete' ? event[:object_id] : event[:id]
+      object = event[:object].constantize.find_by(id: event_id)
 
-      # next if object is already deleted
-      next if !object
+      # For delete events, the object won't exist (already destroyed)
+      # Use the serialized data from the event instead
+      if !object
+        if event[:type] == 'delete' && event[:data]
+          # Create a minimal struct to satisfy the rest of the logic
+          object = OpenStruct.new(id: event_id)
+        else
+          # next if object is already deleted
+          next
+        end
+      end
 
       if !list_objects[event[:object]]
         list_objects[event[:object]] = {}
@@ -165,6 +176,11 @@ class TransactionDispatcher
         else
           store[:changes] = event[:changes]
         end
+      end
+
+      # For delete events, include serialized data
+      if event[:type] == 'delete' && event[:data]
+        store[:data] = event[:data]
       end
 
       # remember article id if exists

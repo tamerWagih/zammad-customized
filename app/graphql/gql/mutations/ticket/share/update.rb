@@ -1,5 +1,3 @@
-# Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
-
 module Gql
   module Mutations
     module Ticket
@@ -13,42 +11,26 @@ module Gql
           field :errors, [String], null: false
 
           def resolve(input:)
-            share = Ticket::Share.find(input[:id])
-            ticket = share.ticket
-            
-            # Check permissions - only agents and admins can update shares
-            unless ticket.agent_access?(context[:current_user]) || context[:current_user].role?('Admin')
-              return {
-                share: nil,
-                errors: ['You need agent or admin permissions to update shares for this ticket']
-              }
-            end
+            share = ::Ticket::Share.find(input[:id])
 
-            # Validate permissions if provided
-            if input[:permissions]
-              valid_permissions = %w[read comment edit]
-              invalid_permissions = input[:permissions] - valid_permissions
-              if invalid_permissions.any?
-                return {
-                  share: nil,
-                  errors: ["Invalid permissions: #{invalid_permissions.join(', ')}"]
-                }
-              end
-            end
-
-            share.update!(
-              permissions: input[:permissions] || share.permissions,
-              message: input[:message] || share.message
-            )
+            share = Service::Ticket::Share::Update
+              .new(current_user: context[:current_user])
+              .execute(
+                share:,
+                attributes: {
+                  message: input[:message],
+                  expires_at: input[:expires_at]
+                }.compact
+              )
 
             {
               share: share,
               errors: []
             }
-          rescue ActiveRecord::RecordNotFound
+          rescue ActiveRecord::RecordNotFound => e
             {
               share: nil,
-              errors: ['Share not found']
+              errors: [e.message]
             }
           rescue StandardError => e
             {

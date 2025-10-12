@@ -8,76 +8,75 @@ class App.TicketShareCreate extends App.ControllerModal
   
   events:
     'submit form': 'submit'
-    'change select[name="shared_with_id"]': 'toggleSubmit'
-
+    'change select[name="group_id"]': 'toggleSubmit'
 
   content: ->
-    # Get available users for sharing
+    # Return loading placeholder initially
+    '<p class="loading">Loading groups...</p>'
+
+  onShown: (e) =>
+    super
+    # Load data after modal is shown
     @ajax(
-      id:          'users_for_sharing'
+      id:          'groups_for_sharing'
       type:        'GET'
-      url:         "#{@apiPath}/users"
+      url:         "#{@apiPath}/groups"
       processData: true
       success:     (data, status, xhr) =>
-        @renderWithUsers(data, status, xhr)
+        @renderWithGroups(data)
       error:       (xhr, status, error) =>
         @renderError(xhr, status, error)
     )
-    # Return loading content initially
-    '<p>Loading users...</p>'
 
+  renderWithGroups: (data) ->
+    groups = if Array.isArray(data) then data else (data?.groups || [])
+    groups = groups.filter (group) -> group?.active isnt false
+    
+    # Filter out the ticket's current group (requester's group already has access)
+    ticket = App.Ticket.find(@ticket_id)
+    if ticket?.group_id
+      groups = groups.filter (group) -> group.id.toString() isnt ticket.group_id.toString()
+    
+    groups = groups.sort (a, b) ->
+      nameA = (a.fullname || a.name || '').toLowerCase()
+      nameB = (b.fullname || b.name || '').toLowerCase()
+      if nameA < nameB then -1 else if nameA > nameB then 1 else 0
 
-  renderWithUsers: (data, status, xhr) =>
-    users = if Array.isArray(data) then data else (data?.users || [])
-    # Only Admins and Agents are valid share targets
-    current_user_id = App.User.current()?.id
-
-    resolveRoleNames = (user) ->
-      names = []
-      # If API provided role_ids, resolve via App.Role store
-      if Array.isArray(user.role_ids)
-        for rid in user.role_ids
-          role = App.Role.find(rid)
-          names.push(role.name) if role?.name
-      # If API provided roles as objects or strings, include their names
-      if Array.isArray(user.roles)
-        for r in user.roles
-          if typeof r is 'string'
-            names.push(r)
-          else if r?.name
-            names.push(r.name)
-      # Deduplicate
-      _.uniq(names)
-
-    available_users = users.filter (user) ->
-      return false if user.id is current_user_id
-      roleNames = resolveRoleNames(user)
-      hasAgentOrAdmin = roleNames.includes('Agent') or roleNames.includes('Admin')
-      return !!hasAgentOrAdmin && user.active isnt false
-
-    # Update modal content
-    @el.find('.modal-body').html(App.view('ticket_share_create')({
+    # Update modal body content (same pattern as Translation modal)
+    content = App.view('ticket_share_create')(
       ticket_id: @ticket_id
-      users: available_users
-    }))
+      groups: groups
+      error: false
+    )
+    @el.find('.modal-body').html(content)
     @toggleSubmit()
+
   toggleSubmit: =>
-    selected = @el.find('select[name="shared_with_id"]').val()
-    if selected then @$('.js-submit').removeClass('is-disabled') else @$('.js-submit').addClass('is-disabled')
+    selected = @el.find('select[name="group_id"]').val()
+    if selected
+      @$('.js-submit').removeClass('is-disabled')
+    else
+      @$('.js-submit').addClass('is-disabled')
 
   renderError: (xhr, status, error) =>
-    @el.find('.modal-body').html(App.view('ticket_share_create')({
+    content = App.view('ticket_share_create')(
       ticket_id: @ticket_id
-      users: []
+      groups: []
       error: true
-    }))
+    )
+    @el.find('.modal-body').html(content)
 
   submit: (e) =>
     e.preventDefault()
     
     form_data = @formParam(e.currentTarget)
     
-    # Send flat form data like approval create does
+    if form_data.expires_at
+      try
+        form_data.expires_at = new Date(form_data.expires_at).toISOString().slice(0, 10)
+      catch
+        form_data.expires_at = ''
+    
     @ajax(
       id: 'create_ticket_share'
       type: 'POST'
@@ -90,8 +89,12 @@ class App.TicketShareCreate extends App.ControllerModal
     )
 
   submitSuccess: (data, status, xhr) =>
-    # Use custom message if provided, otherwise default
-    message = data.message || __('Ticket shared successfully')
+    share = data?.share
+    message = if share?.group_name
+      __('Ticket shared with department %s').replace('%s', share.group_name)
+    else
+      __('Ticket shared successfully')
+
     @notify(
       type: 'success'
       msg:  message
@@ -111,3 +114,4 @@ class App.TicketShareCreate extends App.ControllerModal
       type: 'error'
       msg: error_msg
     )
+

@@ -2,7 +2,7 @@ class SidebarChecklist extends App.Controller
   constructor: ->
     super
 
-    @changeable = @ticket.userGroupAccess('change')
+    @changeable = if @ticket && @ticket.userGroupAccess then @ticket.userGroupAccess('change') else false
 
   release: =>
     super

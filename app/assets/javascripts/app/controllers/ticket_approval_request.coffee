@@ -10,9 +10,13 @@ class App.TicketApprovalRequest extends App.ControllerModal
     'submit form': 'submit'
     'change select[name="approver_id"]': 'toggleSubmit'
 
-
   content: ->
-    # Get available users for approval
+    # Return loading placeholder initially
+    '<p class="loading">Loading approvers...</p>'
+
+  onShown: (e) =>
+    super
+    # Load data after modal is shown
     @ajax(
       id:          'users_for_approval'
       type:        'GET'
@@ -23,9 +27,6 @@ class App.TicketApprovalRequest extends App.ControllerModal
       error:       (xhr, status, error) =>
         @renderError(xhr, status, error)
     )
-    # Return loading content initially
-    '<p>Loading approvers...</p>'
-
 
   renderWithUsers: (data, status, xhr) =>
     users = if Array.isArray(data) then data else (data?.users || [])
@@ -33,35 +34,36 @@ class App.TicketApprovalRequest extends App.ControllerModal
     ticket = App.Ticket.find(@ticket_id)
     ticket_org_id = ticket?.organization_id
     
-    # Filter to only show agents/admins from the same organization
+    # Filter to only show users with "Approver" role
     current_user_id = App.User.current()?.id
     approvers = users.filter (user) ->
       # Exclude current user
       return false if user.id is current_user_id
-      # Only show agents and admins, regardless of org (admins may span orgs)
+      # Only show users with "Approver" role
       user.role_ids && user.role_ids.some (role_id) ->
         role = App.Role.find(role_id)
-        role && (role.name == 'Agent' || role.name == 'Admin')
+        role && role.name == 'Approver'
 
-
-    # Update modal content
-    content = App.view('ticket_approval_request')({
+    # Update modal body content (same pattern as Translation modal)
+    content = App.view('ticket_approval_request')(
       ticket_id: @ticket_id
       approvers: approvers
-    })
-    
+      error: false
+    )
     @el.find('.modal-body').html(content)
     @toggleSubmit()
+  
   toggleSubmit: =>
     selected = @el.find('select[name="approver_id"]').val()
     if selected then @$('.js-submit').removeClass('is-disabled') else @$('.js-submit').addClass('is-disabled')
 
   renderError: (xhr, status, error) =>
-    @el.find('.modal-body').html(App.view('ticket_approval_request')({
+    content = App.view('ticket_approval_request')(
       ticket_id: @ticket_id
       approvers: []
       error: true
-    }))
+    )
+    @el.find('.modal-body').html(content)
 
   submit: (e) =>
     e.preventDefault()

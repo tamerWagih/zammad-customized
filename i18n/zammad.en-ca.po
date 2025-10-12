@@ -21500,3 +21500,196 @@ msgstr ""
 #: app/assets/javascripts/app/views/dashboard/stats/ticket_waiting_time.jst.eco:3
 msgid "∅ Waiting time today"
 msgstr ""
+
+# Email notification translations for ticket shares and approvals
+msgid "Ticket #%s shared with you"
+msgstr "Ticket #%s shared with you"
+
+msgid "Ticket #%s shared by you"
+msgstr "Ticket #%s shared by you"
+
+msgid "Ticket #%s share updated"
+msgstr "Ticket #%s share updated"
+
+msgid "Ticket #%s share updated by you"
+msgstr "Ticket #%s share updated by you"
+
+msgid "Ticket #%s share revoked"
+msgstr "Ticket #%s share revoked"
+
+msgid "Ticket #%s share revoked by you"
+msgstr "Ticket #%s share revoked by you"
+
+msgid "Ticket #%s share removed"
+msgstr "Ticket #%s share removed"
+
+msgid "Ticket #%s share removed by you"
+msgstr "Ticket #%s share removed by you"
+
+msgid "Approval request for ticket #%s"
+msgstr "Approval request for ticket #%s"
+
+msgid "Approval request sent for ticket #%s"
+msgstr "Approval request sent for ticket #%s"
+
+msgid "Approval request updated for ticket #%s"
+msgstr "Approval request updated for ticket #%s"
+
+msgid "Approval granted for ticket #%s"
+msgstr "Approval granted for ticket #%s"
+
+msgid "Approval rejected for ticket #%s"
+msgstr "Approval rejected for ticket #%s"
+
+msgid "Approval request cancelled for ticket #%s"
+msgstr "Approval request cancelled for ticket #%s"
+
+msgid "Ticket Shared with You"
+msgstr "Ticket Shared with You"
+
+msgid "Ticket Shared Successfully"
+msgstr "Ticket Shared Successfully"
+
+msgid "Share Updated"
+msgstr "Share Updated"
+
+msgid "Share Updated Successfully"
+msgstr "Share Updated Successfully"
+
+msgid "Share Revoked"
+msgstr "Share Revoked"
+
+msgid "Share Revoked Successfully"
+msgstr "Share Revoked Successfully"
+
+msgid "Share Removed"
+msgstr "Share Removed"
+
+msgid "Share Removed Successfully"
+msgstr "Share Removed Successfully"
+
+msgid "Approval Request"
+msgstr "Approval Request"
+
+msgid "Approval Request Sent"
+msgstr "Approval Request Sent"
+
+msgid "Approval Request Updated"
+msgstr "Approval Request Updated"
+
+msgid "Approval Granted"
+msgstr "Approval Granted"
+
+msgid "Approval Rejected"
+msgstr "Approval Rejected"
+
+msgid "Approval Request Cancelled"
+msgstr "Approval Request Cancelled"
+
+msgid "Ticket #%s"
+msgstr "Ticket #%s"
+
+msgid "%s has shared this ticket with you."
+msgstr "%s has shared this ticket with you."
+
+msgid "You have successfully shared this ticket with %s."
+msgstr "You have successfully shared this ticket with %s."
+
+msgid "%s has updated your access to this ticket."
+msgstr "%s has updated your access to this ticket."
+
+msgid "You have successfully updated the share with %s."
+msgstr "You have successfully updated the share with %s."
+
+msgid "%s has revoked your access to this ticket."
+msgstr "%s has revoked your access to this ticket."
+
+msgid "You have successfully revoked the share with %s."
+msgstr "You have successfully revoked the share with %s."
+
+msgid "%s has removed your access to this ticket."
+msgstr "%s has removed your access to this ticket."
+
+msgid "You have successfully removed the share with %s."
+msgstr "You have successfully removed the share with %s."
+
+msgid "%s has requested your approval for this ticket."
+msgstr "%s has requested your approval for this ticket."
+
+msgid "You have requested approval from %s for this ticket."
+msgstr "You have requested approval from %s for this ticket."
+
+msgid "%s has updated the approval request for this ticket."
+msgstr "%s has updated the approval request for this ticket."
+
+msgid "You have updated the approval request for %s."
+msgstr "You have updated the approval request for %s."
+
+msgid "%s has approved your request for this ticket."
+msgstr "%s has approved your request for this ticket."
+
+msgid "You have approved the request from %s for this ticket."
+msgstr "You have approved the request from %s for this ticket."
+
+msgid "%s has rejected your request for this ticket."
+msgstr "%s has rejected your request for this ticket."
+
+msgid "You have rejected the request from %s for this ticket."
+msgstr "You have rejected the request from %s for this ticket."
+
+msgid "%s has cancelled the approval request for this ticket."
+msgstr "%s has cancelled the approval request for this ticket."
+
+msgid "You have cancelled the approval request for %s."
+msgstr "You have cancelled the approval request for %s."
+
+msgid "Message"
+msgstr "Message"
+
+msgid "Access Level"
+msgstr "Access Level"
+
+msgid "Full Access"
+msgstr "Full Access"
+
+msgid "Read Only"
+msgstr "Read Only"
+
+msgid "Expires"
+msgstr "Expires"
+
+msgid "Priority"
+msgstr "Priority"
+
+msgid "Urgent"
+msgstr "Urgent"
+
+msgid "High"
+msgstr "High"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Low"
+msgstr "Low"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Approved"
+msgstr "Approved"
+
+msgid "Rejected"
+msgstr "Rejected"
+
+msgid "Pending"
+msgstr "Pending"
+
+msgid "Requested"
+msgstr "Requested"
+
+msgid "View Ticket"
+msgstr "View Ticket"
+
+msgid "This is an automated notification from %s."
+msgstr "This is an automated notification from %s."

@@ -1,0 +1,61 @@
+<% case @objects[:action] when 'create' %>Ticket shared with your group (#{ticket.title})<% when 'update' %>Ticket share updated (#{ticket.title})<% when 'revoke' %>Ticket share revoked (#{ticket.title})<% when 'delete' %>Ticket share deleted (#{ticket.title})<% else %>Ticket share notification (#{ticket.title})<% end %>
+
+<div>Hi #{recipient.firstname},</div>
+<br>
+<% if @objects[:action] == 'create' %>
+  <% if @objects[:recipient].id == @objects[:share].shared_by_id %>
+    <% group_name = @objects[:share].group.respond_to?(:name) ? @objects[:share].group.name : (@objects[:share].group_name || @objects[:share].group.to_s) %>
+    <div>You have <b>shared</b> ticket "<b>#{ticket.title}</b>" with group "<b>#{group_name}</b>".</div>
+  <% else %>
+    <% group_name = @objects[:share].group.respond_to?(:name) ? @objects[:share].group.name : (@objects[:share].group_name || @objects[:share].group.to_s) %>
+    <% shared_by_name = @objects[:share].shared_by.respond_to?(:fullname) ? @objects[:share].shared_by.fullname : (@objects[:share].shared_by_name || @objects[:share].shared_by.to_s) %>
+    <div>Ticket "<b>#{ticket.title}</b>" has been <b>shared</b> with your group "<b>#{group_name}</b>" by "<b>#{shared_by_name}</b>".</div>
+  <% end %>
+<% elsif @objects[:action] == 'update' %>
+  <% if @objects[:recipient].id == @objects[:share].shared_by_id %>
+    <div>Your share settings for ticket "<b>#{ticket.title}</b>" have been updated.</div>
+  <% else %>
+    <div>The share settings for ticket "<b>#{ticket.title}</b>" (shared with your group) have been updated.</div>
+  <% end %>
+<% elsif @objects[:action] == 'revoke' %>
+  <% if @objects[:recipient].id == @objects[:share].shared_by_id %>
+    <% group_name = @objects[:share].group.respond_to?(:name) ? @objects[:share].group.name : (@objects[:share].group_name || @objects[:share].group.to_s) %>
+    <div>You have <b>revoked</b> access to ticket "<b>#{ticket.title}</b>" for group "<b>#{group_name}</b>".</div>
+  <% else %>
+    <div>Access to ticket "<b>#{ticket.title}</b>" has been <b>revoked</b>.</div>
+  <% end %>
+<% elsif @objects[:action] == 'delete' %>
+  <% if @objects[:recipient].id == @objects[:share].shared_by_id %>
+    <div>Your share for ticket "<b>#{ticket.title}</b>" has been deleted.</div>
+  <% else %>
+    <div>The share for ticket "<b>#{ticket.title}</b>" (with your group) has been deleted.</div>
+  <% end %>
+<% else %>
+<div>There has been an update to the share for ticket "<b>#{ticket.title}</b>".</div>
+<% end %>
+<br>
+<div>
+Ticket: ##{ticket.number}<br>
+<% if @objects[:share].group.respond_to?(:name) %>
+Group: #{share.group.name}<br>
+<% elsif @objects[:share].group_name.present? %>
+Group: #{share.group_name}<br>
+<% end %>
+<% if @objects[:share].shared_by.respond_to?(:fullname) %>
+Shared by: #{share.shared_by.fullname}<br>
+<% elsif @objects[:share].shared_by_name.present? %>
+Shared by: #{share.shared_by_name}<br>
+<% end %>
+<% if @objects[:share].message.present? %>
+Message: #{share.message}<br>
+<% end %>
+<% if @objects[:share].expires_at.present? %>
+Expires: #{share.expires_at.strftime('%Y-%m-%d')}<br>
+<% end %>
+</div>
+<br>
+<% unless ['revoke', 'delete'].include?(@objects[:action]) %>
+<div>
+  <a href="#{config.http_type}://#{config.fqdn}/#ticket/zoom/#{ticket.id}" target="zammad_app">View this in #{config.product_name}</a>
+</div>
+<% end %>

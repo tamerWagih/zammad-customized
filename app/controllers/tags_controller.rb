@@ -15,6 +15,10 @@ class TagsController < ApplicationController
         }
       end
 
+    # Filter out system-reserved tags (managed by approval system)
+    reserved_tags = %w[approved rejected]
+    results = results.reject { |tag| reserved_tags.include?(tag[:value]) }
+
     render json: results
   end
 
@@ -35,6 +39,12 @@ class TagsController < ApplicationController
   def add
     raise Exceptions::Forbidden if !::Tag.tag_allowed?(name: params[:item], user_id: UserInfo.current_user_id)
 
+    # Prevent manual addition of system-reserved tags (managed by approval system)
+    reserved_tags = %w[approved rejected]
+    if reserved_tags.include?(params[:item])
+      raise Exceptions::UnprocessableEntity, __('This tag is reserved and managed by the approval system.')
+    end
+
     success = Tag.tag_add(
       object: params[:object],
       o_id:   params[:o_id],
@@ -49,6 +59,12 @@ class TagsController < ApplicationController
 
   # DELETE /api/v1/tags/remove
   def remove
+    # Prevent manual removal of system-reserved tags (managed by approval system)
+    reserved_tags = %w[approved rejected]
+    if reserved_tags.include?(params[:item])
+      raise Exceptions::UnprocessableEntity, __('This tag is reserved and managed by the approval system.')
+    end
+
     success = Tag.tag_remove(
       object: params[:object],
       o_id:   params[:o_id],

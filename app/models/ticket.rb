@@ -734,24 +734,44 @@ returns a hex color code
 
   # Check share permissions for a given user
   def share_permissions_for(user)
-    return { read: false, comment: false, edit: false } unless user
-    
-    # Check if shares table exists and association is available
-    return { read: false, comment: false, edit: false } unless respond_to?(:shares)
-    
+    default = { read: false, comment: false, edit: false }
+    return default unless user
+    return default unless respond_to?(:shares)
+
     begin
-      share = shares.active_current.find_by(shared_with: user)
-      return { read: false, comment: false, edit: false } unless share
+      # Only agents can access shared tickets
+      return default unless user.permissions?('ticket.agent')
       
-      permissions = share.permissions || []
-      {
-        read: permissions.include?('read'),
-        comment: permissions.include?('comment'),
-        edit: permissions.include?('edit')
+      user_group_ids = Array(user.group_ids_access('read'))
+      Rails.logger.info "[SHARE_PERMISSIONS] Checking permissions for user #{user.id} (#{user.email}) on ticket #{id}"
+      Rails.logger.info "[SHARE_PERMISSIONS] User group IDs: #{user_group_ids.inspect}"
+      return default if user_group_ids.blank?
+      
+      # Find matching share for user's groups
+      matching_share = shares.active_current.find do |share|
+        user_group_ids.include?(share.group_id)
+      end
+      
+      Rails.logger.info "[SHARE_PERMISSIONS] Matching share: #{matching_share.inspect}"
+      return default unless matching_share
+      
+      # Get the actual permissions from the share record
+      share_perms = Array(matching_share.permissions).map(&:to_s).map(&:downcase)
+      Rails.logger.info "[SHARE_PERMISSIONS] Share permissions array: #{share_perms.inspect}"
+      
+      has_full = share_perms.include?('full')
+      
+      result = {
+        read: has_full || share_perms.include?('read'),
+        comment: has_full || share_perms.include?('comment'),
+        edit: has_full || share_perms.include?('edit')
       }
+      
+      Rails.logger.info "[SHARE_PERMISSIONS] Computed permissions: #{result.inspect}"
+      result
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
-      { read: false, comment: false, edit: false }
+      default
     end
   end
 
@@ -781,9 +801,20 @@ returns a hex color code
     return unless respond_to?(:shares)
     
     begin
-      shares.where('expires_at < ?', Time.current).update_all(status: 'revoked')
+      # Find expired shares that are still active
+      expired_shares = shares.where(status: 'active')
+                             .where('expires_at < ?', Time.current)
+      
+      # Revoke each individually to trigger callbacks (notifications, WebSocket events)
+      # Don't use update_all as it bypasses ActiveRecord callbacks
+      expired_shares.find_each do |share|
+        # Set user_id for notification system
+        UserInfo.current_user_id = 1 # System user
+        share.update!(status: 'revoked')
+      end
     rescue StandardError => e
       Rails.logger.warn "Failed to revoke expired shares for ticket #{id}: #{e.message}"
     end
   end
 end
+

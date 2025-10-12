@@ -1,0 +1,68 @@
+<% case @objects[:action] when 'create' %>Approval request for ticket (#{ticket.title})<% when 'update' %>Approval request updated for ticket (#{ticket.title})<% when 'approve' %>Ticket approved (#{ticket.title})<% when 'reject' %>Ticket rejected (#{ticket.title})<% when 'delete' %>Approval request deleted for ticket (#{ticket.title})<% else %>Approval notification for ticket (#{ticket.title})<% end %>
+
+<div>Hi #{recipient.firstname},</div>
+<br>
+<% if @objects[:action] == 'create' %>
+  <% if @objects[:recipient].id == @objects[:approval].requester_id %>
+    <% approver_name = @objects[:approval].approver.respond_to?(:fullname) ? @objects[:approval].approver.fullname : @objects[:approval].approver.to_s %>
+    <div>You have <b>sent</b> an approval request for ticket "<b>#{ticket.title}</b>" to "<b>#{approver_name}</b>".</div>
+  <% else %>
+    <% requester_name = @objects[:approval].requester.respond_to?(:fullname) ? @objects[:approval].requester.fullname : @objects[:approval].requester.to_s %>
+    <div>You have <b>received</b> an approval request for ticket "<b>#{ticket.title}</b>" from "<b>#{requester_name}</b>".</div>
+  <% end %>
+<% elsif @objects[:action] == 'update' %>
+  <% if @objects[:recipient].id == @objects[:approval].requester_id %>
+    <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been updated.</div>
+  <% elsif @objects[:recipient].id == @objects[:approval].approver_id %>
+    <div>The approval request you received for ticket "<b>#{ticket.title}</b>" has been updated.</div>
+  <% else %>
+    <div>The approval request for ticket "<b>#{ticket.title}</b>" has been updated by "<b>#{actor.longname}</b>".</div>
+  <% end %>
+<% elsif @objects[:action] == 'approve' %>
+  <% if @objects[:recipient].id == @objects[:approval].requester_id %>
+    <% approver_name = @objects[:approval].approver.respond_to?(:fullname) ? @objects[:approval].approver.fullname : @objects[:approval].approver.to_s %>
+    <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been <b>approved</b> by "<b>#{approver_name}</b>".</div>
+  <% else %>
+    <div>You have <b>approved</b> the request for ticket "<b>#{ticket.title}</b>".</div>
+  <% end %>
+<% elsif @objects[:action] == 'reject' %>
+  <% if @objects[:recipient].id == @objects[:approval].requester_id %>
+    <% approver_name = @objects[:approval].approver.respond_to?(:fullname) ? @objects[:approval].approver.fullname : @objects[:approval].approver.to_s %>
+    <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been <b>rejected</b> by "<b>#{approver_name}</b>".</div>
+  <% else %>
+    <div>You have <b>rejected</b> the request for ticket "<b>#{ticket.title}</b>".</div>
+  <% end %>
+<% elsif @objects[:action] == 'delete' %>
+  <% if @objects[:recipient].id == @objects[:approval].requester_id %>
+    <div>Your approval request for ticket "<b>#{ticket.title}</b>" has been deleted.</div>
+  <% else %>
+    <div>The approval request you received for ticket "<b>#{ticket.title}</b>" has been deleted.</div>
+  <% end %>
+<% else %>
+<div>There has been an update to the approval request for ticket "<b>#{ticket.title}</b>".</div>
+<% end %>
+<br>
+<div>
+Ticket: ##{ticket.number}<br>
+Status: #{t(approval.status)}<br>
+Priority: #{t(approval.priority)}<br>
+<% if @objects[:approval].approver.respond_to?(:fullname) %>
+Approver: #{approval.approver.fullname}<br>
+<% elsif @objects[:approval].approver.is_a?(String) %>
+Approver: #{approval.approver}<br>
+<% end %>
+<% if @objects[:approval].requester.respond_to?(:fullname) %>
+Requester: #{approval.requester.fullname}<br>
+<% elsif @objects[:approval].requester.is_a?(String) %>
+Requester: #{approval.requester}<br>
+<% end %>
+<% if @objects[:approval].message.present? %>
+Message: #{approval.message}<br>
+<% end %>
+</div>
+<br>
+<% unless ['delete'].include?(@objects[:action]) %>
+<div>
+  <a href="#{config.http_type}://#{config.fqdn}/#ticket/zoom/#{ticket.id}" target="zammad_app">View this in #{config.product_name}</a>
+</div>
+<% end %>

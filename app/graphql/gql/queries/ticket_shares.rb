@@ -5,27 +5,20 @@ module Gql
     class TicketShares < BaseQuery
       description 'Get ticket shares'
 
-      argument :ticket_id, GraphQL::Types::ID, required: true, description: 'ID of the ticket'
+      argument :ticket_id,
+               GraphQL::Types::ID,
+               required: true,
+               loads: Gql::Types::TicketType,
+               as: :ticket,
+               description: 'ID of the ticket'
 
       type [Gql::Types::Ticket::ShareType], null: false
 
-      def resolve(ticket_id:)
-        ticket = Ticket.find(ticket_id)
-        
-            # Check permissions - only agents and admins can view shares
-            unless ticket.agent_access?(context[:current_user]) || context[:current_user].role?('Admin')
-              raise Exceptions::NotAuthorized, 'You need agent or admin permissions to view ticket shares'
-            end
-
-        ticket.shares.includes(:shared_with).order(created_at: :desc)
-      rescue ActiveRecord::RecordNotFound
-        []
-      rescue Exceptions::NotAuthorized
-        []
+      def resolve(ticket:)
+        Service::Ticket::Share::List
+          .new(current_user: context.current_user)
+          .execute(ticket:)
       end
     end
   end
 end
-
-
-

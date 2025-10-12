@@ -7,14 +7,14 @@ const TICKET_SHARES_QUERY = gql`
     ticketShares(ticketId: $ticketId) {
       id
       ticketId
-      sharedWithId
-      sharedWith {
+      groupId
+      group {
         id
-        fullname
-        email
+        name
       }
-      permissions
       message
+      status
+      expiresAt
       createdAt
       updatedAt
     }
@@ -22,15 +22,12 @@ const TICKET_SHARES_QUERY = gql`
 `
 
 export function useTicketShares(ticketId: VueCompositionApi.Ref<number | undefined>) {
-  return useQuery(TICKET_SHARES_QUERY, 
+  return useQuery(
+    TICKET_SHARES_QUERY,
     () => ({ ticketId: ticketId.value?.toString() }),
     {
       skip: VueCompositionApi.computed(() => !ticketId.value),
-      errorPolicy: 'all'
-    }
+      errorPolicy: 'all',
+    },
   )
 }
-
-
-
-

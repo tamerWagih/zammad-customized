@@ -27,6 +27,10 @@ ENV ZAMMAD_DIR=/opt/zammad
 WORKDIR ${ZAMMAD_DIR}
 COPY --from=builder ${ZAMMAD_DIR} .
 COPY --from=builder /usr/local/bundle /usr/local/bundle
+#to add DC04 cert inside container
+COPY oct.crt /usr/local/share/ca-certificates/oct.crt
+COPY exchange.crt /usr/local/share/ca-certificates/exchange.crt
+RUN update-ca-certificates
 COPY --from=builder ${ZAMMAD_DIR}/contrib/docker/docker-entrypoint.sh /
 RUN contrib/docker/setup.sh runner
 
