@@ -28,55 +28,15 @@ class Ticket::Approval < ApplicationModel
   scope :rejected, -> { where(status: 'rejected') }
 
   def approve!
-    # Use update_columns to skip callbacks and prevent automatic update event
-    update_columns(status: 'approved', updated_at: Time.zone.now)
-    
-    # Manually trigger specific 'approve' action type for notifications
-    EventBuffer.add('transaction', {
-      object:     'Ticket::Approval',
-      type:       'approve',
-      object_id:  id,
-      data:       {
-        ticket_id: ticket_id,
-        approver_id: approver_id,
-        requester_id: requester_id,
-        status: 'approved',
-        message: message,
-        priority: priority
-      },
-      user_id:    UserInfo.current_user_id,
-      created_at: Time.zone.now,
-    })
-    
-    # Manually touch the parent ticket to trigger its TriggersSubscriptions
-    ticket.touch if ticket
-    
+    # Use update! instead of update_columns to trigger callbacks and HasTransactionDispatcher
+    # This ensures only ONE transaction event is created, not two
+    update!(status: 'approved')
   end
 
   def reject!
-    # Use update_columns to skip callbacks and prevent automatic update event
-    update_columns(status: 'rejected', updated_at: Time.zone.now)
-    
-    # Manually trigger specific 'reject' action type for notifications
-    EventBuffer.add('transaction', {
-      object:     'Ticket::Approval',
-      type:       'reject',
-      object_id:  id,
-      data:       {
-        ticket_id: ticket_id,
-        approver_id: approver_id,
-        requester_id: requester_id,
-        status: 'rejected',
-        message: message,
-        priority: priority
-      },
-      user_id:    UserInfo.current_user_id,
-      created_at: Time.zone.now,
-    })
-    
-    # Manually touch the parent ticket to trigger its TriggersSubscriptions
-    ticket.touch if ticket
-    
+    # Use update! instead of update_columns to trigger callbacks and HasTransactionDispatcher
+    # This ensures only ONE transaction event is created, not two
+    update!(status: 'rejected')
   end
 
   def pending?

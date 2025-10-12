@@ -85,6 +85,15 @@ class Transaction::ShareNotification
       Rails.logger.info "[SHARE_NOTIFICATION] ⏭️  Skipped: send_notification=false param"
       return
     end
+    
+    # Detect actual action type from changes for update events
+    # This allows us to distinguish between normal updates vs revoke actions
+    if @item[:type] == 'update' && @item[:changes] && @item[:changes]['status']
+      old_status, new_status = @item[:changes]['status']
+      if old_status == 'active' && new_status == 'revoked'
+        @item[:type] = 'revoke'
+      end
+    end
 
     prepare_recipients_and_reasons
     Rails.logger.info "[SHARE_NOTIFICATION] 📬 Recipients prepared: #{recipients_and_channels.count} recipient(s)"

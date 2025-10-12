@@ -80,6 +80,17 @@ class Transaction::ApprovalNotification
       return
     end
     
+    # Detect actual action type from changes for update events
+    # This allows us to distinguish between normal updates vs approve/reject actions
+    if @item[:type] == 'update' && @item[:changes] && @item[:changes]['status']
+      old_status, new_status = @item[:changes]['status']
+      if old_status == 'pending' && new_status == 'approved'
+        @item[:type] = 'approve'
+      elsif old_status == 'pending' && new_status == 'rejected'
+        @item[:type] = 'reject'
+      end
+    end
+    
     prepare_recipients_and_reasons
     Rails.logger.info "[APPROVAL_NOTIFICATION] 📬 Recipients prepared: #{recipients_and_channels.count} recipient(s)"
 

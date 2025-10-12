@@ -28,9 +28,9 @@ class TransactionDispatcher
     # reset buffer
     EventBuffer.reset('transaction')
 
-    # get async backends
+    # get sync backends (execute immediately)
     sync_backends = []
-    Setting.where(area: 'Transaction::Backend::Async').reorder(:name).each do |setting|
+    Setting.where(area: 'Transaction::Backend::Sync').reorder(:name).each do |setting|
       backend = Setting.get(setting.name)
       next if params[:disable]&.include?(backend)
 
@@ -47,14 +47,17 @@ class TransactionDispatcher
       objects.each_value do |item|
         Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 Processing item: #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
 
-        # execute sync backends
-        Rails.logger.info "[TRANSACTION_DISPATCHER] 🔄 Executing #{sync_backends.size} sync backends"
-        sync_backends.each do |backend|
-          Rails.logger.info "[TRANSACTION_DISPATCHER] 🔄 Sync backend: #{backend}"
-          execute_single_backend(backend, item, params)
+        # execute sync backends (like triggers) immediately
+        if sync_backends.any?
+          Rails.logger.info "[TRANSACTION_DISPATCHER] 🔄 Executing #{sync_backends.size} sync backends"
+          sync_backends.each do |backend|
+            Rails.logger.info "[TRANSACTION_DISPATCHER] 🔄 Sync backend: #{backend}"
+            execute_single_backend(backend, item, params)
+          end
         end
 
-        # execute async backends
+        # queue async backends (like notifications) for background processing
+        # TransactionJob will load and execute all Backend::Async backends
         Rails.logger.info "[TRANSACTION_DISPATCHER] 🔄 Queuing async backends via TransactionJob"
         TransactionJob.perform_later(item, params)
       end

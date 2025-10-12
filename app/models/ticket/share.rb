@@ -31,29 +31,9 @@ class Ticket::Share < ApplicationModel
   end
 
   def revoke!
-    # Use update_columns to skip callbacks and prevent automatic update event
-    update_columns(status: 'revoked', updated_at: Time.zone.now)
-    
-    # Manually trigger specific 'revoke' action type for notifications
-    EventBuffer.add('transaction', {
-      object:     'Ticket::Share',
-      type:       'revoke',
-      object_id:  id,
-      data:       {
-        ticket_id: ticket_id,
-        group_id: group_id,
-        shared_by_id: shared_by_id,
-        status: 'revoked',
-        message: message,
-        permissions: permissions
-      },
-      user_id:    UserInfo.current_user_id,
-      created_at: Time.zone.now,
-    })
-    
-    # Manually touch the parent ticket to trigger its TriggersSubscriptions
-    ticket.touch if ticket
-    
+    # Use update! instead of update_columns to trigger callbacks and HasTransactionDispatcher
+    # This ensures only ONE transaction event is created, not two
+    update!(status: 'revoked')
   end
 
   def group_name
