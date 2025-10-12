@@ -7,6 +7,7 @@ import type { TicketById, TicketView } from '../types.ts'
 export const getTicketView = (ticket: TicketById) => {
   const session = useSessionStore()
 
+  const isReadOnlyShareAccess = false
   const isTicketEditable = ticket.policy.update
 
   const isTicketCustomer =
@@ -20,6 +21,7 @@ export const getTicketView = (ticket: TicketById) => {
     isTicketAgent,
     isTicketCustomer,
     isTicketEditable,
+    isReadOnlyShareAccess,
     ticketView,
   }
 }

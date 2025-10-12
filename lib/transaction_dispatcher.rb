@@ -28,7 +28,7 @@ class TransactionDispatcher
     # reset buffer
     EventBuffer.reset('transaction')
 
-    # get async backends
+    # get sync backends (execute immediately)
     sync_backends = []
     Setting.where(area: 'Transaction::Backend::Sync').reorder(:name).each do |setting|
       backend = Setting.get(setting.name)
@@ -39,15 +39,26 @@ class TransactionDispatcher
 
     # get uniq objects
     list_objects = get_uniq_changes(list)
+    Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Processing #{list_objects.size} object types"
+    
     list_objects.each_value do |objects|
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📋 Processing #{objects.size} objects"
+      
       objects.each_value do |item|
+        Rails.logger.info "[TRANSACTION_DISPATCHER] 🎯 Processing item: #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
 
-        # execute sync backends
-        sync_backends.each do |backend|
-          execute_single_backend(backend, item, params)
+        # execute sync backends (like triggers) immediately
+        if sync_backends.any?
+          Rails.logger.info "[TRANSACTION_DISPATCHER] 🔄 Executing #{sync_backends.size} sync backends"
+          sync_backends.each do |backend|
+            Rails.logger.info "[TRANSACTION_DISPATCHER] 🔄 Sync backend: #{backend}"
+            execute_single_backend(backend, item, params)
+          end
         end
 
-        # execute async backends
+        # queue async backends (like notifications) for background processing
+        # TransactionJob will load and execute all Backend::Async backends
+        Rails.logger.info "[TRANSACTION_DISPATCHER] 🔄 Queuing async backends via TransactionJob"
         TransactionJob.perform_later(item, params)
       end
     end
@@ -131,10 +142,21 @@ class TransactionDispatcher
       end
 
       # get current state of objects
-      object = event[:object].constantize.find_by(id: event[:id])
+      # For delete events, use object_id instead of id
+      event_id = event[:type] == 'delete' ? event[:object_id] : event[:id]
+      object = event[:object].constantize.find_by(id: event_id)
 
-      # next if object is already deleted
-      next if !object
+      # For delete events, the object won't exist (already destroyed)
+      # Use the serialized data from the event instead
+      if !object
+        if event[:type] == 'delete' && event[:data]
+          # Create a minimal struct to satisfy the rest of the logic
+          object = OpenStruct.new(id: event_id)
+        else
+          # next if object is already deleted
+          next
+        end
+      end
 
       if !list_objects[event[:object]]
         list_objects[event[:object]] = {}
@@ -165,6 +187,11 @@ class TransactionDispatcher
         else
           store[:changes] = event[:changes]
         end
+      end
+
+      # For delete events, include serialized data
+      if event[:type] == 'delete' && event[:data]
+        store[:data] = event[:data]
       end
 
       # remember article id if exists

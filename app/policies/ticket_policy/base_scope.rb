@@ -24,6 +24,12 @@ class TicketPolicy < ApplicationPolicy
       if user.permissions?('ticket.agent')
         sql.push('group_id IN (?)')
         bind.push(user.group_ids_access(self.class::ACCESS_TYPE))
+
+        shared_ids = shared_ticket_ids(self.class::ACCESS_TYPE)
+        if shared_ids.present?
+          sql.push('tickets.id IN (?)')
+          bind.push(shared_ids)
+        end
       end
 
       if user.permissions?('ticket.customer')
@@ -51,6 +57,20 @@ class TicketPolicy < ApplicationPolicy
       return false if args.first.to_s == 'resolve' && instance_of?(TicketPolicy::BaseScope)
 
       super
+    end
+
+    private
+
+    def shared_ticket_ids(access)
+      return [] unless user.permissions?('ticket.agent')
+
+      group_ids = Array(user.group_ids_access(access)).compact
+      return [] if group_ids.blank?
+
+      Ticket::Share.active_current.where(group_id: group_ids).pluck(:ticket_id).uniq
+    rescue StandardError => e
+      Rails.logger.warn("Failed to resolve shared ticket ids for user #{user.id}: #{e.message}")
+      []
     end
   end
 end

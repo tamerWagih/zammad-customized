@@ -81,8 +81,14 @@ class TicketPolicy < ApplicationPolicy
   end
 
   def access?(access)
+    # Check approval access FIRST (approvers get full access)
+    approval_decision = approval_access?(access)
+    return approval_decision unless approval_decision.nil?
+    
+    share_decision = share_access?(access)
+    return share_decision unless share_decision.nil?
+
     return true if agent_access?(access)
-    return true if share_access?(access)
 
     customer_access?
   end
@@ -93,26 +99,54 @@ class TicketPolicy < ApplicationPolicy
     user.group_access?(record.group.id, access)
   end
 
+  # Allow access via Ticket::Approval for approvers.
+  # Only agents and admins can be approvers (standard Zammad requirement).
+  # Approvers get full access to tickets they need to approve.
+  # This prevents the need to create shares that give access to entire groups.
+  def approval_access?(access)
+    return nil unless user
+    return nil unless user.permissions?('ticket.agent') # Only agents can be approvers
+    
+    # Check if user is an approver for this ticket (any status)
+    is_approver = record.approvals.exists?(approver_id: user.id)
+    return nil unless is_approver
+    
+    # Approvers get full access (read, comment, edit) for tickets they need to approve
+    case access.to_s
+    when 'read', 'change', 'create', 'full'
+      true
+    else
+      nil
+    end
+  end
+
   # Allow access via Ticket::Share for the current user.
   # Maps Zammad policy accesses to share permissions:
   # - 'read'  -> read/comment/edit
   # - 'change'-> edit
   # - 'create'-> comment (e.g., add notes)
   def share_access?(access)
-    return false if !user
+    return nil unless user
+    return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
 
-    share = Ticket::Share.find_by(ticket_id: record.id, shared_with_id: user.id, status: 'active')
-    return false if !share
+    share_group_ids = Ticket::Share.active_current.where(ticket_id: record.id).pluck(:group_id)
+    return nil if share_group_ids.empty?
 
+    # Check if user has ANY permission level in the shared groups (read, change, or full)
+    user_group_ids_read = Array(user.group_ids_access('read'))
+    user_group_ids_change = Array(user.group_ids_access('change'))
+    user_group_ids_full = Array(user.group_ids_access('full'))
+    
+    # Combine all group IDs where user has any permission
+    user_group_ids = (user_group_ids_read + user_group_ids_change + user_group_ids_full).uniq
+    return nil if (share_group_ids & user_group_ids).blank?
+
+    # Users with share access get full permissions
     case access.to_s
-    when 'read'
-      share.can_read? || share.can_comment? || share.can_edit?
-    when 'change'
-      share.can_edit?
-    when 'create'
-      share.can_comment?
+    when 'read', 'change', 'create', 'full'
+      true
     else
-      false
+      nil
     end
   end
 
@@ -140,3 +174,4 @@ class TicketPolicy < ApplicationPolicy
     @customer_field_scope ||= ApplicationPolicy::FieldScope.new(deny: %i[time_unit time_units_per_type checklist referencing_checklist_tickets])
   end
 end
+

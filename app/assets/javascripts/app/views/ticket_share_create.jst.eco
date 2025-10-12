@@ -1,75 +1,47 @@
 <% if @error: %>
   <div class="alert alert-warning">
-    <%- @T('Unable to load users. Please try again.') %>
+    <%- @T('Unable to load groups. Please try again.') %>
   </div>
 <% end %>
 
-<form class="form-horizontal">
-  <div class="form-group">
-    <label class="control-label col-sm-3">
-      <%- @T('Share with') %>
-    </label>
-    <div class="col-sm-9">
-      <select name="shared_with_id" class="form-control" required>
-        <option value="">
-          <%- @T('Select a user to share with...') %>
+<div class="form-group">
+  <label class="control-label col-sm-3">
+    <%- @T('Department') %>
+  </label>
+  <div class="col-sm-9">
+    <select name="group_id" class="form-control" required>
+      <option value="">
+        <%- @T('Select a department...') %>
+      </option>
+      <% for group in @groups: %>
+        <option value="<%= group.id %>">
+          <%- group.fullname || group.name %>
         </option>
-        <% for user in @users: %>
-          <option value="<%= user.id %>">
-            <%- user.firstname %> <%- user.lastname %> (<%- user.email %>)
-          </option>
-        <% end %>
-      </select>
-      <small class="help-block">
-        <%- @T('Only agents and admins are shown') %>
-      </small>
-    </div>
+      <% end %>
+    </select>
+    <small class="help-block">
+      <%- @T('All agents in the selected department will receive access based on permissions') %>
+    </small>
   </div>
+</div>
 
-  <div class="form-group">
-    <label class="control-label col-sm-3">
-      <%- @T('Permissions') %>
-    </label>
-    <div class="col-sm-9">
-      <div class="checkbox">
-        <label>
-          <input type="checkbox" name="permissions[]" value="read" checked>
-          <%- @T('Read') %>
-        </label>
-      </div>
-      <div class="checkbox">
-        <label>
-          <input type="checkbox" name="permissions[]" value="comment">
-          <%- @T('Comment') %>
-        </label>
-      </div>
-      <div class="checkbox">
-        <label>
-          <input type="checkbox" name="permissions[]" value="edit">
-          <%- @T('Edit') %>
-        </label>
-      </div>
-    </div>
+<div class="form-group">
+  <label class="control-label col-sm-3">
+    <%- @T('Message') %>
+  </label>
+  <div class="col-sm-9">
+    <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the department...') %>"></textarea>
   </div>
+</div>
 
-  <div class="form-group">
-    <label class="control-label col-sm-3">
-      <%- @T('Message') %>
-    </label>
-    <div class="col-sm-9">
-      <textarea name="message" class="form-control" rows="4" placeholder="<%- @T('Optional message for the shared user...') %>"></textarea>
-    </div>
+<div class="form-group">
+  <label class="control-label col-sm-3">
+    <%- @T('Expire on (Optional)') %>
+  </label>
+  <div class="col-sm-9">
+    <input type="date" name="expires_at" class="form-control" min="<%= new Date().toISOString().slice(0, 10) %>">
+    <small class="help-block">
+      <%- @T('Access ends at the end of the selected day') %>
+    </small>
   </div>
-
-  <div class="form-group">
-    <label class="control-label col-sm-3">
-      <%- @T('Expires') %>
-    </label>
-    <div class="col-sm-9">
-      <input type="date" name="expires_at" class="form-control" min="<%= new Date().toISOString().split('T')[0] %>">
-      <small class="help-block">
-        <%- @T('Optional: Set when this share should expire') %>
-      </small>
-    </div>
-  </div>
-</form>
+</div>

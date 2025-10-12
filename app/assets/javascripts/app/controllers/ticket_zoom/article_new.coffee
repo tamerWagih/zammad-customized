@@ -187,12 +187,6 @@ class App.TicketZoomArticleNew extends App.Controller
     @releaseGlobalClickEvents()
     ticket = App.Ticket.fullLocal(@ticket_id)
 
-    # TODO: Share permissions for GUI enforcement (commented out for now)
-    # Check share permissions for GUI enforcement
-    current_user = App.User.current()
-    share_permissions = ticket?.share_permissions || {}
-    
-    # Check if share is expired (if expires_at is provided)
     is_share_expired = false
     if ticket?.share_expires_at
       try
@@ -201,40 +195,9 @@ class App.TicketZoomArticleNew extends App.Controller
         is_share_expired = expires_date <= current_date
       catch
         is_share_expired = false
-    
-    # Determine what the user can do based on permissions
-    # TEMPORARILY DISABLED - Allow everyone to comment and edit for now
-    can_comment = true  # Always allow commenting for now
-    can_edit = true     # Always allow editing for now
-    
-    # TODO: Uncomment this logic later when share permissions are ready
-    # can_comment = false
-    # can_edit = false
-    # 
-    # # Owner can always comment and edit
-    # if ticket?.owner_id && String(ticket.owner_id) == String(current_user?.id)
-    #   can_comment = true
-    #   can_edit = true
-    # else if is_share_expired
-    #   # Expired share - read-only access
-    #   can_comment = false
-    #   can_edit = false
-    # else if share_permissions.edit
-    #   # Edit permission includes comment and edit
-    #   can_comment = true
-    #   can_edit = true
-    # else if share_permissions.comment
-    #   # Comment permission includes comment only
-    #   can_comment = true
-    #   can_edit = false
-    # else if share_permissions.read
-    #   # Read permission is read-only
-    #   can_comment = false
-    #   can_edit = false
-    # else
-    #   # No share permissions - read-only access
-    #   can_comment = false
-    #   can_edit = false
+
+    can_comment = ticket?.currentView?() isnt 'customer'
+    can_edit    = can_comment
 
     @html App.view('ticket_zoom/article_new')(
       ticket:           ticket
@@ -247,6 +210,7 @@ class App.TicketZoomArticleNew extends App.Controller
       can_edit:         can_edit
       is_share_expired: is_share_expired
     )
+
     @setArticleTypePre(@type)
     @setArticleTypePost(@type)
 
@@ -365,7 +329,8 @@ class App.TicketZoomArticleNew extends App.Controller
           if params.content_type is 'text/html'
             params.body = "#{params.body}</br>#{@signature.text()}"
           else
-            params.body = "#{params.body}\n#{@signature.text()}"
+            params.body = "#{params.body}
+#{@signature.text()}"
           break
 
     # add security params
@@ -973,3 +938,9 @@ class App.TicketZoomArticleNew extends App.Controller
     $('<div class="alert alert--warning js-warning-body-presence"></div>')
       .text(noCaption)
       .prependTo(@attachmentsHolder)
+
+
+
+
+
+

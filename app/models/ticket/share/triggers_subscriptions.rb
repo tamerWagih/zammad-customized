@@ -39,11 +39,12 @@ module Ticket::Share::TriggersSubscriptions
   def trigger_share_subscription(action)
     # Custom share subscription event
     # This will trigger frontend listeners for TicketShare events
-    Sessions.broadcast("TicketShare:#{action}", { 
+    event_data = {
       share: {
         id: id,
         ticket_id: ticket_id,
-        user: shared_with&.fullname,
+        group_id: group_id,
+        group: group&.fullname || group&.name,
         permissions: permissions,
         message: message,
         status: status,
@@ -51,6 +52,13 @@ module Ticket::Share::TriggersSubscriptions
         expires_at: expires_at,
         updated_at: updated_at
       }
-    })
+    }
+    
+    Rails.logger.info "[SHARE_WEBSOCKET] Broadcasting TicketShare:#{action} for share ##{id} (ticket ##{ticket_id})"
+    Rails.logger.info "[SHARE_WEBSOCKET] Event data: #{event_data.inspect}"
+    Sessions.broadcast("TicketShare:#{action}", event_data)
+    Rails.logger.info "[SHARE_WEBSOCKET] Broadcast completed for TicketShare:#{action}"
   end
 end
+
+

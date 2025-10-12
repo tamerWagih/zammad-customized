@@ -12,5 +12,7 @@ class CollectionAssets extends App.Controller
       App.Template.subscribe(->)
       App.ChecklistTemplate.subscribe(->)
       App.TicketSharedDraftStart.subscribe(->)
+      App.TicketShare.subscribe(->)
+      App.TicketApproval.subscribe(->)
 
 App.Config.set('collection_assets', CollectionAssets, 'Plugins')

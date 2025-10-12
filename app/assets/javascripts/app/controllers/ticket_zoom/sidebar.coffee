@@ -29,6 +29,13 @@ class App.TicketZoomSidebar extends App.ControllerObserver
         backend.postParams(args)
 
   render: (ticket) =>
+    ticketModel = ticket
+    if !ticketModel?.currentView?()
+      if @object_id && App.Ticket.exists(@object_id)
+        ticketModel = App.Ticket.fullLocal(@object_id)
+
+    return unless ticketModel?.currentView?()
+    ticket = ticketModel
     @sidebarBackends ||= {}
     @sidebarItems = []
     sidebarBackends = App.Config.get('TicketZoomSidebar')
@@ -46,6 +53,8 @@ class App.TicketZoomSidebar extends App.ControllerObserver
           mentions:         @mentions
           time_accountings: @time_accountings
           links:            @links
+          approvals:        @approvals
+          shares:           @shares
           parent:           @parent
         )
       else
@@ -58,6 +67,8 @@ class App.TicketZoomSidebar extends App.ControllerObserver
           mentions:         @mentions
           time_accountings: @time_accountings
           links:            @links
+          approvals:        @approvals
+          shares:           @shares
           parent:           @parent
         )
       @sidebarItems.push @sidebarBackends[key]
@@ -66,6 +77,9 @@ class App.TicketZoomSidebar extends App.ControllerObserver
       @sidebar.releaseController()
 
     tabsSidebarEl = @$('.tabsSidebar')
+    
+    # Clear existing sidebar content to prevent duplication
+    tabsSidebarEl.empty()
     
     try
       @sidebar = new App.Sidebar(

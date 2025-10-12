@@ -43,7 +43,17 @@ class Ticket::AssetsAll
   end
 
   def response(assets, attributes_to_change)
-    {
+    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Building API response for user ##{user.id} (#{user.email})"
+    
+    approvals_data = approvals
+    shares_data = shares
+    share_perms = share_permissions
+    
+    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Approvals data size: #{approvals_data.size}"
+    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Shares data size: #{shares_data.size}"
+    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Share permissions for user: #{share_perms.inspect}"
+    
+    response_data = {
       ticket_id:          ticket.id,
       ticket_article_ids: articles.pluck(:id),
       assets:             assets,
@@ -52,7 +62,28 @@ class Ticket::AssetsAll
       mentions:           mentions.pluck(:id),
       time_accountings:   time_accountings,
       form_meta:          attributes_to_change[:form_meta],
+      approvals:          approvals_data,
+      shares:             shares_data,
+      share_permissions:  share_perms,
     }
+    
+    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: API response built successfully"
+    response_data
+  end
+  
+  def share_permissions
+    return { read: false, comment: false, edit: false } unless user
+    
+    begin
+      if ticket.respond_to?(:share_permissions_for)
+        ticket.share_permissions_for(user)
+      else
+        { read: false, comment: false, edit: false }
+      end
+    rescue StandardError => e
+      Rails.logger.warn "Failed to get share permissions for ticket #{ticket.id}, user #{user.id}: #{e.message}"
+      { read: false, comment: false, edit: false }
+    end
   end
 
   def get_attributes_to_change(assets)
@@ -88,5 +119,59 @@ class Ticket::AssetsAll
 
   def mentions
     @mentions ||= ticket.mentions
+  end
+
+  def approvals
+    @approvals ||= if ticket.respond_to?(:approvals) && user.permissions?('ticket.agent')
+                     # Return all approvals for this ticket (same format as ApprovalController)
+                     result = ticket.approvals.includes(:approver, :requester).map do |approval|
+                       {
+                         id:           approval.id.to_s,
+                         ticket_id:    approval.ticket_id.to_s,
+                         approver_id:  approval.approver_id.to_s,
+                         approver:     approval.approver&.fullname,
+                         requester_id: approval.requester_id.to_s,
+                         requester:    approval.requester&.fullname,
+                         status:       approval.status,
+                         message:      approval.message,
+                         priority:     approval.priority,
+                         created_at:   approval.created_at,
+                         updated_at:   approval.updated_at,
+                       }
+                     end
+                     Rails.logger.info "[APPROVAL_API] Ticket ##{ticket.id}: Returning #{result.size} approvals for user ##{user.id} (#{user.email})"
+                     result
+                   else
+                     Rails.logger.info "[APPROVAL_API] Ticket ##{ticket.id}: No approvals returned (respond_to: #{ticket.respond_to?(:approvals)}, is_agent: #{user.permissions?('ticket.agent')})"
+                     []
+                   end
+  end
+
+  def shares
+    @shares ||= if ticket.respond_to?(:shares) && user.permissions?('ticket.agent')
+                  # Return all shares for this ticket (same format as SharesController)
+                  result = ticket.shares.includes(:shared_by, :group).map do |share|
+                    {
+                      id:              share.id.to_s,
+                      ticket_id:       share.ticket_id.to_s,
+                      group_id:        share.group_id.to_s,
+                      group_name:      share.group&.name,
+                      group:           share.group&.name,
+                      shared_by_id:    share.shared_by_id.to_s,
+                      shared_by_name:  share.shared_by&.fullname,
+                      status:          share.status,
+                      permissions:     Array(share.permissions),
+                      message:         share.message,
+                      expires_at:      share.expires_at,
+                      created_at:      share.created_at,
+                      updated_at:      share.updated_at,
+                    }
+                  end
+                  Rails.logger.info "[SHARE_API] Ticket ##{ticket.id}: Returning #{result.size} shares for user ##{user.id} (#{user.email})"
+                  result
+                else
+                  Rails.logger.info "[SHARE_API] Ticket ##{ticket.id}: No shares returned (respond_to: #{ticket.respond_to?(:shares)}, is_agent: #{user.permissions?('ticket.agent')})"
+                  []
+                end
   end
 end

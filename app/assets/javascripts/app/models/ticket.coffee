@@ -1,5 +1,5 @@
 class App.Ticket extends App.Model
-  @configure 'Ticket', 'number', 'title', 'group_id', 'owner_id', 'customer_id', 'state_id', 'priority_id', 'article', 'tags', 'links', 'updated_at', 'preferences'
+  @configure 'Ticket', 'number', 'title', 'group_id', 'owner_id', 'customer_id', 'state_id', 'priority_id', 'article', 'tags', 'links', 'updated_at', 'preferences', 'share_permissions', 'share_expires_at'
   @extend Spine.Model.Ajax
   @url: @apiPath + '/tickets'
   @configure_attributes = [
@@ -131,10 +131,14 @@ class App.Ticket extends App.Model
         App.i18n.translateContent('Approval request deleted for |%s| by %s', item.title, item.created_by.displayName())
       when 'Ticket shared with you'
         App.i18n.translateContent('%s shared ticket |%s| with you', item.created_by.displayName(), item.title)
+      when 'Ticket shared with your group'
+        App.i18n.translateContent('%s shared ticket |%s| with your group', item.created_by.displayName(), item.title)
       when 'Share revoked'
         App.i18n.translateContent('%s revoked a share on |%s|', item.created_by.displayName(), item.title)
       when 'Share updated'
         App.i18n.translateContent('%s updated share on |%s|', item.created_by.displayName(), item.title)
+      when 'Share deleted'
+        App.i18n.translateContent('%s deleted share on |%s|', item.created_by.displayName(), item.title)
       when 'Ticket/Share updated'
         App.i18n.translateContent('%s updated share on |%s|', item.created_by.displayName(), item.title)
       else
@@ -226,8 +230,110 @@ class App.Ticket extends App.Model
     user.allOrganizationIds().includes(@organization_id)
 
   userGroupAccess: (permission) ->
+    # Check all access methods: standard group access, approvals, and shares
+    # Backend TicketPolicy checks these too, so frontend should match
+    
     user = App.User.current()
-    return @isAccessibleByGroup(user, permission)
+    return false unless user
+    return false unless user.permission('ticket.agent')
+    
+    # 1. Check standard group access
+    return true if @isAccessibleByGroup(user, permission)
+    
+    # 2. Check if user is an approver (approvers get full access)
+    if @_approvals_cache or @approvals
+      approvals = @_approvals_cache or @approvals or []
+      for approval in approvals
+        if parseInt(approval.approver_id) is parseInt(user.id)
+          return true
+    
+    # 3. Check share permissions (uses share_permissions from backend)
+    return true if @hasSharePermission(permission)
+    
+    false
+
+  hasSharePermission: (permission) ->
+    return false unless App.User.current()?.permission('ticket.agent')
+
+    perms = @sharePermissions()
+    perms ?= @sharePermissionsFallback()
+    return false unless perms
+
+    requested = []
+    if Array.isArray(permission)
+      requested = permission
+    else if permission?
+      requested = [permission]
+    else
+      requested = ['read']
+
+    for perm in requested
+      normalized = perm?.toString()?.toLowerCase()
+      allowed = switch normalized
+        when 'read' then perms.read
+        when 'change' then perms.edit
+        when 'create' then perms.comment or perms.edit
+        when 'comment' then perms.comment
+        when 'edit' then perms.edit
+        when 'full' then perms.edit
+        else perms.read
+      return true if allowed
+
+    false
+
+  sharePermissions: ->
+    perms = @share_permissions ? @preferences?.share_permissions
+    return null unless perms && typeof perms is 'object'
+
+    fetch = (key) ->
+      value = perms[key]
+      value = perms[key?.toString()] if value is undefined
+      return false if value is null or value is undefined
+
+      if typeof value is 'string'
+        lowered = value.toLowerCase()
+        return lowered in ['true', '1', 'yes']
+
+      !!value
+
+    {
+      read: fetch('read')
+      comment: fetch('comment')
+      edit: fetch('edit')
+    }
+
+  sharePermissionsFallback: ->
+    user = App.User.current()
+    return null unless user
+
+    shares = App.TicketShare?.findAllByAttribute && App.TicketShare.findAllByAttribute('ticket_id', @id) || []
+    return null unless shares?.length
+
+    groupIds = user.allGroupIds?('read') || []
+    return null unless groupIds.length
+
+    now = new Date()
+    matchingShare = shares.find (share) ->
+      return false unless share?.status is 'active'
+      return false unless share.group_id?
+      groupMatch = groupIds.some (gid) -> gid?.toString?() is share.group_id?.toString?()
+      return false unless groupMatch
+      return true unless share.expires_at
+      expiresAt = new Date(share.expires_at)
+      expiresAt > now
+
+    return null unless matchingShare
+
+    permissions = matchingShare.permissions || []
+    permissions = [permissions] unless Array.isArray(permissions)
+    permissions = permissions.map (perm) -> perm?.toString()?.toLowerCase?() || perm
+    hasFull = permissions.includes('full')
+
+    {
+      read: hasFull or permissions.includes('read')
+      comment: hasFull or permissions.includes('comment')
+      edit: hasFull or permissions.includes('edit') or permissions.includes('change')
+    }
 
   userIsCustomer: ->
     user = App.User.current()
@@ -239,8 +345,22 @@ class App.Ticket extends App.Model
     return @isAccessibleByOwner(user)
 
   currentView: ->
-    return 'agent' if App.User.current()?.permission('ticket.agent') && @userGroupAccess('read')
-    return 'customer' if App.User.current()?.permission('ticket.customer')
+    # Simplified: Backend TicketPolicy is source of truth for access
+    # If this ticket exists in frontend, backend has granted access
+    # Just check user role to determine which view to show
+    
+    user = App.User.current()
+    return unless user
+    
+    # Agents get agent view (backend ensures they have access)
+    # This includes: standard group access, approvers, and shared users
+    if user.permission('ticket.agent')
+      return 'agent'
+    
+    # Customers get customer view
+    if user.permission('ticket.customer')
+      return 'customer'
+    
     return
 
   isAccessibleByOwner: (user) ->
@@ -265,6 +385,7 @@ class App.Ticket extends App.Model
     return false if !user.permission('ticket.agent')
     return true if @isAccessibleByOwner(user)
     return @isAccessibleByGroup(user, permission)
+
 
   attributes: ->
     attrs = super

@@ -2687,6 +2687,30 @@ Setting.create_or_update(
         email:  true,
         online: true,
       }
+    },
+    approval:         {
+      criteria: {
+        owned_by_me:     true,
+        owned_by_nobody: true,
+        subscribed:      true,
+        no:              false,
+      },
+      channel:  {
+        email:  true,
+        online: true,
+      }
+    },
+    share:            {
+      criteria: {
+        owned_by_me:     true,
+        owned_by_nobody: true,
+        subscribed:      true,
+        no:              false,
+      },
+      channel:  {
+        email:  true,
+        online: true,
+      }
     }
   },
   frontend:    true
@@ -5079,6 +5103,10 @@ Setting.create_if_not_exists(
   state:       'Transaction::Notification',
   frontend:    false
 )
+# REMOVED: Duplicate approval notification backend setting
+# The 9100_approval_notification setting from migration is the active one
+# REMOVED: Duplicate share notification backend setting
+# The 9200_share_notification setting from migration is the active one
 Setting.create_if_not_exists(
   title:       __('Defines transaction backend.'),
   name:        '1000_signature_detection',

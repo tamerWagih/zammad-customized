@@ -3,32 +3,40 @@
 class Ticket::Approval < ApplicationModel
   include HasActivityStreamLog
   include HasSearchIndexBackend
-  include ChecksClientNotification
+  # NOTE: ChecksClientNotification removed - parent Ticket model handles WebSocket via TriggersSubscriptions
   include HasTags
-  include Ticket::Approval::TriggersSubscriptions
+  include HasTransactionDispatcher
+  include Ticket::Approval::TriggersNotifications
 
-  belongs_to :ticket
+  PRIORITIES = %w[low normal high urgent].freeze
+  STATUSES   = %w[pending approved rejected].freeze
+
+  belongs_to :ticket, touch: true  # Touch parent ticket to trigger its TriggersSubscriptions
   belongs_to :approver, class_name: 'User'
   belongs_to :requester, class_name: 'User'
+  belongs_to :created_by, class_name: 'User', optional: true
+  belongs_to :updated_by, class_name: 'User', optional: true
 
-  validates :status, inclusion: { in: %w[pending approved rejected] }
+  validates :status, inclusion: { in: STATUSES }
   validates :ticket_id, presence: true
   validates :approver_id, presence: true
-  validates :approver_id, uniqueness: { scope: :ticket_id }
-  validates :priority, inclusion: { in: %w[low normal high urgent] }
+  validates :approver_id, uniqueness: { scope: :ticket_id, conditions: -> { where(status: 'pending') } }, if: :pending_status?
+  validates :priority, inclusion: { in: PRIORITIES }
 
-  scope :pending, -> { where(status: 'pending') }
+  scope :pending,  -> { where(status: 'pending') }
   scope :approved, -> { where(status: 'approved') }
   scope :rejected, -> { where(status: 'rejected') }
 
   def approve!
+    # Use update! instead of update_columns to trigger callbacks and HasTransactionDispatcher
+    # This ensures only ONE transaction event is created, not two
     update!(status: 'approved')
-    ticket.update!(state: Ticket::State.find_by(name: 'open')) if ticket.state.name == 'pending approval'
   end
 
   def reject!
+    # Use update! instead of update_columns to trigger callbacks and HasTransactionDispatcher
+    # This ensures only ONE transaction event is created, not two
     update!(status: 'rejected')
-    ticket.update!(state: Ticket::State.find_by(name: 'closed')) if ticket.state.name == 'pending approval'
   end
 
   def pending?
@@ -43,35 +51,58 @@ class Ticket::Approval < ApplicationModel
     status == 'rejected'
   end
 
+  def approver_name
+    approver&.fullname
+  end
+
+  def requester_name
+    requester&.fullname
+  end
+
+  def as_json(options = {})
+    super({
+      only: %i[
+        id
+        ticket_id
+        approver_id
+        requester_id
+        status
+        message
+        priority
+        created_at
+        updated_at
+      ],
+      methods: %i[approver_name requester_name]
+    }.merge(options))
+  end
+
   private
+
+  def pending_status?
+    status.blank? || status == 'pending'
+  end
 
   def search_index_attribute_lookup(record)
     {
       ticket_id: record.ticket_id,
-      approver: record.approver.fullname,
-      status: record.status,
-      message: record.message,
+      approver:  record.approver&.fullname,
+      requester: record.requester&.fullname,
+      status:    record.status,
+      message:   record.message,
     }
-  end
-
-  def as_json(options = {})
-    super(only: %i[id status message created_at priority], methods: %i[approver_name])
-  end
-
-  def approver_name
-    approver&.fullname
   end
 
   def activity_message
     case status
     when 'pending'
-      "Approval request sent to #{approver&.fullname}"
+      "Approval request sent to #{approver_name}"
     when 'approved'
-      "Approval request approved by #{approver&.fullname}"
+      "Approval request approved by #{approver_name}"
     when 'rejected'
-      "Approval request rejected by #{approver&.fullname}"
+      "Approval request rejected by #{approver_name}"
     else
       "Approval request status changed to #{status}"
     end
   end
+
 end

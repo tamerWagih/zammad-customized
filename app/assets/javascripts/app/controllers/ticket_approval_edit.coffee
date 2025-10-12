@@ -64,16 +64,8 @@ class App.TicketApprovalEdit extends App.ControllerModal
     )
 
   submitSuccess: (data, status, xhr) =>
-    # Don't show notification here to avoid double messages
-    # The parent widget will handle the success notification
-    
-    # Call parent widget's success handler for immediate update
-    if @parentWidget && @parentWidget.approvalSuccess
-      @parentWidget.approvalSuccess(data, status, xhr)
-    else
-      # Fallback to callback
-      @callback() if @callback
-    
+    # Pass the updated approval data to callback for immediate local update
+    @callback(data.approval) if @callback
     @close()
 
   submitError: (xhr, status, error) =>

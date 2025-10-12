@@ -1,11 +1,15 @@
 class SidebarApprovals extends App.Controller
-  constructor: ->
+  constructor: (params) ->
     super
-    @last_can_share = null
+    
+    # Store approvals from parent (same pattern as SidebarTicket with tags/links)
+    @approvals = params.approvals || []
 
   sidebarItem: =>
+    # Only show for agent view
+    return unless @ticket.currentView() is 'agent'
     
-    return if @ticket.currentView() isnt 'agent'
+    # Only agents and admins can see approvals
     return unless @permissionCheck('ticket.agent') or @permissionCheck('admin.*')
 
     @item = {
@@ -17,8 +21,8 @@ class SidebarApprovals extends App.Controller
       sidebarActions: []
     }
 
-    # Only allow requesting approval if user is owner or has share access
-    if @canShareOrApprove()
+    # Add action button if user can edit ticket
+    if @ticket.editable && @ticket.editable()
       @item.sidebarActions.push(
         title: __('Request Approval')
         name: 'approval-request'
@@ -27,90 +31,53 @@ class SidebarApprovals extends App.Controller
 
     @item
 
-  showPanel: (el) =>
-    @elSidebar = el
-    @widget = new App.WidgetApprovals(
-      el:       @elSidebar
-      ticket_id: @ticket.id
-      parentVC: @
-      callback: @refreshApprovals
-    )
-    
-    # Load approvals data for isReceiver check
-    @loadApprovalsForCheck()
-
-  # Standard reload method called by sidebar system
-  reload: (args) =>
-    if @widget && @widget.reload
-      @widget.reload(args)
-    else if @elSidebar
-      @showPanel(@elSidebar)
-    
-    # Check if ticket assignment changed and trigger sidebar re-render
-    @checkAndUpdateActions()
-
-  checkAndUpdateActions: =>
-    # Check if the ability to share/approve has changed
-    current_can_share = @canShareOrApprove()
-    if @last_can_share isnt current_can_share
-      @last_can_share = current_can_share
-      # Trigger sidebar re-render to update actions
-      App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: @taskKey })
-
-  refreshApprovals: =>
-    if @elSidebar
-      @showPanel(@elSidebar)
-
-  loadApprovalsForCheck: =>
-    # Load approvals data for isReceiver check
-    @ajax(
-      id: 'load_approvals_for_check'
-      type: 'GET'
-      url: "#{@apiPath}/tickets/#{@ticket.id}/approvals"
-      processData: true
-      success: (data, status, xhr) =>
-        @approvals = data?.approvals || []
-      error: (xhr, status, error) =>
-        @approvals = []
-    )
-
-  requestApproval: =>
-    # Create approval request modal
-    new App.TicketApprovalRequest(
-      ticket_id: @ticket.id
-      container: @elSidebar.closest('.content')
-      callback: @refreshApprovals
-    )
-
   badgeRender: (el) =>
     @badgeEl = el
     @badgeRenderLocal()
 
   badgeRenderLocal: =>
+    return if !@badgeEl
+    
+    # Count pending approvals for badge
+    approvals = @approvals || []
+    pending_count = approvals.filter((a) -> a.status is 'pending').length
+    
     @badgeEl.html(App.view('generic/sidebar_tabs_item')(
       name: 'approvals'
       icon: 'checkmark'
-      counter: ''
-      counterPossible: false
+      counterPossible: pending_count > 0
+      counter: pending_count
     ))
 
-  canShareOrApprove: =>
-    # Check if current user can share or request approval
-    current_user = App.User.current()
-    return false unless current_user
+  reload: (args) =>
+    # Standard pattern: update local data if provided (like SidebarTicket)
+    if args.approvals?
+      @approvals = args.approvals
     
-    # Only owner can share and request approval (prevents circular requests)
-    if @ticket?.owner_id && String(@ticket.owner_id) == String(current_user.id)
-      return true
+    # Update badge count
+    @badgeRenderLocal()
     
-    # TODO: Allow users with edit access to share and request approval later
-    # share_permissions = @ticket?.share_permissions
-    # if share_permissions && share_permissions.edit
-    #   return true
+    # Reload widget if it exists
+    if @widget && @widget.reload
+      @widget.reload(@approvals)
+
+  showPanel: (el) =>
+    @elSidebar = el
     
-    # Everyone else cannot share or request approval
-    return false
+    # Standard pattern: create widget and pass data (like SidebarTicket does with WidgetTag)
+    @widget = new App.WidgetApprovals(
+      el: @elSidebar
+      ticket_id: @ticket.id
+      ticket: @ticket
+      approvals: @approvals  # Pass data from parent
+    )
+
+  requestApproval: =>
+    new App.TicketApprovalRequest(
+      ticket_id: @ticket.id
+      callback: =>
+        # Refresh the approvals widget by fetching fresh data from API
+        @widget.fetch() if @widget && @widget.fetch
+    )
 
 App.Config.set('450-Approvals', SidebarApprovals, 'TicketZoomSidebar')
-
-

@@ -1,11 +1,15 @@
 class SidebarShares extends App.Controller
-  constructor: ->
+  constructor: (params) ->
     super
-    @last_can_share = null
+    
+    # Store shares from parent (same pattern as SidebarTicket with tags/links)
+    @shares = params.shares || []
 
   sidebarItem: =>
+    # Only show for agent view
+    return unless @ticket.currentView() is 'agent'
     
-    return if @ticket.currentView() isnt 'agent'
+    # Only agents and admins can see shares
     return unless @permissionCheck('ticket.agent') or @permissionCheck('admin.*')
 
     @item = {
@@ -17,84 +21,63 @@ class SidebarShares extends App.Controller
       sidebarActions: []
     }
 
-    # Only allow sharing if user is owner or has share access
-    if @canShareOrApprove()
+    # Add action button if user can edit ticket
+    if @ticket.editable && @ticket.editable()
       @item.sidebarActions.push(
         title: __('Share Ticket')
-        name: 'share-create'
-        callback: @createShare
+        name: 'share-ticket'
+        callback: @shareTicket
       )
 
     @item
-
-  showPanel: (el) =>
-    @elSidebar = el
-    @widget = new App.WidgetShares(
-      el:       @elSidebar
-      ticket_id: @ticket.id
-      parentVC: @
-      callback: @refreshShares
-    )
-
-  # Standard reload method called by sidebar system
-  reload: (args) =>
-    if @widget && @widget.reload
-      @widget.reload(args)
-    else if @elSidebar
-      @showPanel(@elSidebar)
-    
-    # Check if ticket assignment changed and trigger sidebar re-render
-    @checkAndUpdateActions()
-
-  checkAndUpdateActions: =>
-    # Check if the ability to share/approve has changed
-    current_can_share = @canShareOrApprove()
-    if @last_can_share isnt current_can_share
-      @last_can_share = current_can_share
-      # Trigger sidebar re-render to update actions
-      App.Event.trigger('ui::ticket::sidebarRerender', { taskKey: @taskKey })
-
-  refreshShares: =>
-    if @elSidebar
-      @showPanel(@elSidebar)
-
-  createShare: =>
-    # Create share modal
-    new App.TicketShareCreate(
-      ticket_id: @ticket.id
-      container: @elSidebar.closest('.content')
-      callback: @refreshShares
-    )
 
   badgeRender: (el) =>
     @badgeEl = el
     @badgeRenderLocal()
 
   badgeRenderLocal: =>
+    return if !@badgeEl
+    
+    # Count active shares for badge
+    shares = @shares || []
+    active_count = shares.filter((s) -> s.status is 'active').length
+    
     @badgeEl.html(App.view('generic/sidebar_tabs_item')(
       name: 'shares'
       icon: 'team'
-      counter: ''
-      counterPossible: false
+      counterPossible: active_count > 0
+      counter: active_count
     ))
 
-  canShareOrApprove: =>
-    # Check if current user can share or request approval
-    current_user = App.User.current()
-    return false unless current_user
+  reload: (args) =>
+    # Standard pattern: update local data if provided (like SidebarTicket)
+    if args.shares?
+      @shares = args.shares
     
-    # Only owner can share and request approval (prevents circular requests)
-    if @ticket?.owner_id && String(@ticket.owner_id) == String(current_user.id)
-      return true
+    # Update badge count
+    @badgeRenderLocal()
     
-    # TODO: Allow users with edit access to share and request approval later
-    # share_permissions = @ticket?.share_permissions
-    # if share_permissions && share_permissions.edit
-    #   return true
+    # Reload widget if it exists
+    if @widget && @widget.reload
+      @widget.reload(@shares)
+
+  showPanel: (el) =>
+    @elSidebar = el
     
-    # Everyone else cannot share or request approval
-    return false
+    # Standard pattern: create widget and pass data (like SidebarTicket does with WidgetTag)
+    @widget = new App.WidgetShares(
+      el: @elSidebar
+      ticket_id: @ticket.id
+      ticket: @ticket
+      shares: @shares  # Pass data from parent
+    )
+
+  shareTicket: =>
+    new App.TicketShareCreate(
+      ticket_id: @ticket.id
+      callback: =>
+        # Refresh the shares widget by fetching fresh data from API
+        @widget.fetch() if @widget && @widget.fetch
+    )
 
 App.Config.set('451-Shares', SidebarShares, 'TicketZoomSidebar')
-
-

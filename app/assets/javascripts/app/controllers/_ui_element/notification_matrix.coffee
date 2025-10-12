@@ -11,5 +11,9 @@ class App.UiElement.notification_matrix
         name: __('Ticket reminder reached')
       escalation:
         name: __('Ticket escalation')
+      approval:
+        name: __('Ticket approval')
+      share:
+        name: __('Ticket share')
 
     $( App.view('generic/notification_matrix')( matrixYAxe: matrixYAxe, values: values ) )

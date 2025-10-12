@@ -8,266 +8,264 @@ class App.WidgetApprovals extends App.Controller
 
   constructor: ->
     super
-    @loadRetryCount = 0
-    @delay (=> @loadApprovals()), 150, 'approval-initial'
-    @renderActions()
     
-    # Listen for ticket updates to refresh approvals
-    @controllerBind('Ticket:update Ticket:touch', (data) =>
-      return if data.id.toString() isnt @ticket_id.toString()
-      @delay =>
-        @loadApprovals()
-      , 500, 'approval-reload'
-    )
+    # Standard pattern: if approvals passed from parent, use them (like WidgetTag)
+    if @approvals
+      @localApprovals = _.clone(@approvals)
+      @render()
+      return
     
-    # Also refresh on generic ticket updates/touches
-    @controllerBind('Ticket:update Ticket:touch', (data) =>
-      return if String(data.id) isnt String(@ticket_id)
-      @delay (=> @loadApprovals()), 400, 'approval-reload-ticket'
-    )
-    
-    # Listen for notification events to refresh approvals
-    @controllerBind('OnlineNotification::changed', =>
-      @delay =>
-        @loadApprovals()
-      , 800, 'approval-reload-notify'
-    )
-    
-    # Also reload when the sidebar is re-rendered
-    @controllerBind('ui::ticket::sidebarRerender', (args) =>
-      @delay (=> @loadApprovals()), 150, 'approval-sidebar-rerender'
-    )
+    # Fallback: fetch from API if not provided
+    @fetch()
 
-    # Listen for real-time updates from other users with debounce
-    @controllerBind('TicketApproval:create', (data) =>
-      @delay =>
-        @loadApprovals()
-      , 500, 'approval-reload'
-    )
-    @controllerBind('TicketApproval:update', (data) =>
-      @delay =>
-        @loadApprovals()
-      , 500, 'approval-reload'
-    )
-    @controllerBind('TicketApproval:destroy', (data) =>
-      @delay =>
-        @loadApprovals()
-      , 500, 'approval-reload'
-    )
-
-  # Standard reload method called by sidebar system
-  reload: (args) =>
-    @loadApprovals()
-
-  loadApprovals: =>
-    return if @isLoadingApprovals
+  fetch: =>
+    return unless @ticket_id
     
-    @isLoadingApprovals = true
     @ajax(
       id:          'load_approvals'
       type:        'GET'
       url:         "#{@apiPath}/tickets/#{@ticket_id}/approvals"
       processData: true
-      success:     @renderApprovals
-      error:       @renderError
-      complete:    (xhr, status) =>
-        @isLoadingApprovals = false
-        if status is 'abort'
-          if (@loadRetryCount ? 0) < 3
-            @loadRetryCount = (@loadRetryCount ? 0) + 1
-            @delay (=> @loadApprovals()), 200, 'approval-retry'
+      success:     (data) =>
+        @localApprovals = data?.approvals || []
+        @render()
+      error: (xhr, status, error) =>
+        console.error 'Failed to load approvals:', status, error
+        @localApprovals = []
+        @render()
     )
 
-  renderApprovals: (data, status, xhr) =>
-    @approvals = data?.approvals || []
-    @loadRetryCount = 0
-    @render(@approvals)
-
-  renderError: (xhr, status, error) =>
-    # Ignore aborted requests caused by view re-renders/navigation
-    if status is 'abort' or error is 'abort'
+  reload: (approvals) =>
+    # ONLY PROTECTION: Skip if data is unchanged (Zammad WidgetTag pattern)
+    # This is sufficient - if data hasn't changed, no need to re-render
+    # If data HAS changed, always update (even if rapid)
+    if @localApprovals && _.isEqual(@localApprovals, approvals)
+      console.log "[APPROVALS] Skipping reload - data unchanged"
       return
     
-    error_message = 'Unable to load approvals'
-    if xhr?.responseJSON?.error
-      error_message = xhr.responseJSON.error
-    else if xhr?.statusText
-      error_message = "Unable to load approvals: #{xhr.statusText}"
-    
-    @html "<div class='sidebar-block'><div class='alert alert-danger'>#{error_message}</div></div>"
+    # Data is different → update UI immediately
+    console.log "[APPROVALS] Reload triggered - data changed"
+    @localApprovals = _.clone(approvals)
+    @stopLoading()  # Clear any loading state when fresh data arrives
+    @render()
 
-  render: (approvals) =>
-    # Render the full template with real data
+  render: =>
+    # Prevent unnecessary re-renders (like WidgetTag)
+    return if @lastLocalApprovals && _.isEqual(@lastLocalApprovals, @localApprovals)
+    @lastLocalApprovals = _.clone(@localApprovals)
+    
     current_user = App.User.current()
-    current_user_id = if current_user then String(current_user.id) else 'unknown'
+    # Clone data before modification to prevent mutation of @localApprovals
+    # This ensures _.isEqual() works correctly on next reload
+    approvals_data = _.map(@localApprovals || [], (a) -> _.clone(a))
+    
+    # Refresh ticket for permission checks
+    if @ticket_id
+      @ticket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
+    
+    # Check if current user can manage approvals
+    can_manage = @ticket && @ticket.editable && @ticket.editable()
+    
+    # Prepare display data
+    for approval in approvals_data
+      approval.can_approve = current_user && parseInt(approval.approver_id) is parseInt(current_user.id) && approval.status is 'pending'
+      approval.can_manage = can_manage
+      approval.is_pending = approval.status is 'pending'
+      approval.is_approved = approval.status is 'approved'
+      approval.is_rejected = approval.status is 'rejected'
+      
+      # Get user names properly (handle both object and string formats)
+      if approval.approver
+        if typeof approval.approver is 'object'
+          approval.approver_name = approval.approver_name || approval.approver.firstname + ' ' + approval.approver.lastname
+        else
+          approval.approver_name = approval.approver
+      
+      if approval.requester
+        if typeof approval.requester is 'object'
+          approval.requester_name = approval.requester_name || approval.requester.firstname + ' ' + approval.requester.lastname
+        else
+          approval.requester_name = approval.requester
+      
+      # Format dates (use App.i18n for timestamp formatting)
+      if approval.created_at
+        approval.created_at_formatted = App.i18n.translateTimestamp(approval.created_at)
+      if approval.updated_at
+        approval.updated_at_formatted = App.i18n.translateTimestamp(approval.updated_at)
     
     @html App.view('widget/approvals')(
-      approvals: approvals
+      approvals: approvals_data
       ticket_id: @ticket_id
-      current_user_id: current_user_id
+      current_user_id: current_user.id.toString()  # Convert to string to match backend format
     )
-
-  renderActions: =>
-    @parentVC?.parentSidebar?.sidebarActionsRender('approvals', @parentVC?.item?.sidebarActions || [])
-
-  openRequestApproval: (e) =>
-    e?.preventDefault()
-    new App.TicketApprovalRequest(
-      ticket_id: @ticket_id
-      container: @el.closest('.content')
-      callback:  => @loadApprovals()
-    )
-
 
   approve: (e) =>
     e.preventDefault()
-    approval_id = $(e.currentTarget).data('approval-id')
-    @setCurrentAction('approve')
+    approval_id = $(e.currentTarget).data('id')
+    return unless approval_id
     
-    @ajax(
-      id: 'approve_approval'
-      type: 'POST'
-      url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/approve"
-      processData: true
-      success: @approvalSuccess
-      error: @approvalError
+    new App.ControllerConfirm(
+      message: __('Are you sure you want to approve this request?')
+      callback: =>
+        @updateApprovalStatus(approval_id, 'approved')
+      container: @el.closest('.content')
     )
 
   reject: (e) =>
     e.preventDefault()
-    approval_id = $(e.currentTarget).data('approval-id')
-    @setCurrentAction('reject')
+    approval_id = $(e.currentTarget).data('id')
+    return unless approval_id
+    
+    new App.ControllerConfirm(
+      message: __('Are you sure you want to reject this request?')
+      callback: =>
+        @updateApprovalStatus(approval_id, 'rejected')
+      container: @el.closest('.content')
+    )
+
+  updateApprovalStatus: (approval_id, status) =>
+    # Use the correct endpoint: POST to /approve or /reject
+    action = if status is 'approved' then 'approve' else 'reject'
+    
+    # Show loading state
+    @startLoading()
     
     @ajax(
-      id: 'reject_approval'
+      id:   "#{action}_approval"
       type: 'POST'
-      url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/reject"
+      url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}/#{action}"
       processData: true
-      success: @approvalSuccess
-      error: @approvalError
+      success: (data) =>
+        # NO optimistic update - let WebSocket handle it
+        # Just stop loading and wait for real-time update
+        @stopLoading()
+      error: (xhr, status, error) =>
+        @stopLoading()
+        console.error "Failed to #{action} approval:", status, error
+        @notify(
+          type: 'error'
+          msg: App.i18n.translateContent("Failed to #{action} approval.")
+        )
     )
 
   editApproval: (e) =>
     e.preventDefault()
-    e.stopPropagation()
-    e.stopImmediatePropagation()
-    @setCurrentAction('edit')
+    approval_id = $(e.currentTarget).data('id')
+    return unless approval_id
     
-    approval_id = $(e.currentTarget).data('approval-id')
+    # Find the approval in local data
+    approval = _.find(@localApprovals, (a) -> parseInt(a.id) is parseInt(approval_id))
+    return unless approval
     
-    # Find the approval data
-    approval = @approvals?.find (a) -> a.id.toString() == approval_id.toString()
-    if approval
-      # Create edit modal with current data
-      new App.TicketApprovalEdit(
-        approval: approval
-        ticket_id: @ticket_id
-        container: @el.closest('.content')
-        callback: => 
-          @loadApprovals()
-        parentWidget: @
-      )
-    else
-      # Fallback: reload approvals then reopen
-      @ajax(
-        id: 'reload_approval_for_edit'
-        type: 'GET'
-        url: "#{@apiPath}/tickets/#{@ticket_id}/approvals"
-        processData: true
-        success: (data, status, xhr) =>
-          @approvals = data?.approvals || []
-          approval = @approvals.find (a) -> a.id.toString() == approval_id.toString()
-          if approval
-            new App.TicketApprovalEdit(
-              approval: approval
-              ticket_id: @ticket_id
-              container: @el.closest('.content')
-              callback: => @loadApprovals()
-              parentWidget: @
-            )
-          else
-            @notify(type: 'error', msg: __('Approval data not found. Please refresh and try again.'))
-        error: (xhr, status, error) =>
-          @notify(type: 'error', msg: __('Approval data not found. Please refresh and try again.'))
-      )
+    new App.TicketApprovalEdit(
+      ticket_id: @ticket_id
+      approval: approval
+      container: @el.closest('.content')
+      callback: (updated_approval) =>
+        # Optimistic update: immediately update local data
+        index = _.findIndex(@localApprovals, (a) -> parseInt(a.id) is parseInt(updated_approval.id))
+        if index >= 0
+          @localApprovals[index] = updated_approval
+          @render()  # Re-render with updated data
+        
+        # No loading spinner needed - optimistic update shows change immediately
+        # WebSocket will provide final confirmation when it arrives
+    )
 
   deleteApproval: (e) =>
     e.preventDefault()
-    e.stopPropagation()
-    e.stopImmediatePropagation()
+    approval_id = $(e.currentTarget).data('id')
+    return unless approval_id
     
-    approval_id = $(e.currentTarget).data('approval-id')
-    
-    # Prevent multiple modals
-    return if @__deleteModalOpen
-    @__deleteModalOpen = true
-    
-    # Simple confirmation modal like translation controller
     new App.ControllerConfirm(
-      message: __('Are you sure you want to delete this approval request? This action cannot be undone.'),
-      buttonClass: 'btn--danger',
+      message: __('Are you sure you want to delete this approval request?')
       callback: =>
-        @setCurrentAction('delete')
         @ajax(
-          id: 'delete_approval'
+          id:   'delete_approval'
           type: 'DELETE'
-          url: "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
-          processData: true
-          success: @approvalSuccess
-          error: @approvalError
+          url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals/#{approval_id}"
+          success: =>
+            # Remove from local data immediately
+            @localApprovals = _.filter(@localApprovals, (a) -> parseInt(a.id) isnt parseInt(approval_id))
+            
+            # Re-render locally without API fetch
+            @render()
+            
+            # Clear permission cache - will be updated by WebSocket event
+            ticket = App.Ticket.findNative(@ticket_id)
+            if ticket
+              ticket._approvals_cache = @localApprovals
+            
+            # Don't trigger sidebar rerender - WebSocket will handle it with fresh data
+            
+            # WebSocket will handle eventual consistency
+          error: (xhr, status, error) =>
+            # Only show error if not 404 (item might be already deleted)
+            if xhr.status isnt 404
+              console.error 'Failed to delete approval:', status, error
+              @notify(
+                type: 'error'
+                msg: App.i18n.translateContent('Failed to delete approval.')
+              )
         )
-      buttonCancel: true
       container: @el.closest('.content')
     )
+
+  openRequestApproval: (e) =>
+    e.preventDefault()
+    new ApprovalRequest(
+      ticket_id: @ticket_id
+      container: @el.closest('.content')
+    )
+
+class ApprovalRequest extends App.ControllerModal
+  buttonClose: true
+  buttonCancel: true
+  buttonSubmit: __('Request Approval')
+  head: __('Request Approval')
+
+  content: =>
+    @ticket = App.Ticket.find(@ticket_id)
     
-    # Reset flag after modal is created
-    @delay =>
-      @__deleteModalOpen = false
-    , 100
-
-  approvalSuccess: (data, status, xhr) =>
-    # Get the action type from the AJAX request to show appropriate message
-    action = @getCurrentAction()
-    if action is 'approve'
-      @notify(type: 'success', msg: __('Approval request approved successfully'))
-    else if action is 'reject'
-      @notify(type: 'success', msg: __('Approval request rejected successfully'))
-    else if action is 'delete'
-      @notify(type: 'success', msg: __('Approval request deleted successfully'))
-    else if action is 'edit'
-      @notify(type: 'success', msg: __('Approval request updated successfully'))
-    # Don't show generic success message for edit actions to avoid duplicates
+    # Get all agents for approver selection
+    agents = []
+    for user_id, user of App.User.all()
+      if user.active && user.permissions?('ticket.agent')
+        agents.push(user)
     
-    # Reload approvals from backend immediately
-    @loadApprovals()
-    @callback() if @callback
-    @clearCurrentAction()
+    # Sort by name
+    agents = _.sortBy(agents, (agent) -> agent.displayName())
+    
+    content = $( App.view('widget/approval_request')(
+      ticket: @ticket
+      agents: agents
+    ))
+    
+    content
 
-  approvalError: (xhr, status, error) =>
-    action = @getCurrentAction()
-    if action is 'approve'
-      @notify(type: 'error', msg: __('Failed to approve request'))
-    else if action is 'reject'
-      @notify(type: 'error', msg: __('Failed to reject request'))
-    else if action is 'delete'
-      @notify(type: 'error', msg: __('Failed to delete approval request'))
-    else
-      @notify(type: 'error', msg: __('Failed to update approval'))
-    @clearCurrentAction()
+  onSubmit: (e) =>
+    e.preventDefault()
+    params = @formParam(e.target)
+    
+    unless params.approver_id
+      @formValidate(form: e.target, errors: { approver_id: 'required' })
+      return
+    
+    @ajax(
+      id:   'create_approval'
+      type: 'POST'
+      url:  "#{@apiPath}/tickets/#{@ticket_id}/approvals"
+      data: JSON.stringify(params)
+      processData: false
+      success: =>
+        @close()
+        # Backend will trigger WebSocket event, which will refresh the data
+      error: (xhr, status, error) =>
+        console.error 'Failed to create approval:', status, error
+        @notify(
+          type: 'error'
+          msg: App.i18n.translateContent('Failed to create approval request.')
+        )
+    )
 
-  getCurrentAction: =>
-    @currentAction
 
-  setCurrentAction: (action) =>
-    @currentAction = action
-
-  clearCurrentAction: =>
-    @currentAction = null
-
-
-  refresh: =>
-    if @callback
-      @callback()
-
-  reload: =>
-    @loadApprovals()
