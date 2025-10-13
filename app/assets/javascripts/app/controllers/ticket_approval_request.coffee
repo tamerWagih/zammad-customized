@@ -47,6 +47,21 @@ class App.TicketApprovalRequest extends App.ControllerModal
       return false if user.id is current_user_id  # Exclude current user
       return false if user.active is false        # Exclude inactive users
       true
+    
+    # Sort approvers by name (firstname, lastname, or login)
+    approvers.sort (a, b) ->
+      # Get display name for sorting
+      nameA = (a.firstname || '') + ' ' + (a.lastname || '')
+      nameA = a.login if nameA.trim() == ''
+      nameA = a.email if !nameA
+      nameA = (nameA || '').toLowerCase()
+      
+      nameB = (b.firstname || '') + ' ' + (b.lastname || '')
+      nameB = b.login if nameB.trim() == ''
+      nameB = b.email if !nameB
+      nameB = (nameB || '').toLowerCase()
+      
+      if nameA < nameB then -1 else if nameA > nameB then 1 else 0
 
     # Update modal body content (same pattern as Translation modal)
     content = App.view('ticket_approval_request')(
