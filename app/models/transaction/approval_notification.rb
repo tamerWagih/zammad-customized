@@ -92,26 +92,21 @@ class Transaction::ApprovalNotification
     end
     
     prepare_recipients_and_reasons
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📬 Recipients prepared: #{recipients_and_channels.count} recipient(s)"
 
     # send notifications
     recipients_and_channels.each do |recipient_settings|
       send_to_single_recipient(recipient_settings)
     end
 
-    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ Backend perform() completed for approval ##{@item[:object_id]}"
     true
   end
 
   def prepare_recipients_and_reasons
     # get recipients based on approval type
     possible_recipients = get_recipients
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Possible recipients (before settings filter): #{possible_recipients.map(&:email).join(', ')}"
 
     # apply notification settings filter
     recipients_reason_by_notifications_settings(possible_recipients)
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Final recipients (after settings filter): #{@recipients_and_channels.map { |r| r[:user].email }.join(', ')}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Channels for each: #{@recipients_and_channels.map { |r| "#{r[:user].email}=#{r[:channels].inspect}" }.join(', ')}"
   end
 
   def get_recipients
@@ -120,15 +115,12 @@ class Transaction::ApprovalNotification
     # ALWAYS send to BOTH approver and requester for ALL actions
     # This ensures both parties stay informed about any changes
     # For DELETE events, approver/requester are strings, so we need to look up by ID
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 🔍 Debug - Action user: #{@item[:user_id]}, Approver: #{approval.approver_id}, Requester: #{approval.requester_id}"
     
     if approval.approver_id.present?
       approver_user = ::User.find_by(id: approval.approver_id)
       if approver_user
         recipients << approver_user
-        Rails.logger.info "[APPROVAL_NOTIFICATION] 📤 Added approver: #{approver_user.email}(#{approver_user.id})"
       else
-        Rails.logger.warn "[APPROVAL_NOTIFICATION] ⚠️  Approver user not found: #{approval.approver_id}"
       end
     end
     
@@ -136,13 +128,10 @@ class Transaction::ApprovalNotification
       requester_user = ::User.find_by(id: approval.requester_id)
       if requester_user
         recipients << requester_user
-        Rails.logger.info "[APPROVAL_NOTIFICATION] 📤 Added requester: #{requester_user.email}(#{requester_user.id})"
       else
-        Rails.logger.warn "[APPROVAL_NOTIFICATION] ⚠️  Requester user not found: #{approval.requester_id}"
       end
     end
 
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Action: #{@item[:type]} - Final recipients: #{recipients.map { |u| "#{u.email}(#{u.id})" }.join(', ')}"
 
     # Remove duplicates but DON'T exclude current user - they should get notification too
     recipients.compact.uniq
@@ -159,8 +148,6 @@ class Transaction::ApprovalNotification
       next if !result
       next if already_checked_recipient_ids[user.id]
 
-      Rails.logger.info "[APPROVAL_NOTIFICATION] 🔍 Notification settings check for #{user.email}: #{result ? 'PASSED' : 'FILTERED OUT'}"
-      Rails.logger.info "[APPROVAL_NOTIFICATION]    Settings result: #{result.inspect}" if result
       
       already_checked_recipient_ids[user.id] = true
       @recipients_and_channels.push result
@@ -180,7 +167,6 @@ class Transaction::ApprovalNotification
 
     # ignore inactive users
     if !user.active?
-      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Skipped #{user.email}: user inactive"
       return
     end
 
@@ -197,17 +183,14 @@ class Transaction::ApprovalNotification
     # NOTE: Online notifications are handled by ChecksClientNotification (WebSocket broadcasts)
     # This backend is ONLY responsible for EMAIL notifications
     used_channels = []
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📋 Channels for #{user.email}: #{channels.inspect}"
 
     # ignore email channel notification and empty emails
     if !channels['email']
-      Rails.logger.info "[APPROVAL_NOTIFICATION] ⏭️  Email skipped for #{user.email}: email channel not enabled (channels: #{channels.inspect})"
       add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
       return
     end
     
     if user.email.blank?
-      Rails.logger.warn "[APPROVAL_NOTIFICATION] ⚠️  Email skipped for user: no email address"
       add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
       return
     end
@@ -216,27 +199,12 @@ class Transaction::ApprovalNotification
     add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
 
     # send email notification
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📧 Sending email to #{user.email}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Template: ticket_approval_notification"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Action: #{@item[:type]}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Ticket: ##{ticket.id} (#{ticket.title})"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Approval: ##{approval.id} (status: #{approval.status})"
     # For DELETE events, approver/requester are strings, not User objects
     approver_info = approval.approver.respond_to?(:email) ? approval.approver.email : approval.approver.to_s
     requester_info = approval.requester.respond_to?(:email) ? approval.requester.email : approval.requester.to_s
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Approver: #{approver_info}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Requester: #{requester_info}"
     
     # Log the objects being passed to the template
     template_objects = build_objects(user)
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📧 Email template objects for #{user.email}:"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Approval ID: #{template_objects[:approval]&.id}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Approver: #{template_objects[:approver]&.email || template_objects[:approver] || 'N/A'}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Approver Name: #{template_objects[:approver_name]}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Requester: #{template_objects[:requester]&.email || template_objects[:requester] || 'N/A'}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Requester Name: #{template_objects[:requester_name]}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Action: #{template_objects[:action]}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Recipient ID: #{template_objects[:recipient]&.id}"
     
     result = NotificationFactory::Mailer.notification(
       template:    'ticket_approval_notification',
@@ -247,14 +215,8 @@ class Transaction::ApprovalNotification
       main_object: ticket,
     )
     
-    Rails.logger.info "[APPROVAL_NOTIFICATION] ✅ Email sent successfully to #{user.email}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Subject: #{result[:subject] rescue 'N/A'}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    From: #{Setting.get('notification_sender')}"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    Message ID: #{result[:message_id] rescue 'N/A'}"
     
     # Log the actual email content - extract from Mail::Message object
-    Rails.logger.info "[APPROVAL_NOTIFICATION] 📧 EMAIL BODY for #{user.email}:"
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    =========================================="
     begin
       if result.respond_to?(:body)
         # Extract body from Mail::Message
@@ -263,26 +225,18 @@ class Transaction::ApprovalNotification
           text_part = result.text_part
           html_part = result.html_part
           if text_part
-            Rails.logger.info "[APPROVAL_NOTIFICATION]    TEXT PART:"
-            Rails.logger.info "[APPROVAL_NOTIFICATION]    #{text_part.body.decoded}"
           end
           if html_part
-            Rails.logger.info "[APPROVAL_NOTIFICATION]    HTML PART (first 500 chars):"
             html_body = html_part.body.decoded
-            Rails.logger.info "[APPROVAL_NOTIFICATION]    #{html_body[0..500]}..."
           end
         else
           # Single part message
-          Rails.logger.info "[APPROVAL_NOTIFICATION]    BODY:"
-          Rails.logger.info "[APPROVAL_NOTIFICATION]    #{result.body.decoded}"
         end
       else
-        Rails.logger.info "[APPROVAL_NOTIFICATION]    Result type: #{result.class}, no body method"
       end
     rescue => e
       Rails.logger.error "[APPROVAL_NOTIFICATION]    Failed to extract body: #{e.message}"
     end
-    Rails.logger.info "[APPROVAL_NOTIFICATION]    =========================================="
   rescue Channel::DeliveryError => e
     status_code = begin
       e.original_error.response.status.to_i
@@ -291,8 +245,6 @@ class Transaction::ApprovalNotification
     end
 
     if SILENCABLE_SMTP_ERROR_CODES.any? { |elem| elem.include? status_code }
-      Rails.logger.info "[APPROVAL_NOTIFICATION] ⚠️  Email delivery failed (silenced SMTP error)"
-      Rails.logger.info "[APPROVAL_NOTIFICATION]    Status code: #{status_code}"
       Rails.logger.info do
         "could not send approval email notification to agent (#{@item[:type]}/#{ticket.id}/#{user.email}) #{e.original_error}"
       end
@@ -374,7 +326,6 @@ class Transaction::ApprovalNotification
         end
       end
     rescue => e
-      Rails.logger.warn "[APPROVAL_NOTIFICATION] Failed to load approver: #{e.message}"
       # Try to find by ID as fallback
       if approval_obj.respond_to?(:approver_id) && approval_obj.approver_id.present?
         approver_user = User.find_by(id: approval_obj.approver_id)
@@ -392,7 +343,6 @@ class Transaction::ApprovalNotification
         end
       end
     rescue => e
-      Rails.logger.warn "[APPROVAL_NOTIFICATION] Failed to load requester: #{e.message}"
       # Try to find by ID as fallback
       if approval_obj.respond_to?(:requester_id) && approval_obj.requester_id.present?
         requester_user = User.find_by(id: approval_obj.requester_id)
