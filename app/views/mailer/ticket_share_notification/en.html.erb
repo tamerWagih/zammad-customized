@@ -36,21 +36,21 @@
 <br>
 <div>
 Ticket: ##{ticket.number}<br>
-<% if share.group.respond_to?(:name) %>
+<% if @objects[:share].group.respond_to?(:name) %>
 Group: #{share.group.name}<br>
-<% elsif share.group_name.present? %>
+<% elsif @objects[:share].group_name.present? %>
 Group: #{share.group_name}<br>
 <% end %>
-<% if share.shared_by.respond_to?(:fullname) %>
+<% if @objects[:share].shared_by.respond_to?(:fullname) %>
 Shared by: #{share.shared_by.fullname}<br>
-<% elsif share.shared_by_name.present? %>
+<% elsif @objects[:share].shared_by_name.present? %>
 Shared by: #{share.shared_by_name}<br>
 <% end %>
-<% if share.message.present? %>
+<% if @objects[:share].message.present? %>
 Message: #{share.message}<br>
 <% end %>
-<% if share.expires_at.present? %>
-Expires: #{share.expires_at.strftime('%Y-%m-%d')}<br>
+<% if @objects[:expires_at_formatted].present? && @objects[:expires_at_formatted] != 'No expiry' %>
+Expires: #{@objects[:expires_at_formatted]}<br>
 <% end %>
 </div>
 <br>
