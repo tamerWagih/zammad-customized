@@ -1,6 +1,6 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
-class Ticket::CC < ApplicationModel
+class Ticket::Cc < ApplicationModel
   include HasActivityStreamLog
   include HasSearchIndexBackend
   include HasTags

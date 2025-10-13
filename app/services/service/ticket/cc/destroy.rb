@@ -1,6 +1,6 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
-class Service::Ticket::CC::Destroy < Service::BaseWithCurrentUser
+class Service::Ticket::Cc::Destroy < Service::BaseWithCurrentUser
   def execute(cc:)
     ticket = cc.ticket
     Pundit.authorize current_user, ticket, :update?

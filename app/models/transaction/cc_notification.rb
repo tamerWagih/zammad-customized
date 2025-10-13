@@ -19,7 +19,7 @@ class Transaction::CCNotification
     if @item[:type] == 'delete' && @item[:data]
       @cc_record ||= OpenStruct.new(@item[:data])
     else
-      @cc_record ||= Ticket::CC.find_by(id: @item[:object_id])
+      @cc_record ||= Ticket::Cc.find_by(id: @item[:object_id])
     end
   end
   
@@ -38,8 +38,8 @@ class Transaction::CCNotification
   def perform
     Rails.logger.info "[CC_NOTIFICATION] 🔄 Backend perform() called for #{@item[:type]} on #{@item[:object]} ##{@item[:object_id]}"
     
-    # Only process Ticket::CC objects
-    if @item[:object] != 'Ticket::CC'
+    # Only process Ticket::Cc objects
+    if @item[:object] != 'Ticket::Cc'
       return
     end
     
