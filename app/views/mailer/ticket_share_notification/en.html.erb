@@ -49,8 +49,8 @@ Shared by: #{share.shared_by_name}<br>
 <% if @objects[:share].message.present? %>
 Message: #{share.message}<br>
 <% end %>
-<% if @objects[:expires_at_formatted].present? && @objects[:expires_at_formatted] != 'No expiry' %>
-Expires: #{@objects[:expires_at_formatted]}<br>
+<% if @objects[:share].expires_at.present? %>
+Expires: #{@objects[:share].expires_at}<br>
 <% end %>
 </div>
 <br>
