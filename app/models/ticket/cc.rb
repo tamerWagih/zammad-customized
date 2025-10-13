@@ -5,7 +5,6 @@ class Ticket::CC < ApplicationModel
   include HasSearchIndexBackend
   include HasTags
   include HasTransactionDispatcher
-  include Ticket::CC::TriggersNotifications
   
   VALID_PERMISSIONS = %w[read comment full].freeze
   
@@ -22,6 +21,8 @@ class Ticket::CC < ApplicationModel
   validate :user_is_agent_or_customer
   
   before_validation :set_default_permissions
+  after_create :trigger_create_notification
+  after_destroy :trigger_destroy_notification
   
   def full_access?
     Array(permissions).include?('full')
@@ -103,6 +104,21 @@ class Ticket::CC < ApplicationModel
   
   def activity_message
     "User #{user_name} was CC'd on this ticket"
+  end
+  
+  def trigger_create_notification
+    OnlineNotification.add(
+      type:          'You were CC\'d on a ticket',
+      object:        'Ticket',
+      o_id:          ticket_id,
+      seen:          false,
+      user_id:       user_id,
+      created_by_id: created_by_id || 1,
+    )
+  end
+  
+  def trigger_destroy_notification
+    OnlineNotification.remove_by_type('Ticket', ticket_id, 'You were CC\'d on a ticket', user)
   end
 end
 
