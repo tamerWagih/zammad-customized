@@ -50,7 +50,7 @@ Shared by: #{share.shared_by_name}<br>
 Message: #{share.message}<br>
 <% end %>
 <% if @objects[:share].expires_at.present? %>
-Expires: #{@objects[:share].expires_at}<br>
+Expires: #{share.expires_at}<br>
 <% end %>
 </div>
 <br>
