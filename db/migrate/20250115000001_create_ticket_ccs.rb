@@ -14,6 +14,10 @@ class CreateTicketCcs < ActiveRecord::Migration[7.2]
     
     # Ensure unique CC per user per ticket
     add_index :ticket_ccs, [:ticket_id, :user_id], unique: true, name: 'index_ticket_ccs_on_ticket_id_and_user_id'
+    
+    # Create notification type for CCs
+    # TypeLookup.by_name will create it if it doesn't exist
+    TypeLookup.by_name("You were CC'd on a ticket")
   end
 end
 
