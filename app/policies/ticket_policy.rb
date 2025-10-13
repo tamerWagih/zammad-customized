@@ -129,8 +129,8 @@ class TicketPolicy < ApplicationPolicy
   def cc_access?(access)
     return nil unless user
     
-    # Check if user is CC'd on this ticket
-    cc = record.ccs.find_by(user_id: user.id)
+    # Check if user is CC'd on this ticket - use single query with permissions
+    cc = record.ccs.select(:permissions).find_by(user_id: user.id)
     return nil unless cc
     
     # Map access requests to CC permissions
