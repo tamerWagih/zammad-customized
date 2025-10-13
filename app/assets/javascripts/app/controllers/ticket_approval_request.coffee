@@ -16,11 +16,20 @@ class App.TicketApprovalRequest extends App.ControllerModal
 
   onShown: (e) =>
     super
-    # Load data after modal is shown
+    # Find Approver role ID
+    approverRole = App.Role.findByAttribute('name', 'Approver')
+    if !approverRole
+      @renderError(null, null, 'Approver role not found')
+      return
+    
+    # Load only users with Approver role from backend (efficient!)
     @ajax(
       id:          'users_for_approval'
       type:        'GET'
-      url:         "#{@apiPath}/users"
+      url:         "#{@apiPath}/users/search"
+      data:
+        role_ids: [approverRole.id]  # Backend filters by Approver role
+        limit: 1000
       processData: true
       success:     (data, status, xhr) =>
         @renderWithUsers(data, status, xhr)
@@ -30,19 +39,14 @@ class App.TicketApprovalRequest extends App.ControllerModal
 
   renderWithUsers: (data, status, xhr) =>
     users = if Array.isArray(data) then data else (data?.users || [])
-    # Get ticket's organization ID
-    ticket = App.Ticket.find(@ticket_id)
-    ticket_org_id = ticket?.organization_id
     
-    # Filter to only show users with "Approver" role
+    # Backend already filtered by Approver role
+    # Just exclude current user and inactive users
     current_user_id = App.User.current()?.id
     approvers = users.filter (user) ->
-      # Exclude current user
-      return false if user.id is current_user_id
-      # Only show users with "Approver" role
-      user.role_ids && user.role_ids.some (role_id) ->
-        role = App.Role.find(role_id)
-        role && role.name == 'Approver'
+      return false if user.id is current_user_id  # Exclude current user
+      return false if user.active is false        # Exclude inactive users
+      true
 
     # Update modal body content (same pattern as Translation modal)
     content = App.view('ticket_approval_request')(
