@@ -141,8 +141,6 @@ class App.TicketZoom extends App.Controller
     )
 
   load: (data, local = false, newTicketRaw = undefined) =>
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: load() called with local=#{local}"
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Raw data keys:", Object.keys(data)
     
     if !newTicketRaw
       newTicketRaw = data.assets.Ticket[@ticket_id]
@@ -192,9 +190,6 @@ class App.TicketZoom extends App.Controller
     @approvals = data.approvals || []
     @shares = data.shares || []
     
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: API response received"
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approvals from API - count:", @approvals.length, "data:", @approvals
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Shares from API - count:", @shares.length, "data:", @shares
 
     if draft = App.TicketSharedDraftZoom.findByAttribute 'ticket_id', @ticket_id
       draft.remove(clear: true)
@@ -209,24 +204,16 @@ class App.TicketZoom extends App.Controller
     @ticket._approvals_cache = @approvals
     @ticket._shares_cache = @shares
     
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket object retrieved"
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Set _approvals_cache (#{@approvals.length} items) and _shares_cache (#{@shares.length} items) on ticket object"
     
     # Evaluate permissions with detailed logging
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Evaluating permissions..."
     @view           = @ticket && @ticket.currentView && @ticket.currentView()
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: currentView() returned:", @view
     
     @readable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || false
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: readable:", @readable
     
     @changeable     = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || false
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: changeable:", @changeable
     
     @fullable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || false
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: fullable:", @fullable
     
-    console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Permission evaluation complete - view: #{@view}, readable: #{@readable}, changeable: #{@changeable}, fullable: #{@fullable}"
     @formMeta       = data.form_meta
 
     # render page
@@ -249,12 +236,9 @@ class App.TicketZoom extends App.Controller
     @controllerBind('TicketApproval:create TicketApproval:update TicketApproval:destroy', (data) =>
       ticket_id = data?.approval?.ticket_id || data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       
-      console.log "[TICKET_ZOOM] TicketApproval WebSocket event received:", data
-      console.log "[TICKET_ZOOM] Event ticket_id:", ticket_id, "My ticket_id:", @ticket_id
       
       return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
       
-      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Approval event detected (matched)"
       
       # Delay the refresh to avoid race conditions with optimistic local updates
       # This gives time for DB commit and prevents overwriting local changes with stale data
@@ -265,7 +249,6 @@ class App.TicketZoom extends App.Controller
             type:  'GET'
             url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
             success: (ticketData) =>
-              console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success (approval event)"
               
               # Update ticket object with fresh data
               if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
@@ -281,7 +264,6 @@ class App.TicketZoom extends App.Controller
               @ticket._approvals_cache = @approvals if @ticket
               @ticket._shares_cache = @shares if @ticket
               
-              console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated approvals (#{@approvals.length}), shares (#{@shares.length})"
               
               # Trigger sidebar rerender for approval/share widgets
               App.Event.trigger('ui::ticket::sidebarRerender')
@@ -296,12 +278,9 @@ class App.TicketZoom extends App.Controller
     @controllerBind('TicketShare:create TicketShare:update TicketShare:destroy', (data) =>
       ticket_id = data?.share?.ticket_id || data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
       
-      console.log "[TICKET_ZOOM] TicketShare WebSocket event received:", data
-      console.log "[TICKET_ZOOM] Event ticket_id:", ticket_id, "My ticket_id:", @ticket_id
       
       return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
       
-      console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Share event detected (matched)"
       
       # Delay the refresh to avoid race conditions with optimistic local updates
       # This gives time for DB commit and prevents overwriting local changes with stale data
@@ -312,7 +291,6 @@ class App.TicketZoom extends App.Controller
             type:  'GET'
             url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
             success: (ticketData) =>
-              console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Ticket refresh success (share event)"
               
               # Update ticket object with fresh data
               if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
@@ -328,7 +306,6 @@ class App.TicketZoom extends App.Controller
               @ticket._approvals_cache = @approvals if @ticket
               @ticket._shares_cache = @shares if @ticket
               
-              console.log "[TICKET_ZOOM] Ticket ##{@ticket_id}: Updated approvals (#{@approvals.length}), shares (#{@shares.length})"
               
               # Trigger sidebar rerender for approval/share widgets
               App.Event.trigger('ui::ticket::sidebarRerender')

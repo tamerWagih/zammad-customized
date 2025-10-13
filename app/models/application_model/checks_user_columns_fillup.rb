@@ -30,10 +30,6 @@ returns
   def fill_up_user_create
     # Add debugging for our specific models
     if self.class.name == 'Ticket::Approval' || self.class.name == 'Ticket::Share'
-      Rails.logger.info "[CHECKS_USER_COLUMNS_FILLUP] 🎯 fill_up_user_create called for #{self.class.name}"
-      Rails.logger.info "[CHECKS_USER_COLUMNS_FILLUP] 📋 UserInfo.current_user_id: #{UserInfo.current_user_id}"
-      Rails.logger.info "[CHECKS_USER_COLUMNS_FILLUP] 📋 Has updated_by_id column: #{self.class.column_names.include?('updated_by_id')}"
-      Rails.logger.info "[CHECKS_USER_COLUMNS_FILLUP] 📋 Has created_by_id column: #{self.class.column_names.include?('created_by_id')}"
     end
 
     if self.class.column_names.include?('updated_by_id') && UserInfo.current_user_id
@@ -42,7 +38,6 @@ returns
       end
       self.updated_by_id = UserInfo.current_user_id
       if self.class.name == 'Ticket::Approval' || self.class.name == 'Ticket::Share'
-        Rails.logger.info "[CHECKS_USER_COLUMNS_FILLUP] ✅ Set updated_by_id to #{UserInfo.current_user_id}"
       end
     end
 
@@ -55,7 +50,6 @@ returns
     end
     self.created_by_id = UserInfo.current_user_id
     if self.class.name == 'Ticket::Approval' || self.class.name == 'Ticket::Share'
-      Rails.logger.info "[CHECKS_USER_COLUMNS_FILLUP] ✅ Set created_by_id to #{UserInfo.current_user_id}"
     end
     true
   end
@@ -77,9 +71,6 @@ returns
   def fill_up_user_update
     # Add debugging for our specific models
     if self.class.name == 'Ticket::Approval' || self.class.name == 'Ticket::Share'
-      Rails.logger.info "[CHECKS_USER_COLUMNS_FILLUP] 🎯 fill_up_user_update called for #{self.class.name}"
-      Rails.logger.info "[CHECKS_USER_COLUMNS_FILLUP] 📋 UserInfo.current_user_id: #{UserInfo.current_user_id}"
-      Rails.logger.info "[CHECKS_USER_COLUMNS_FILLUP] 📋 Has updated_by_id column: #{self.class.column_names.include?('updated_by_id')}"
     end
 
     return true if self.class.column_names.exclude?('updated_by_id')
@@ -87,7 +78,6 @@ returns
 
     self.updated_by_id = UserInfo.current_user_id
     if self.class.name == 'Ticket::Approval' || self.class.name == 'Ticket::Share'
-      Rails.logger.info "[CHECKS_USER_COLUMNS_FILLUP] ✅ Set updated_by_id to #{UserInfo.current_user_id}"
     end
     true
   end

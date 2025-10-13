@@ -21,25 +21,19 @@ class TransactionJob < ApplicationJob
 =end
 
   def perform(item, params = {})
-    Rails.logger.info "[TRANSACTION_JOB] 🔄 Processing item: #{item[:object]} ##{item[:object_id]} (#{item[:type]})"
     
     # Log all registered backends
     backends = Setting.where(area: 'Transaction::Backend::Async').reorder(:name)
-    Rails.logger.info "[TRANSACTION_JOB] 📋 Total async backends found: #{backends.count}"
     backends.each do |setting|
-      Rails.logger.info "[TRANSACTION_JOB] 📋 Backend: #{setting.name} = #{Setting.get(setting.name)}"
     end
     
     backends.each do |setting|
       backend = Setting.get(setting.name)
-      Rails.logger.info "[TRANSACTION_JOB] 📋 Processing backend: #{setting.name} = #{backend}"
       next if params[:disable]&.include?(backend)
 
-      Rails.logger.info "[TRANSACTION_JOB] 🚀 Executing backend: #{backend} for #{item[:object]} ##{item[:object_id]}"
       
       # Add detailed logging for notification backends
       if backend == 'Transaction::Notification' || backend == 'Transaction::ApprovalNotification' || backend == 'Transaction::ShareNotification'
-        Rails.logger.info "[TRANSACTION_JOB] 📧 NOTIFICATION BACKEND: #{backend} processing #{item[:object]} #{item[:type]} event"
       end
       
       TransactionDispatcher.execute_single_backend(backend.constantize, item, params)
