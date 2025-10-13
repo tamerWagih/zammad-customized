@@ -101,6 +101,7 @@ class Ticket < ApplicationModel
   has_many      :mentions,               as: :mentionable, dependent: :destroy
   has_many      :approvals,              class_name: 'Ticket::Approval', dependent: :destroy
   has_many      :shares,                 class_name: 'Ticket::Share', dependent: :destroy
+  has_many      :ccs,                    class_name: 'Ticket::CC', dependent: :destroy
   has_one       :shared_draft,           class_name: 'Ticket::SharedDraftZoom', inverse_of: :ticket, dependent: :destroy
   belongs_to    :state,                  class_name: 'Ticket::State', optional: true
   belongs_to    :priority,               class_name: 'Ticket::Priority', optional: true
