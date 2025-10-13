@@ -1,13 +1,13 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
-class TicketCCsController < ApplicationController
+class TicketCcsController < ApplicationController
   before_action :authenticate_and_authorize!
   before_action :set_ticket
   before_action :check_permissions
   before_action :set_cc, only: %i[destroy]
   
   def index
-    ccs = Service::Ticket::CC::List
+    ccs = Service::Ticket::Cc::List
       .new(current_user: current_user)
       .execute(ticket: @ticket)
     
@@ -15,7 +15,7 @@ class TicketCCsController < ApplicationController
   end
   
   def create
-    cc = Service::Ticket::CC::Create
+    cc = Service::Ticket::Cc::Create
       .new(current_user: current_user)
       .execute(
         ticket:  @ticket,
@@ -31,7 +31,7 @@ class TicketCCsController < ApplicationController
   end
   
   def destroy
-    cc_data = Service::Ticket::CC::Destroy
+    cc_data = Service::Ticket::Cc::Destroy
       .new(current_user: current_user)
       .execute(cc: @cc)
     
