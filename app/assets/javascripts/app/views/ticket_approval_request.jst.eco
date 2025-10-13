@@ -15,26 +15,8 @@
       </option>
       <% for approver in @approvers: %>
         <option value="<%= approver.id %>">
-          <%
-          # Build display name from available data
-          displayParts = []
-          
-          # Add name if available
-          if approver.firstname || approver.lastname
-            namePart = "#{approver.firstname || ''} #{approver.lastname || ''}".trim()
-            displayParts.push(namePart) if namePart
-          
-          # Add email if available
-          if approver.email
-            displayParts.push("(#{approver.email})")
-          
-          # Fallback to login if nothing else
-          if displayParts.length == 0
-            displayParts.push(approver.login || "User ##{approver.id}")
-          
-          displayName = displayParts.join(' ')
-          %>
-          <%- displayName %>
+          <% name = "#{approver.firstname || ''} #{approver.lastname || ''}".trim() || approver.login || approver.email || "User ##{approver.id}" %>
+          <%- name %><% if approver.email && name != approver.email: %> (<%- approver.email %>)<% end %>
         </option>
       <% end %>
     </select>
