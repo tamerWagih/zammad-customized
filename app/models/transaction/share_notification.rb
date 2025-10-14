@@ -117,11 +117,17 @@ class Transaction::ShareNotification
     
     # Get only users who are EXPLICITLY assigned to this specific group
     # This prevents admin users with global access from being included
-    group_users = ::User.joins(:user_groups)
-                       .where(user_groups: { group_id: group_id, access: ['read', 'full'] })
+    # Optimized: Use joins to filter agents directly in the database query
+    agent_users = ::User.joins('INNER JOIN groups_users ON groups_users.user_id = users.id')
+                       .joins('INNER JOIN roles_users ON roles_users.user_id = users.id')
+                       .joins('INNER JOIN roles ON roles.id = roles_users.role_id')
+                       .joins('INNER JOIN permissions_roles ON permissions_roles.role_id = roles.id')
+                       .joins('INNER JOIN permissions ON permissions.id = permissions_roles.permission_id')
+                       .where('groups_users.group_id = ?', group_id)
+                       .where("groups_users.access IN ('read', 'full')")
                        .where(active: true)
-    
-    agent_users = group_users.select { |user| user.permissions?('ticket.agent') }
+                       .where(permissions: { name: 'ticket.agent' })
+                       .distinct
     
     agent_users.each do |user|
       recipients << user

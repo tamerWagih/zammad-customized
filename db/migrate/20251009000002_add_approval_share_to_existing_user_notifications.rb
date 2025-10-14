@@ -35,11 +35,17 @@ class AddApprovalShareToExistingUserNotifications < ActiveRecord::Migration[7.2]
     }
 
     # Update all active agent users
+    # Optimized: Get only agents using a direct database join instead of checking permissions for each user
     users_updated = 0
-    User.where(active: true).find_each do |user|
-      # Only update agents (users with ticket.agent permission)
-      next unless user.permissions?('ticket.agent')
-
+    agent_users = User.joins('INNER JOIN roles_users ON roles_users.user_id = users.id')
+                     .joins('INNER JOIN roles ON roles.id = roles_users.role_id')
+                     .joins('INNER JOIN permissions_roles ON permissions_roles.role_id = roles.id')
+                     .joins('INNER JOIN permissions ON permissions.id = permissions_roles.permission_id')
+                     .where(active: true)
+                     .where(permissions: { name: 'ticket.agent' })
+                     .distinct
+    
+    agent_users.find_each do |user|
       # Get current preferences
       prefs = user.preferences || {}
       notification_config = prefs['notification_config'] || {}
@@ -74,9 +80,16 @@ class AddApprovalShareToExistingUserNotifications < ActiveRecord::Migration[7.2]
     Rails.logger.info "[USER_NOTIFICATION_FIX] ⬇️  Removing approval/share from user notifications..."
 
     users_updated = 0
-    User.where(active: true).find_each do |user|
-      next unless user.permissions?('ticket.agent')
-
+    # Optimized: Get only agents using a direct database join
+    agent_users = User.joins('INNER JOIN roles_users ON roles_users.user_id = users.id')
+                     .joins('INNER JOIN roles ON roles.id = roles_users.role_id')
+                     .joins('INNER JOIN permissions_roles ON permissions_roles.role_id = roles.id')
+                     .joins('INNER JOIN permissions ON permissions.id = permissions_roles.permission_id')
+                     .where(active: true)
+                     .where(permissions: { name: 'ticket.agent' })
+                     .distinct
+    
+    agent_users.find_each do |user|
       prefs = user.preferences || {}
       notification_config = prefs['notification_config'] || {}
       matrix = notification_config['matrix'] || {}
