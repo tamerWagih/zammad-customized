@@ -11,6 +11,12 @@ class Service::Ticket::Cc::Create < Service::BaseWithCurrentUser
       raise Exceptions::UnprocessableEntity, __('User must be an agent or customer')
     end
     
+    # Prevent CC'ing the ticket's customer (they already have access)
+    if ticket.customer_id == cc_user.id
+      raise Exceptions::UnprocessableEntity,
+            __('Cannot CC the ticket\'s customer (%s). The customer already has access to this ticket.') % cc_user.fullname
+    end
+    
     # Check if already CC'd
     if ticket.ccs.exists?(user_id: cc_user.id)
       raise Exceptions::UnprocessableEntity, 

@@ -6,7 +6,7 @@ You were CC'd on a ticket (#{ticket.title})
   <% created_by_name = @objects[:cc].created_by.respond_to?(:fullname) ? @objects[:cc].created_by.fullname : (@objects[:cc].created_by_name || 'Someone') %>
   <div>You have been <b>CC'd</b> on ticket "<b>#{ticket.title}</b>" by "<b>#{created_by_name}</b>".</div>
 <% else %>
-  <% cc_user_name = @objects[:cc].cc_user.respond_to?(:fullname) ? @objects[:cc].cc_user.fullname : (@objects[:cc].cc_user_name || 'Unknown User') %>
+  <% cc_user_name = @objects[:cc].user.respond_to?(:fullname) ? @objects[:cc].user.fullname : (@objects[:cc].user_name || 'Unknown User') %>
   <div>You have <b>CC'd</b> user "<b>#{cc_user_name}</b>" on ticket "<b>#{ticket.title}</b>".</div>
 <% end %>
 <br>
