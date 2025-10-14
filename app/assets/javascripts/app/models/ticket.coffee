@@ -28,7 +28,7 @@ class App.Ticket extends App.Model
       { name: 'created_at',               display: __('Created at'),   tag: 'datetime', width: '110px', readonly: 1 },
       { name: 'updated_by_id',            display: __('Updated by'),   relation: 'User', readonly: 1 },
       { name: 'updated_at',               display: __('Updated at'),   tag: 'datetime', width: '110px', readonly: 1 },
-      { name: 'cc_user_ids',              display: __('CC'),           tag: 'autocompletion', multiple: true, null: true, relation: 'User', placeholder: __('Select agents or customers to CC'), item_class: 'multiple', disableCreateObject: true, class: 'span7', autocomplete_url: '/api/v1/users/search', queryCallback: (query) -> { query: query, permissions: ['ticket.agent', 'ticket.customer'] }, screen: { create_middle: { shown: true } } },
+      { name: 'cc_user_ids',              display: __('CC'),           tag: 'user_autocompletion', multiple: true, null: true, relation: 'User', placeholder: __('Select agents or customers to CC'), item_class: 'multiple', disableCreateObject: true, width: '10%', source: '/api/v1/users/search', queryCallback: (query) -> { query: query, permissions: ['ticket.agent', 'ticket.customer'] }, screen: { create_middle: { shown: true } } },
     ]
 
   uiUrl: ->
