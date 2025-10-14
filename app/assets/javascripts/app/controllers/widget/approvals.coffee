@@ -40,11 +40,9 @@ class App.WidgetApprovals extends App.Controller
     # This is sufficient - if data hasn't changed, no need to re-render
     # If data HAS changed, always update (even if rapid)
     if @localApprovals && _.isEqual(@localApprovals, approvals)
-      console.log "[APPROVALS] Skipping reload - data unchanged"
       return
     
     # Data is different → update UI immediately
-    console.log "[APPROVALS] Reload triggered - data changed"
     @localApprovals = _.clone(approvals)
     @stopLoading()  # Clear any loading state when fresh data arrives
     @render()

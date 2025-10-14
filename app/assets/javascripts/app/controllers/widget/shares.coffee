@@ -39,11 +39,9 @@ class App.WidgetShares extends App.Controller
     # This is sufficient - if data hasn't changed, no need to re-render
     # If data HAS changed, always update (even if rapid)
     if @localShares && _.isEqual(@localShares, shares)
-      console.log "[SHARES] Skipping reload - data unchanged"
       return
     
     # Data is different → update UI immediately
-    console.log "[SHARES] Reload triggered - data changed"
     @localShares = _.clone(shares)
     @stopLoading()  # Clear any loading state when fresh data arrives
     @render()

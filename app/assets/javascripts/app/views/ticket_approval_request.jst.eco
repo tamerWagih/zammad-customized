@@ -15,7 +15,8 @@
       </option>
       <% for approver in @approvers: %>
         <option value="<%= approver.id %>">
-          <%- approver.firstname %> <%- approver.lastname %> (<%- approver.email %>)
+          <% name = "#{approver.firstname || ''} #{approver.lastname || ''}".trim() || approver.login || approver.email || "User ##{approver.id}" %>
+          <%- name %><% if approver.email && name != approver.email: %> (<%- approver.email %>)<% end %>
         </option>
       <% end %>
     </select>

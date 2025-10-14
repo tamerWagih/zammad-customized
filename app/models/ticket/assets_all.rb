@@ -43,15 +43,11 @@ class Ticket::AssetsAll
   end
 
   def response(assets, attributes_to_change)
-    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Building API response for user ##{user.id} (#{user.email})"
     
     approvals_data = approvals
     shares_data = shares
     share_perms = share_permissions
     
-    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Approvals data size: #{approvals_data.size}"
-    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Shares data size: #{shares_data.size}"
-    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: Share permissions for user: #{share_perms.inspect}"
     
     response_data = {
       ticket_id:          ticket.id,
@@ -67,7 +63,6 @@ class Ticket::AssetsAll
       share_permissions:  share_perms,
     }
     
-    Rails.logger.info "[TICKET_ASSETS_ALL] Ticket ##{ticket.id}: API response built successfully"
     response_data
   end
   
@@ -139,10 +134,8 @@ class Ticket::AssetsAll
                          updated_at:   approval.updated_at,
                        }
                      end
-                     Rails.logger.info "[APPROVAL_API] Ticket ##{ticket.id}: Returning #{result.size} approvals for user ##{user.id} (#{user.email})"
                      result
                    else
-                     Rails.logger.info "[APPROVAL_API] Ticket ##{ticket.id}: No approvals returned (respond_to: #{ticket.respond_to?(:approvals)}, is_agent: #{user.permissions?('ticket.agent')})"
                      []
                    end
   end

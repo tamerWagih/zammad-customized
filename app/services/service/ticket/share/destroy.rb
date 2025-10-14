@@ -21,7 +21,6 @@ class Service::Ticket::Share::Destroy < Service::BaseWithCurrentUser
   def add_destroy_event_to_buffer(share)
     # Add destroy event to EventBuffer before destroying the record
     # IMPORTANT: Must include serialized data since record won't exist when notification runs
-    Rails.logger.info "[SHARE_NOTIFICATION] ✅ DELETE event added to EventBuffer for share ##{share.id}"
     EventBuffer.add('transaction', {
       object:     'Ticket::Share',
       type:       'delete',

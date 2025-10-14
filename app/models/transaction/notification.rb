@@ -67,46 +67,36 @@ class Transaction::Notification
   end
 
   def perform
-    Rails.logger.info "[NOTIFICATION] 🔔 Transaction::Notification.perform called"
-    Rails.logger.info "[NOTIFICATION] 📋 Item: #{@item[:object]} ##{@item[:object_id]} (#{@item[:type]})"
     
     # return if we run import mode
     if Setting.get('import_mode')
-      Rails.logger.info "[NOTIFICATION] ⏭️  Skipping: import_mode enabled"
       return
     end
     
     if %w[Ticket Ticket::Article].exclude?(@item[:object])
-      Rails.logger.info "[NOTIFICATION] ⏭️  Skipping: object type #{@item[:object]} not Ticket or Ticket::Article"
       return
     end
     
     # Skip approval and share events - they have dedicated notification backends
     if %w[Ticket::Approval Ticket::Share].include?(@item[:object])
-      Rails.logger.info "[NOTIFICATION] ⏭️  Skipping: #{@item[:object]} events handled by dedicated backend"
       return
     end
     
     if @params[:disable_notification]
-      Rails.logger.info "[NOTIFICATION] ⏭️  Skipping: notifications disabled via params"
       return
     end
     
     if !ticket
-      Rails.logger.info "[NOTIFICATION] ⏭️  Skipping: ticket not found"
       return
     end
 
-    Rails.logger.info "[NOTIFICATION] ✅ Processing ticket ##{ticket.id} (#{ticket.title})"
     prepare_recipients_and_reasons
-    Rails.logger.info "[NOTIFICATION] 📬 Found #{recipients_and_channels.count} recipients"
 
     # send notifications
     recipients_and_channels.each do |recipient_settings|
       send_to_single_recipient(recipient_settings)
     end
     
-    Rails.logger.info "[NOTIFICATION] ✅ Notification processing completed"
   end
 
   def prepare_recipients_and_reasons
@@ -252,7 +242,6 @@ class Transaction::Notification
 
     # ignore email channel notification and empty emails
     if !channels['email'] || user.email.blank?
-      Rails.logger.info "[NOTIFICATION] ⏭️  Skipping email for #{user.email || user.login}: email channel disabled or no email address"
       add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
       return
     end
@@ -283,11 +272,6 @@ class Transaction::Notification
                  raise "unknown type for notification #{@item[:type]}"
                end
 
-    Rails.logger.info "[NOTIFICATION] 📧 Sending email notification to #{user.email}"
-    Rails.logger.info "[NOTIFICATION]    Template: #{template}"
-    Rails.logger.info "[NOTIFICATION]    Ticket: ##{ticket.id} (#{ticket.title})"
-    Rails.logger.info "[NOTIFICATION]    Type: #{@item[:type]}"
-    Rails.logger.info "[NOTIFICATION]    User: #{user.fullname} (#{user.email})"
 
     attachments = []
     if article
@@ -311,9 +295,6 @@ class Transaction::Notification
       attachments: attachments,
     )
     
-    Rails.logger.info "[NOTIFICATION] ✅ Email sent successfully to #{user.email}"
-    Rails.logger.info "[NOTIFICATION]    Subject: #{result[:subject] rescue 'N/A'}"
-    Rails.logger.info "[NOTIFICATION]    From: #{Setting.get('notification_sender')}"
     Rails.logger.debug { "sent ticket email notification to agent (#{@item[:type]}/#{ticket.id}/#{user.email})" }
   rescue Channel::DeliveryError => e
     status_code = begin
@@ -323,9 +304,6 @@ class Transaction::Notification
     end
 
     if SILENCABLE_SMTP_ERROR_CODES.any? { |elem| elem.include? status_code }
-      Rails.logger.info "[NOTIFICATION] ⚠️  Email delivery failed (silenced error)"
-      Rails.logger.info "[NOTIFICATION]    Status code: #{status_code}"
-      Rails.logger.info "[NOTIFICATION]    Error: #{e.original_error}"
       Rails.logger.info do
         "could not send ticket email notification to agent (#{@item[:type]}/#{ticket.id}/#{user.email}) #{e.original_error}"
       end
