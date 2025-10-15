@@ -634,6 +634,32 @@ returns a hex color code
     mentions.pluck(:user_id)
   end
 
+  def cc_user_ids
+    ccs.pluck(:user_id)
+  end
+
+  def cc_user_ids=(user_ids)
+    # Remove existing CCs
+    ccs.destroy_all
+    
+    # Add new CCs
+    return if user_ids.blank?
+    
+    user_ids = Array(user_ids).compact.uniq
+    user_ids.each do |user_id|
+      next if user_id.blank?
+      
+      user = User.find_by(id: user_id)
+      next unless user&.permissions?('ticket.agent') || user&.permissions?('ticket.customer')
+      
+      ccs.create!(
+        user: user,
+        created_by: User.current,
+        permissions: user.permissions?('ticket.agent') ? ['full'] : ['read', 'comment']
+      )
+    end
+  end
+
   private
 
   def check_generate
