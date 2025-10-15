@@ -2,6 +2,11 @@ class App.Ticket extends App.Model
   @configure 'Ticket', 'number', 'title', 'group_id', 'owner_id', 'customer_id', 'state_id', 'priority_id', 'article', 'tags', 'links', 'updated_at', 'preferences', 'share_permissions', 'share_expires_at', 'cc_user_ids'
   @extend Spine.Model.Ajax
   @url: @apiPath + '/tickets'
+  
+  # Filter function for CC field to show only agents and customers
+  @ccUserFilter: (users) ->
+    users.filter (user) ->
+      user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
   @configure_attributes = [
       { name: 'number',                   display: '#',            tag: 'input',    type: 'text', limit: 100, null: true, readonly: 1, width: '68px' },
       { name: 'title',                    display: __('Title'),        tag: 'input',    type: 'text', limit: 100, null: false },
@@ -28,7 +33,7 @@ class App.Ticket extends App.Model
       { name: 'created_at',               display: __('Created at'),   tag: 'datetime', width: '110px', readonly: 1 },
       { name: 'updated_by_id',            display: __('Updated by'),   relation: 'User', readonly: 1 },
       { name: 'updated_at',               display: __('Updated at'),   tag: 'datetime', width: '110px', readonly: 1 },
-      { name: 'cc_user_ids',              display: __('CC'),           tag: 'searchable_select',   multiple: true, limit: 100, null: true, relation: 'User', width: '12%', edit: true, screen: { create_middle: { shown: true } } },
+      { name: 'cc_user_ids',              display: __('CC'),           tag: 'searchable_select',   multiple: true, limit: 100, null: true, relation: 'User', width: '12%', edit: true, filter: @ccUserFilter, screen: { create_middle: { shown: true } } },
     ]
 
   uiUrl: ->
