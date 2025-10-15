@@ -29,7 +29,7 @@ class App.Ticket extends App.Model
       { name: 'created_at',               display: __('Created at'),   tag: 'datetime', width: '110px', readonly: 1 },
       { name: 'updated_by_id',            display: __('Updated by'),   relation: 'User', readonly: 1 },
       { name: 'updated_at',               display: __('Updated at'),   tag: 'datetime', width: '110px', readonly: 1 },
-      { name: 'cc_user_ids',              display: __('CC'),           tag: 'user_autocompletion_cc', multiple: true, limit: 100, null: true, relation: 'User', width: '12%', edit: true, screen: { create_middle: { shown: true } } },
+      { name: 'cc_user_ids',              display: __('CC'),           tag: 'autocompletion_ajax', multiple: true, limit: 100, null: true, relation: 'User', width: '12%', edit: true, screen: { create_middle: { shown: true } } },
     ]
 
   uiUrl: ->
