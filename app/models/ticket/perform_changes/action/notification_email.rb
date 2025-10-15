@@ -7,10 +7,32 @@ class Ticket::PerformChanges::Action::NotificationEmail < Ticket::PerformChanges
   end
 
   def execute(...)
-    return if recipients_checked.blank?
-    return if from_email_address.blank?
+    Rails.logger.info "[TRIGGER_EMAIL] 🔄 Executing notification_email action"
+    Rails.logger.info "[TRIGGER_EMAIL]    Trigger: #{performable.try(:name) || 'unknown'}"
+    Rails.logger.info "[TRIGGER_EMAIL]    Ticket: ##{id}"
+    Rails.logger.info "[TRIGGER_EMAIL]    Recipients raw: #{execution_data['recipient'].inspect}"
+    
+    if recipients_checked.blank?
+      Rails.logger.warn "[TRIGGER_EMAIL] ❌ No valid recipients after filtering"
+      Rails.logger.warn "[TRIGGER_EMAIL]    Recipients raw: #{recipients_raw.inspect}"
+      Rails.logger.warn "[TRIGGER_EMAIL]    Check: customer email valid? group configured? not blocked?"
+      return
+    end
+    
+    Rails.logger.info "[TRIGGER_EMAIL]    Recipients checked: #{recipients_checked.inspect}"
+    
+    if from_email_address.blank?
+      Rails.logger.error "[TRIGGER_EMAIL] ❌ No email address configured for group '#{record.group.name}'"
+      Rails.logger.error "[TRIGGER_EMAIL]    FIX: Go to Admin → Groups → '#{record.group.name}' → Set Email Address"
+      return
+    end
+    
+    Rails.logger.info "[TRIGGER_EMAIL]    From: #{from_email_address.email}"
+    Rails.logger.info "[TRIGGER_EMAIL] ✅ All checks passed - sending email..."
 
     send_email_notification
+    
+    Rails.logger.info "[TRIGGER_EMAIL] ✅ Email sent successfully to: #{recipient_string}"
   end
 
   private
@@ -244,15 +266,23 @@ class Ticket::PerformChanges::Action::NotificationEmail < Ticket::PerformChanges
   end
 
   def recipients_by_type(recipient_type)
-    case recipient_type
+    Rails.logger.debug "[TRIGGER_EMAIL] 🔍 Getting recipients for type: #{recipient_type}"
+    
+    result = case recipient_type
     when 'article_last_sender'
       recipients_by_type_article_last_sender
     when 'ticket_customer'
-      user_lookup_email(record.customer_id)
+      email = user_lookup_email(record.customer_id)
+      Rails.logger.info "[TRIGGER_EMAIL]    ticket_customer → #{email || 'NONE (no customer or no email)'}"
+      email
     when 'ticket_owner'
-      user_lookup_email(record.owner_id)
+      email = user_lookup_email(record.owner_id)
+      Rails.logger.info "[TRIGGER_EMAIL]    ticket_owner → #{email || 'NONE (no owner or no email)'}"
+      email
     when 'ticket_agents'
-      recipients_by_type_user_group_access
+      emails = recipients_by_type_user_group_access
+      Rails.logger.info "[TRIGGER_EMAIL]    ticket_agents → #{emails.join(', ')}"
+      emails
     when %r{\Auserid_(\d+)\z}
       return user_lookup_email($1) if User.exists?($1)
 
@@ -262,6 +292,8 @@ class Ticket::PerformChanges::Action::NotificationEmail < Ticket::PerformChanges
       Rails.logger.error "Unknown email notification recipient '#{recipient_type}'"
       nil
     end
+    
+    result
   end
 
   def recipients_by_type_article_last_sender
@@ -288,16 +320,29 @@ class Ticket::PerformChanges::Action::NotificationEmail < Ticket::PerformChanges
 
   def send_recipient_notification?(recipient_email)
     # do not send notification if system address
-    return false if EmailAddress.exists?(email: recipient_email)
+    if EmailAddress.exists?(email: recipient_email)
+      Rails.logger.info "[TRIGGER_EMAIL] ⏭️  Skipping #{recipient_email}: matches system email address"
+      return false
+    end
 
-    return false if trigger_based_notification_blocked?(recipient_email)
+    if trigger_based_notification_blocked?(recipient_email)
+      # Already logged in trigger_based_notification_blocked?
+      return false
+    end
 
     # do not sent notifications to this recipients or for auto response tagged incoming emails
-    return false if send_no_auto_response?(recipient_email)
+    if send_no_auto_response?(recipient_email)
+      # Logged in send_no_auto_response? or auto_response_from_customer?
+      return false
+    end
 
     # loop protection / check if maximal count of trigger mail has reached
-    return false if ticket_trigger_loop_protection?(recipient_email)
+    if ticket_trigger_loop_protection?(recipient_email)
+      # Already logged in ticket_trigger_loop_protection?
+      return false
+    end
 
+    Rails.logger.info "[TRIGGER_EMAIL] ✅ Recipient check passed for: #{recipient_email}"
     true
   end
 

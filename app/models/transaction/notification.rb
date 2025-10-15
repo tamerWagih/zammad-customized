@@ -77,8 +77,8 @@ class Transaction::Notification
       return
     end
     
-    # Skip approval and share events - they have dedicated notification backends
-    if %w[Ticket::Approval Ticket::Share].include?(@item[:object])
+    # Skip approval, share, and CC events - they have dedicated notification backends
+    if %w[Ticket::Approval Ticket::Share Ticket::Cc].include?(@item[:object])
       return
     end
     
