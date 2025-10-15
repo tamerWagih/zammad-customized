@@ -3,10 +3,11 @@ class App.Ticket extends App.Model
   @extend Spine.Model.Ajax
   @url: @apiPath + '/tickets'
   
-  # Filter function for CC field to show only agents and customers
+  # Filter function for CC field to show only agents and customers (excluding current user)
   @ccUserFilter: (users) ->
+    currentUserId = App.Session.get('id')
     users.filter (user) ->
-      user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+      user.id != currentUserId && (user.permissions?('ticket.agent') || user.permissions?('ticket.customer'))
   @configure_attributes = [
       { name: 'number',                   display: '#',            tag: 'input',    type: 'text', limit: 100, null: true, readonly: 1, width: '68px' },
       { name: 'title',                    display: __('Title'),        tag: 'input',    type: 'text', limit: 100, null: false },
