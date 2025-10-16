@@ -319,10 +319,17 @@ class Ticket::PerformChanges::Action::NotificationEmail < Ticket::PerformChanges
   end
 
   def send_recipient_notification?(recipient_email)
-    # do not send notification if system address
-    if EmailAddress.exists?(email: recipient_email)
-      Rails.logger.info "[TRIGGER_EMAIL] ⏭️  Skipping #{recipient_email}: matches system email address"
-      return false
+    # do not send notification if recipient is a system address used for incoming emails
+    # BUT allow if it's a customer email that happens to be in EmailAddress table
+    email_address = EmailAddress.find_by(email: recipient_email)
+    if email_address
+      # Only block if this is a channel email address (used for incoming emails)
+      if email_address.channel_id.present?
+        Rails.logger.info "[TRIGGER_EMAIL] ⏭️  Skipping #{recipient_email}: recipient is an incoming email address"
+        return false
+      else
+        Rails.logger.info "[TRIGGER_EMAIL] ✅ Allowing #{recipient_email}: not an incoming email address"
+      end
     end
 
     if trigger_based_notification_blocked?(recipient_email)
