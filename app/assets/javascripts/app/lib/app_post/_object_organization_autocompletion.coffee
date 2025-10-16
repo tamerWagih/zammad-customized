@@ -44,7 +44,7 @@ class App.ObjectOrganizationAutocompletion extends App.Controller
     if !@attribute.sourceType
       @attribute.sourceType = 'GET'
     if !@attribute.source
-      @attribute.source = "#{@apiPath}/search/user-organization"
+      @attribute.source = "#{@apiPath}/users/search"
     @build()
 
     # set current value
@@ -74,6 +74,9 @@ class App.ObjectOrganizationAutocompletion extends App.Controller
   onFocus: =>
     @formControl.addClass 'focus'
     @open()
+    # Load users when field is focused (empty query)
+    if _.isEmpty(@objectSelect.val())
+      @lazySearch('')
 
   focusInput: =>
     @objectSelect.trigger('focus') if not @formControl.hasClass('focus')
@@ -354,7 +357,8 @@ class App.ObjectOrganizationAutocompletion extends App.Controller
       name: name
     )
 
-    if !@attribute.disableCreateObject
+    # Don't show "Create new" button for CC field
+    if !@attribute.disableCreateObject && !@attribute.name?.includes('cc')
       @recipientList.append(@buildObjectNew())
 
     # start search
@@ -373,7 +377,8 @@ class App.ObjectOrganizationAutocompletion extends App.Controller
     if _.isEmpty(query)
       @emptyResultList()
 
-      if !@attribute.disableCreateObject
+      # Don't show "Create new" button for empty queries in CC field
+      if !@attribute.disableCreateObject && !@attribute.name?.includes('cc')
         @recipientList.append(@buildObjectNew())
 
       # reset object selection
@@ -426,7 +431,8 @@ class App.ObjectOrganizationAutocompletion extends App.Controller
               object = App[@objectSingle].fullLocal(item.id)
               @recipientList.append(@buildObjectItem(object))
 
-          if !@attribute.disableCreateObject
+          # Don't show "Create new" button for CC field
+          if !@attribute.disableCreateObject && !@attribute.name?.includes('cc')
             @recipientList.append(@buildObjectNew())
 
         @recipientList.find('.js-object').first().addClass('is-active')
