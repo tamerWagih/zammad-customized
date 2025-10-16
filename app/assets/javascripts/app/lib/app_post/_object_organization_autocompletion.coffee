@@ -74,9 +74,8 @@ class App.ObjectOrganizationAutocompletion extends App.Controller
   onFocus: =>
     @formControl.addClass 'focus'
     @open()
-    # Load users when field is focused (empty query)
-    if _.isEmpty(@objectSelect.val())
-      @lazySearch('')
+    # Don't auto-load users on focus to avoid permission issues
+    # Users will need to type to search
 
   focusInput: =>
     @objectSelect.trigger('focus') if not @formControl.hasClass('focus')
@@ -436,6 +435,13 @@ class App.ObjectOrganizationAutocompletion extends App.Controller
             @recipientList.append(@buildObjectNew())
 
         @recipientList.find('.js-object').first().addClass('is-active')
+      error: (xhr, status, error) =>
+        # Handle permission errors gracefully
+        if xhr.status is 403
+          @emptyResultList()
+          @recipientList.append('<li class="text-muted">Please type to search for users</li>')
+        else
+          @log 'error', 'Search failed', xhr, status, error
     )
 
   emptyResultList: =>
