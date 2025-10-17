@@ -11,33 +11,44 @@ class TicketCcsController < ApplicationController
     query = params[:query] || params[:term] || ''
     limit = (params[:limit] || 50).to_i
     
-    # Get Agent and Customer roles (exact match, not partial)
-    agent_role = Role.find_by(name: 'Agent')
-    customer_role = Role.find_by(name: 'Customer')
+    Rails.logger.info "[CC_SEARCH] Starting search with query: '#{query}', limit: #{limit}"
     
-    return render json: { record_ids: [], assets: {} } if agent_role.nil? && customer_role.nil?
+    # Get all active users with email addresses first
+    users = User.where(active: true).where.not(email: [nil, ''])
     
-    role_ids = [agent_role&.id, customer_role&.id].compact
+    Rails.logger.info "[CC_SEARCH] Initial user count (active with email): #{users.count}"
     
-    # Get all active users with Agent or Customer role only
-    users = User.where(active: true)
-                .where.not(email: [nil, ''])
-                .joins(:roles)
-                .where(roles: { id: role_ids })
-                .distinct
+    # Filter to only Agent and Customer roles
+    # Use permissions check instead of role names for more robust filtering
+    user_ids_with_permissions = []
+    
+    users.find_each do |user|
+      # Check if user has ticket.agent OR ticket.customer permission
+      if user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+        user_ids_with_permissions << user.id
+      end
+    end
+    
+    Rails.logger.info "[CC_SEARCH] Users with agent/customer permissions: #{user_ids_with_permissions.count}"
+    
+    # Filter to only these users
+    users = User.where(id: user_ids_with_permissions, active: true)
     
     # Filter by query if provided
     if query.present?
       search_term = "%#{User.sanitize_sql_like(query.downcase)}%"
       users = users.where(
-        'LOWER(users.firstname) LIKE ? OR LOWER(users.lastname) LIKE ? OR LOWER(users.email) LIKE ? OR LOWER(users.login) LIKE ?',
+        'LOWER(firstname) LIKE ? OR LOWER(lastname) LIKE ? OR LOWER(email) LIKE ? OR LOWER(login) LIKE ?',
         search_term, search_term, search_term, search_term
       )
+      Rails.logger.info "[CC_SEARCH] After query filter: #{users.count} users"
     end
     
     # Order and limit results
-    users = users.order(Arel.sql('LOWER(users.firstname), LOWER(users.lastname), LOWER(users.email)'))
+    users = users.order(Arel.sql('LOWER(firstname), LOWER(lastname), LOWER(email)'))
                  .limit(limit)
+    
+    Rails.logger.info "[CC_SEARCH] Final user count after order/limit: #{users.count}"
     
     # Build assets hash (required by user_autocompletion)
     assets = {}
@@ -51,14 +62,18 @@ class TicketCcsController < ApplicationController
       assets = user.assets(assets)
     end
     
+    Rails.logger.info "[CC_SEARCH] Final record_ids count (excluding current user): #{record_ids.count}"
+    Rails.logger.info "[CC_SEARCH] Returning users: #{users.map { |u| "#{u.fullname} (#{u.email})" }.join(', ')}"
+    
     # Return in format expected by user_autocompletion (same as /users/search)
     render json: {
       record_ids: record_ids,
       assets: assets
     }
   rescue => e
-    Rails.logger.error "CC search_users error: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
+    Rails.logger.error "[CC_SEARCH] ❌ Error: #{e.class.name} - #{e.message}"
+    Rails.logger.error "[CC_SEARCH] Backtrace:"
+    Rails.logger.error e.backtrace.first(10).join("\n")
     render json: { error: 'Search failed', record_ids: [], assets: {} }, status: :internal_server_error
   end
   

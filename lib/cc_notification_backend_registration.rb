@@ -1,7 +1,7 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
 # Ensure CC Notification backend is registered
-# This should be called via migration (20251015000001_register_cc_notification_backend.rb)
+# This should be called via migration (20251015999999_remove_cc_notification_backend.rb)
 # or manually via rails console if needed
 module CcNotificationBackendRegistration
   def self.register!
