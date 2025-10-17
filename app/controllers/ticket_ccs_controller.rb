@@ -28,21 +28,24 @@ class TicketCcsController < ApplicationController
     users = users.order(Arel.sql('LOWER(firstname), LOWER(lastname), LOWER(email)'))
                  .limit(limit)
     
-    # Format response for autocomplete (compatible with user_autocompletion)
-    result = users.map do |user|
-      {
-        id:       user.id,
-        label:    user.fullname.presence || user.email,
-        value:    user.email,
-        inactive: !user.active
-      }
+    # Build assets hash (required by user_autocompletion)
+    assets = {}
+    record_ids = []
+    
+    users.each do |user|
+      record_ids << user.id
+      assets = user.assets(assets)
     end
     
-    render json: result
+    # Return in format expected by user_autocompletion (same as /users/search)
+    render json: {
+      record_ids: record_ids,
+      assets: assets
+    }
   rescue => e
     Rails.logger.error "CC search_users error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
-    render json: { error: 'Search failed' }, status: :internal_server_error
+    render json: { error: 'Search failed', record_ids: [], assets: {} }, status: :internal_server_error
   end
   
   def index
