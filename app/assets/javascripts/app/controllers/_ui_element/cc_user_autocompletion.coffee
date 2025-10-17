@@ -16,7 +16,7 @@ class App.UiElement.cc_user_autocompletion
         @customerRoleId = @getRoleId('Customer')
         console.log "[CC_FILTER] Role IDs cached - Agent: #{@agentRoleId}, Customer: #{@customerRoleId}"
     
-    # Override the searchObject method to filter results after loading
+    # Override the searchObject method to filter data before processing
     originalSearchObject = autocompletion.searchObject
     autocompletion.searchObject = (query) ->
       # Initialize role IDs before filtering
@@ -25,59 +25,48 @@ class App.UiElement.cc_user_autocompletion
       # Call original search method
       originalSearchObject.call(this, query)
       
-      # Use event-based filtering instead of setTimeout
-      @setupEventBasedFiltering()
-    
-    # Setup event-based filtering to avoid race conditions
-    autocompletion.setupEventBasedFiltering = ->
-      # Remove any existing filter listeners to avoid duplicates
-      @recipientList.off('DOMNodeInserted.cc_filter')
-      
-      # Use MutationObserver for reliable DOM change detection
-      if @mutationObserver
-        @mutationObserver.disconnect()
-      
-      @mutationObserver = new MutationObserver (mutations) =>
+      # Filter results after they're loaded using a simple timeout
+      setTimeout =>
         @filterResults()
-      
-      # Start observing when recipientList is available
-      if @recipientList && @recipientList.length > 0
-        @mutationObserver.observe(@recipientList[0], {
-          childList: true,
-          subtree: true
-        })
-        console.log "[CC_FILTER] MutationObserver started"
-      
-      # Also filter immediately in case results are already loaded
-      @filterResults()
+      , 50
     
-    # Enhanced filtering method with error handling
+    # Simple and reliable filtering method
     autocompletion.filterResults = ->
       try
-        @recipientList.find('.js-object').each (index, element) =>
+        elements = @recipientList.find('.js-object')
+        console.log "[CC_FILTER] Found #{elements.length} elements to filter"
+        
+        elements.each (index, element) =>
           $element = $(element)
           userId = $element.data('id')
           
           if userId
             user = App.User.find(userId)
             
-            # Error handling for null user
             if !user
-              console.warn "[CC_FILTER] User not found for ID: #{userId}, removing element"
+              console.warn "[CC_FILTER] User not found for ID: #{userId}, removing"
               $element.remove()
               return
             
             # Check if user should be filtered out
-            if !@isAgentOrCustomer(user)
-              console.log "[CC_FILTER] Filtering out user: #{user.email} (not Agent/Customer)"
-              $element.remove()
-            else if @isCurrentUser(user)
-              console.log "[CC_FILTER] Filtering out current user: #{user.email}"
+            if !@isValidUserForCC(user)
+              console.log "[CC_FILTER] Filtering out user: #{user.email} (not valid for CC)"
               $element.remove()
             else
               console.log "[CC_FILTER] Keeping user: #{user.email}"
       catch error
         console.error "[CC_FILTER] Error during filtering:", error
+    
+    # Check if user is valid for CC (Agent/Customer, not current user)
+    autocompletion.isValidUserForCC = (user) ->
+      return false if !user
+      
+      # Check if current user
+      if user.id == @currentUserId
+        return false
+      
+      # Check if user has Agent or Customer role
+      return @isAgentOrCustomer(user)
     
     # Enhanced filtering method with cached role IDs
     autocompletion.isAgentOrCustomer = (user) ->
@@ -92,11 +81,6 @@ class App.UiElement.cc_user_autocompletion
           return true
       
       return false
-    
-    # Check if user is current user
-    autocompletion.isCurrentUser = (user) ->
-      return false if !user || !@currentUserId
-      return user.id == @currentUserId
     
     # Enhanced helper method to get role ID by name with error handling
     autocompletion.getRoleId = (roleName) ->
@@ -115,18 +99,5 @@ class App.UiElement.cc_user_autocompletion
       catch error
         console.error "[CC_FILTER] Error getting role ID for '#{roleName}':", error
         return null
-    
-    # Cleanup method to disconnect observers
-    autocompletion.cleanup = ->
-      if @mutationObserver
-        @mutationObserver.disconnect()
-        @mutationObserver = null
-        console.log "[CC_FILTER] MutationObserver disconnected"
-    
-    # Override destroy method to cleanup
-    originalDestroy = autocompletion.destroy
-    autocompletion.destroy = ->
-      @cleanup()
-      originalDestroy?.call(this)
     
     autocompletion.element()
