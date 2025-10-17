@@ -34,28 +34,46 @@ class App.UiElement.cc_user_autocompletion
     autocompletion.filterResults = ->
       try
         elements = @recipientList.find('.js-object')
+        console.log "[CC_FILTER] ===== FILTERING START ====="
         console.log "[CC_FILTER] Found #{elements.length} elements to filter"
+        console.log "[CC_FILTER] Current user ID: #{@currentUserId}"
+        console.log "[CC_FILTER] Agent role ID: #{@agentRoleId}"
+        console.log "[CC_FILTER] Customer role ID: #{@customerRoleId}"
+        
+        if elements.length == 0
+          console.log "[CC_FILTER] No elements found to filter"
+          return
         
         elements.each (index, element) =>
           $element = $(element)
           userId = $element.data('id')
           
+          console.log "[CC_FILTER] Processing element #{index + 1}: user ID #{userId}"
+          
           if userId
             user = App.User.find(userId)
             
             if !user
-              console.warn "[CC_FILTER] User not found for ID: #{userId}, removing"
+              console.warn "[CC_FILTER] ❌ User not found for ID: #{userId}, removing"
               $element.remove()
               return
             
+            console.log "[CC_FILTER] User found: #{user.email} (ID: #{user.id})"
+            console.log "[CC_FILTER] User roles: #{JSON.stringify(user.role_ids)}"
+            
             # Check if user should be filtered out
             if !@isValidUserForCC(user)
-              console.log "[CC_FILTER] Filtering out user: #{user.email} (not valid for CC)"
+              console.log "[CC_FILTER] ❌ Filtering out user: #{user.email} (not valid for CC)"
               $element.remove()
             else
-              console.log "[CC_FILTER] Keeping user: #{user.email}"
+              console.log "[CC_FILTER] ✅ Keeping user: #{user.email}"
+          else
+            console.warn "[CC_FILTER] ❌ No user ID found in element, removing"
+            $element.remove()
+        
+        console.log "[CC_FILTER] ===== FILTERING COMPLETE ====="
       catch error
-        console.error "[CC_FILTER] Error during filtering:", error
+        console.error "[CC_FILTER] ❌ Error during filtering:", error
     
     # Check if user is valid for CC (Agent/Customer, not current user)
     autocompletion.isValidUserForCC = (user) ->
