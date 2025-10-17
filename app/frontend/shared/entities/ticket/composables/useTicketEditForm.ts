@@ -21,7 +21,6 @@ import type {
 } from '#shared/entities/ticket-article/action/plugins/types.ts'
 import { EnumObjectManagerObjects } from '#shared/graphql/types.ts'
 import { useApplicationStore } from '#shared/stores/application.ts'
-import { setCcAutoCompleteBehavior } from '#shared/components/Form/fields/FieldRecipient/features/setCcAutoCompleteBehavior.ts'
 
 import type { FormKitNode } from '@formkit/core'
 import type { Ref } from 'vue'
@@ -189,11 +188,6 @@ export const useTicketEditForm = (
           contact: recipientContact,
           multiple: true,
         },
-        plugins: [
-          {
-            plugin: setCcAutoCompleteBehavior,
-          },
-        ],
       },
       {
         if: '$currentArticleType.fields.subject',
