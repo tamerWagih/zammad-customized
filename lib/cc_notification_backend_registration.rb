@@ -1,8 +1,12 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
 # Ensure CC Notification backend is registered
+# This should be called via migration (20251015000001_register_cc_notification_backend.rb)
+# or manually via rails console if needed
 module CcNotificationBackendRegistration
   def self.register!
+    return unless ActiveRecord::Base.connection.table_exists?('settings')
+    
     Rails.logger.info '[CC_BACKEND] Checking CC Notification backend registration...'
     
     setting = Setting.find_by(name: '9300_cc_notification')
@@ -31,13 +35,9 @@ module CcNotificationBackendRegistration
     Setting.where(area: 'Transaction::Backend::Async').reorder(:name).each do |s|
       Rails.logger.info "[CC_BACKEND]    #{s.name} => #{s.state}"
     end
-  end
-end
-
-# Auto-register on load in development/production
-if Rails.env.development? || Rails.env.production?
-  Rails.application.config.after_initialize do
-    CcNotificationBackendRegistration.register!
+  rescue => e
+    Rails.logger.error "[CC_BACKEND] ❌ Error during registration: #{e.message}"
+    Rails.logger.error e.backtrace.first(5).join("\n")
   end
 end
 
