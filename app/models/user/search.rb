@@ -71,10 +71,32 @@ returns if user has no permissions to search
       end
 
       def search_params_pre(params)
+        # Restrict customers to only see users in their organization (security)
+        if customer_only?(params[:current_user])
+          org_user_ids = []
+          if params[:current_user].organization_id
+            org_user_ids = User.where(organization_id: params[:current_user].organization_id, active: true).pluck(:id)
+          end
+          # Add current user ID in case they have no organization
+          org_user_ids << params[:current_user].id
+          params[:ids] = if params[:ids].present?
+                          params[:ids] & org_user_ids  # Intersection with existing IDs
+                        else
+                          org_user_ids
+                        end
+        end
+        
         return if params[:permissions].blank?
 
         params[:role_ids] ||= []
         params[:role_ids] |= Role.with_permissions(params[:permissions]).pluck(:id)
+      end
+      
+      def customer_only?(current_user)
+        return false if current_user.blank?
+        return true if current_user.permissions?('ticket.customer') && !current_user.permissions?(['admin.user', 'ticket.agent'])
+
+        false
       end
 
       def search_query_extension(params)
