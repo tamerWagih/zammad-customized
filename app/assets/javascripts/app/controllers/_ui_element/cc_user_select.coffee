@@ -17,7 +17,7 @@ class App.UiElement.cc_user_select
     container.html('<p class="loading">Loading users...</p>')
     
     # Make AJAX call exactly like approval system
-    $.ajax(
+    App.Ajax.request(
       id: 'users_for_cc'
       type: 'GET'
       url: "#{App.Config.get('api_path')}/users/search"
