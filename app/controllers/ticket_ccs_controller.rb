@@ -2,9 +2,43 @@
 
 class TicketCcsController < ApplicationController
   before_action :authenticate_and_authorize!
-  before_action :set_ticket
-  before_action :check_permissions
+  before_action :set_ticket, except: [:search_users]
+  before_action :check_permissions, except: [:search_users]
   before_action :set_cc, only: %i[destroy]
+  
+  def search_users
+    query = params[:query] || params[:term] || ''
+    limit = params[:limit] || 50
+    
+    # Get all active users (agents and customers)
+    users = User.where(active: true)
+                .where.not(email: [nil, ''])
+                .order(:firstname, :lastname, :email)
+                .limit(limit)
+    
+    # Filter by query if provided
+    if query.present?
+      users = users.where(
+        'LOWER(firstname) LIKE ? OR LOWER(lastname) LIKE ? OR LOWER(email) LIKE ? OR LOWER(login) LIKE ?',
+        "%#{query.downcase}%",
+        "%#{query.downcase}%",
+        "%#{query.downcase}%",
+        "%#{query.downcase}%"
+      )
+    end
+    
+    # Format response for autocomplete
+    result = users.map do |user|
+      {
+        id: user.id,
+        label: user.fullname.presence || user.email,
+        value: user.email,
+        inactive: !user.active
+      }
+    end
+    
+    render json: result
+  end
   
   def index
     ccs = Service::Ticket::Cc::List

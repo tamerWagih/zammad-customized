@@ -74,8 +74,9 @@ class App.ObjectOrganizationAutocompletion extends App.Controller
   onFocus: =>
     @formControl.addClass 'focus'
     @open()
-    # Don't auto-load users on focus to avoid permission issues
-    # Users will need to type to search
+    # Load users when field is focused (empty query) if no value selected
+    if _.isEmpty(@objectSelect.val()) && (@attribute.name is 'cc_user_ids' || !@attribute.source?.includes('/users/search'))
+      @lazySearch('')
 
   focusInput: =>
     @objectSelect.trigger('focus') if not @formControl.hasClass('focus')
