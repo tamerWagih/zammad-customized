@@ -1,121 +1,70 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_autocompletion
   @render: (attribute, params = {}) ->
-    # Use standard user autocompletion but with CC filtering
-    autocompletion = new App.UserOrganizationAutocompletion(attribute: attribute, params: params)
+    # Find Agent and Customer role IDs (same pattern as approver selection)
+    agentRole = App.Role.findByAttribute('name', 'Agent')
+    customerRole = App.Role.findByAttribute('name', 'Customer')
     
-    # Cache role IDs once to avoid repeated lookups
-    autocompletion.agentRoleId = null
-    autocompletion.customerRoleId = null
-    autocompletion.currentUserId = App.User.current?.id
+    if !agentRole && !customerRole
+      console.error "[CC_FILTER] Neither Agent nor Customer role found"
+      return new App.UserOrganizationAutocompletion(attribute: attribute, params: params).element()
     
-    # Initialize role IDs
-    autocompletion.initializeRoleIds = ->
-      if @agentRoleId == null || @customerRoleId == null
-        @agentRoleId = @getRoleId('Agent')
-        @customerRoleId = @getRoleId('Customer')
-        console.log "[CC_FILTER] Role IDs cached - Agent: #{@agentRoleId}, Customer: #{@customerRoleId}"
+    # Create modified attribute with backend filtering (same pattern as approver)
+    ccAttribute = $.extend(true, {}, attribute)
     
-    # Override the searchObject method to filter data before processing
-    originalSearchObject = autocompletion.searchObject
-    autocompletion.searchObject = (query) ->
-      # Initialize role IDs before filtering
-      @initializeRoleIds()
-      
-      # Call original search method
-      originalSearchObject.call(this, query)
-      
-      # Filter results after they're loaded using a simple timeout
-      setTimeout =>
-        @filterResults()
-      , 50
-    
-    # Simple and reliable filtering method
-    autocompletion.filterResults = ->
-      try
-        elements = @recipientList.find('.js-object')
-        console.log "[CC_FILTER] ===== FILTERING START ====="
-        console.log "[CC_FILTER] Found #{elements.length} elements to filter"
-        console.log "[CC_FILTER] Current user ID: #{@currentUserId}"
-        console.log "[CC_FILTER] Agent role ID: #{@agentRoleId}"
-        console.log "[CC_FILTER] Customer role ID: #{@customerRoleId}"
+    # Override the ajax method to add role filtering to API call
+    originalAjax = App.UserOrganizationAutocompletion.prototype.ajax
+    App.UserOrganizationAutocompletion.prototype.ajax = (options) ->
+      # Only modify CC-related calls
+      if @attribute?.tag == 'cc_user_autocompletion'
+        console.log "[CC_FILTER] Modifying API call for CC filtering"
         
-        if elements.length == 0
-          console.log "[CC_FILTER] No elements found to filter"
-          return
+        # Add role filtering to the API call (same as approver selection)
+        if options.data
+          options.data.role_ids = []
+          options.data.role_ids.push(agentRole.id) if agentRole
+          options.data.role_ids.push(customerRole.id) if customerRole
+          console.log "[CC_FILTER] Added role_ids to API call: #{JSON.stringify(options.data.role_ids)}"
         
-        elements.each (index, element) =>
-          $element = $(element)
-          userId = $element.data('id')
+        # Override success callback to filter results (same pattern as approver)
+        originalSuccess = options.success
+        options.success = (data, status, xhr) =>
+          console.log "[CC_FILTER] API response received, filtering users"
           
-          console.log "[CC_FILTER] Processing element #{index + 1}: user ID #{userId}"
+          # Process the response data (same as approver selection)
+          users = if Array.isArray(data) then data else (data?.users || [])
+          current_user_id = App.User.current()?.id
           
-          if userId
-            user = App.User.find(userId)
-            
-            if !user
-              console.warn "[CC_FILTER] ❌ User not found for ID: #{userId}, removing"
-              $element.remove()
-              return
-            
-            console.log "[CC_FILTER] User found: #{user.email} (ID: #{user.id})"
-            console.log "[CC_FILTER] User roles: #{JSON.stringify(user.role_ids)}"
-            
-            # Check if user should be filtered out
-            if !@isValidUserForCC(user)
-              console.log "[CC_FILTER] ❌ Filtering out user: #{user.email} (not valid for CC)"
-              $element.remove()
-            else
-              console.log "[CC_FILTER] ✅ Keeping user: #{user.email}"
+          # Filter users (same logic as approver selection)
+          filteredUsers = users.filter (user) ->
+            return false if user.id is current_user_id  # Exclude current user
+            return false if user.active is false        # Exclude inactive users
+            return false if !user.email                 # Exclude users without email
+            true
+          
+          console.log "[CC_FILTER] Filtered #{users.length} users down to #{filteredUsers.length}"
+          
+          # Modify the response to only include filtered users
+          if Array.isArray(data)
+            # Replace the array with filtered users
+            filteredData = filteredUsers
+          else if data?.users
+            # Replace the users array
+            data.users = filteredUsers
+            filteredData = data
           else
-            console.warn "[CC_FILTER] ❌ No user ID found in element, removing"
-            $element.remove()
-        
-        console.log "[CC_FILTER] ===== FILTERING COMPLETE ====="
-      catch error
-        console.error "[CC_FILTER] ❌ Error during filtering:", error
+            filteredData = data
+          
+          # Call original success with filtered data
+          originalSuccess(filteredData, status, xhr)
+      
+      # Call original ajax method
+      originalAjax.call(this, options)
     
-    # Check if user is valid for CC (Agent/Customer, not current user)
-    autocompletion.isValidUserForCC = (user) ->
-      return false if !user
-      
-      # Check if current user
-      if user.id == @currentUserId
-        return false
-      
-      # Check if user has Agent or Customer role
-      return @isAgentOrCustomer(user)
+    # Create the autocompletion instance
+    autocompletion = new App.UserOrganizationAutocompletion(attribute: ccAttribute, params: params)
     
-    # Enhanced filtering method with cached role IDs
-    autocompletion.isAgentOrCustomer = (user) ->
-      return false if !user || !user.role_ids
-      
-      # Use cached role IDs
-      @initializeRoleIds()
-      
-      # Check if user has Agent or Customer role
-      for roleId in user.role_ids
-        if roleId == @agentRoleId || roleId == @customerRoleId
-          return true
-      
-      return false
-    
-    # Enhanced helper method to get role ID by name with error handling
-    autocompletion.getRoleId = (roleName) ->
-      try
-        roles = App.Role.all()
-        if !roles
-          console.warn "[CC_FILTER] App.Role.all() returned null/undefined"
-          return null
-        
-        for id, role of roles
-          if role && role.name == roleName
-            return role.id
-        
-        console.warn "[CC_FILTER] Role '#{roleName}' not found"
-        return null
-      catch error
-        console.error "[CC_FILTER] Error getting role ID for '#{roleName}':", error
-        return null
+    # Restore original ajax method after creating instance
+    App.UserOrganizationAutocompletion.prototype.ajax = originalAjax
     
     autocompletion.element()
