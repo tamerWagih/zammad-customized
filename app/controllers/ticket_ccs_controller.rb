@@ -1,43 +1,48 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
 class TicketCcsController < ApplicationController
-  before_action :authenticate_and_authorize!
+  prepend_before_action :authentication_check, only: [:search_users]
+  before_action :authenticate_and_authorize!, except: [:search_users]
   before_action :set_ticket, except: [:search_users]
   before_action :check_permissions, except: [:search_users]
   before_action :set_cc, only: %i[destroy]
   
   def search_users
     query = params[:query] || params[:term] || ''
-    limit = params[:limit] || 50
+    limit = (params[:limit] || 50).to_i
     
-    # Get all active users (agents and customers)
+    # Get all active users (agents and customers) with proper ordering
     users = User.where(active: true)
                 .where.not(email: [nil, ''])
-                .order(:firstname, :lastname, :email)
-                .limit(limit)
     
     # Filter by query if provided
     if query.present?
+      search_term = "%#{User.sanitize_sql_like(query.downcase)}%"
       users = users.where(
         'LOWER(firstname) LIKE ? OR LOWER(lastname) LIKE ? OR LOWER(email) LIKE ? OR LOWER(login) LIKE ?',
-        "%#{query.downcase}%",
-        "%#{query.downcase}%",
-        "%#{query.downcase}%",
-        "%#{query.downcase}%"
+        search_term, search_term, search_term, search_term
       )
     end
     
-    # Format response for autocomplete
+    # Order and limit results
+    users = users.order(Arel.sql('LOWER(firstname), LOWER(lastname), LOWER(email)'))
+                 .limit(limit)
+    
+    # Format response for autocomplete (compatible with user_autocompletion)
     result = users.map do |user|
       {
-        id: user.id,
-        label: user.fullname.presence || user.email,
-        value: user.email,
+        id:       user.id,
+        label:    user.fullname.presence || user.email,
+        value:    user.email,
         inactive: !user.active
       }
     end
     
     render json: result
+  rescue => e
+    Rails.logger.error "CC search_users error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    render json: { error: 'Search failed' }, status: :internal_server_error
   end
   
   def index
