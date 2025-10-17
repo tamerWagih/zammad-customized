@@ -8,60 +8,52 @@ class TicketCcsController < ApplicationController
   before_action :set_cc, only: %i[destroy]
   
   def search_users
+    Rails.logger.info "[CC_SEARCH] ========== ENDPOINT CALLED =========="
+    Rails.logger.info "[CC_SEARCH] Params: #{params.inspect}"
+    Rails.logger.info "[CC_SEARCH] Current user: #{current_user&.id}"
+    
     query = params[:query] || params[:term] || ''
     limit = (params[:limit] || 50).to_i
     
-    Rails.logger.info "[CC_SEARCH] Starting search with query: '#{query}', limit: #{limit}, current_user: #{current_user.id}"
+    Rails.logger.info "[CC_SEARCH] Starting search with query: '#{query}', limit: #{limit}"
     
-    # Get Agent and Customer roles by exact name
-    agent_role = Role.lookup(name: 'Agent')
-    customer_role = Role.lookup(name: 'Customer')
-    
-    Rails.logger.info "[CC_SEARCH] Agent role: #{agent_role&.id}, Customer role: #{customer_role&.id}"
-    
-    if agent_role.nil? && customer_role.nil?
-      Rails.logger.warn "[CC_SEARCH] ⚠️  No Agent or Customer roles found!"
-      return render json: { record_ids: [], assets: {} }
-    end
-    
-    role_ids = [agent_role&.id, customer_role&.id].compact
-    
-    # Get users with Agent or Customer role using JOIN
-    users = User.joins(:roles)
-                .where(active: true)
+    # Simple approach: Get all active users with ticket permissions
+    # Don't use role JOIN - use permission check which is more reliable
+    users = User.where(active: true)
                 .where.not(email: [nil, ''])
-                .where(roles: { id: role_ids })
                 .where.not(id: current_user.id)  # Exclude current user
-                .distinct
     
-    Rails.logger.info "[CC_SEARCH] Users with Agent/Customer role (excluding current user): #{users.count}"
+    Rails.logger.info "[CC_SEARCH] Active users with email (excluding current): #{users.count}"
     
     # Filter by query if provided
     if query.present?
       search_term = "%#{User.sanitize_sql_like(query.downcase)}%"
       users = users.where(
-        'LOWER(users.firstname) LIKE ? OR LOWER(users.lastname) LIKE ? OR LOWER(users.email) LIKE ? OR LOWER(users.login) LIKE ?',
+        'LOWER(firstname) LIKE ? OR LOWER(lastname) LIKE ? OR LOWER(email) LIKE ? OR LOWER(login) LIKE ?',
         search_term, search_term, search_term, search_term
       )
       Rails.logger.info "[CC_SEARCH] After query filter: #{users.count} users"
     end
     
     # Order and limit results
-    users = users.order(Arel.sql('LOWER(users.firstname), LOWER(users.lastname), LOWER(users.email)'))
+    users = users.order(Arel.sql('LOWER(firstname), LOWER(lastname), LOWER(email)'))
                  .limit(limit)
     
-    Rails.logger.info "[CC_SEARCH] Final user count: #{users.count}"
+    Rails.logger.info "[CC_SEARCH] After order/limit: #{users.count}"
     
-    # Build assets hash (required by user_autocompletion)
+    # Build assets hash and filter to only agent/customer permissions
     assets = {}
     record_ids = []
     
     users.each do |user|
-      record_ids << user.id
-      assets = user.assets(assets)
+      # Only include users with ticket.agent OR ticket.customer permission
+      if user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+        record_ids << user.id
+        assets = user.assets(assets)
+      end
     end
     
-    Rails.logger.info "[CC_SEARCH] ✅ Returning #{record_ids.count} users"
+    Rails.logger.info "[CC_SEARCH] ✅ Returning #{record_ids.count} users with agent/customer permissions"
     
     # Return in format expected by user_autocompletion (same as /users/search)
     render json: {
@@ -69,9 +61,10 @@ class TicketCcsController < ApplicationController
       assets: assets
     }
   rescue => e
-    Rails.logger.error "[CC_SEARCH] ❌ Error: #{e.class.name} - #{e.message}"
+    Rails.logger.error "[CC_SEARCH] ❌ EXCEPTION: #{e.class.name}"
+    Rails.logger.error "[CC_SEARCH] Message: #{e.message}"
     Rails.logger.error "[CC_SEARCH] Backtrace:"
-    Rails.logger.error e.backtrace.first(10).join("\n")
+    e.backtrace.first(15).each { |line| Rails.logger.error "[CC_SEARCH]   #{line}" }
     render json: { error: 'Search failed', record_ids: [], assets: {} }, status: :internal_server_error
   end
   

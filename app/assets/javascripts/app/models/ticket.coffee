@@ -29,7 +29,7 @@ class App.Ticket extends App.Model
       { name: 'created_at',               display: __('Created at'),   tag: 'datetime', width: '110px', readonly: 1 },
       { name: 'updated_by_id',            display: __('Updated by'),   relation: 'User', readonly: 1 },
       { name: 'updated_at',               display: __('Updated at'),   tag: 'datetime', width: '110px', readonly: 1 },
-      { name: 'cc_user_ids',              display: __('CC'),           tag: 'user_autocompletion', multiple: true, limit: 100, null: true, relation: 'User', edit: true, placeholder: __('Select users to CC'), source: "#{App.Config.get('api_path')}/tickets/ccs/search_users", nulloption: false, screen: { create_middle: { shown: true, item_class: 'column' } } },
+      { name: 'cc_user_ids',              display: __('CC'),           tag: 'user_autocompletion', multiple: true, limit: 100, null: true, relation: 'User', edit: true, source: "#{App.Config.get('api_path')}/tickets/ccs/search_users", disableCreateObject: true, minLengt: 2, nulloption: false, screen: { create_middle: { shown: true, item_class: 'column' } } },
     ]
 
   uiUrl: ->
