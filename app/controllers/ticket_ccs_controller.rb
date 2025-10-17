@@ -2,8 +2,8 @@
 
 class TicketCcsController < ApplicationController
   before_action :authenticate_and_authorize!
-  before_action :set_ticket
-  before_action :check_permissions
+  before_action :set_ticket, except: [:search_users]
+  before_action :check_permissions, except: [:search_users]
   before_action :set_cc, only: %i[destroy]
   
   def index
@@ -12,6 +12,42 @@ class TicketCcsController < ApplicationController
       .execute(ticket: @ticket)
     
     render json: { ccs: ccs.map { |cc| serialize_cc(cc) } }
+  end
+  
+  # Search for users that can be CC'd (agents and customers only)
+  def search_users
+    # Get Agent and Customer roles
+    agent_role = Role.find_by(name: 'Agent')
+    customer_role = Role.find_by(name: 'Customer')
+    role_ids = [agent_role&.id, customer_role&.id].compact
+    
+    # Search users with these roles
+    users = User.search(
+      query:            params[:query] || params[:term],
+      role_ids:         role_ids,
+      limit:            params[:limit] || 50,
+      current_user:     current_user,
+      full:             true,
+      with_total_count: false,
+    )&.dig(:objects) || []
+    
+    # Filter out current user and inactive users
+    users = users.select { |u| u.active && u.id != current_user.id }
+    
+    # Format for autocomplete
+    result = users.map do |user|
+      realname = user.fullname(recipient_line: true) || user.fullname || user.email || user.id
+      value = user.email || realname
+      
+      {
+        id: user.id,
+        label: realname,
+        value: realname,
+        inactive: !user.active
+      }
+    end
+    
+    render json: result, status: :ok
   end
   
   def create
