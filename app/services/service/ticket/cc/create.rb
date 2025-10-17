@@ -11,6 +11,12 @@ class Service::Ticket::Cc::Create < Service::BaseWithCurrentUser
       raise Exceptions::UnprocessableEntity, __('User must be an agent or customer')
     end
     
+    # Prevent CCing yourself
+    if cc_user.id == current_user.id
+      raise Exceptions::UnprocessableEntity,
+            __('Cannot CC yourself')
+    end
+    
     # Prevent CC'ing the ticket's customer (they already have access)
     if ticket.customer_id == cc_user.id
       raise Exceptions::UnprocessableEntity,
