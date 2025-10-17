@@ -11,21 +11,32 @@ class TicketCcsController < ApplicationController
     query = params[:query] || params[:term] || ''
     limit = (params[:limit] || 50).to_i
     
-    # Get all active users (agents and customers) with proper ordering
+    # Get Agent and Customer roles (exact match, not partial)
+    agent_role = Role.find_by(name: 'Agent')
+    customer_role = Role.find_by(name: 'Customer')
+    
+    return render json: { record_ids: [], assets: {} } if agent_role.nil? && customer_role.nil?
+    
+    role_ids = [agent_role&.id, customer_role&.id].compact
+    
+    # Get all active users with Agent or Customer role only
     users = User.where(active: true)
                 .where.not(email: [nil, ''])
+                .joins(:roles)
+                .where(roles: { id: role_ids })
+                .distinct
     
     # Filter by query if provided
     if query.present?
       search_term = "%#{User.sanitize_sql_like(query.downcase)}%"
       users = users.where(
-        'LOWER(firstname) LIKE ? OR LOWER(lastname) LIKE ? OR LOWER(email) LIKE ? OR LOWER(login) LIKE ?',
+        'LOWER(users.firstname) LIKE ? OR LOWER(users.lastname) LIKE ? OR LOWER(users.email) LIKE ? OR LOWER(users.login) LIKE ?',
         search_term, search_term, search_term, search_term
       )
     end
     
     # Order and limit results
-    users = users.order(Arel.sql('LOWER(firstname), LOWER(lastname), LOWER(email)'))
+    users = users.order(Arel.sql('LOWER(users.firstname), LOWER(users.lastname), LOWER(users.email)'))
                  .limit(limit)
     
     # Build assets hash (required by user_autocompletion)
@@ -33,6 +44,9 @@ class TicketCcsController < ApplicationController
     record_ids = []
     
     users.each do |user|
+      # Exclude current user (cannot CC themselves)
+      next if user.id == current_user.id
+      
       record_ids << user.id
       assets = user.assets(assets)
     end
