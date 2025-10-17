@@ -9,6 +9,17 @@ module Gql::Queries
 
     type [Gql::Types::AutocompleteSearch::RecipientEntryType], null: false
 
+    def find_users(query:, limit:)
+      users = ::User.search(
+        query:,
+        limit:,
+        current_user: context.current_user,
+      )
+      
+      # Filter out current user for recipient searches
+      users.reject { |user| user.id == context.current_user&.id }
+    end
+
     def post_process(results, input:)
       results.flat_map do |user|
         case input[:contact]
