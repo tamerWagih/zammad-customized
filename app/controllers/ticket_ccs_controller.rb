@@ -11,59 +11,57 @@ class TicketCcsController < ApplicationController
     query = params[:query] || params[:term] || ''
     limit = (params[:limit] || 50).to_i
     
-    Rails.logger.info "[CC_SEARCH] Starting search with query: '#{query}', limit: #{limit}"
+    Rails.logger.info "[CC_SEARCH] Starting search with query: '#{query}', limit: #{limit}, current_user: #{current_user.id}"
     
-    # Get all active users with email addresses first
-    users = User.where(active: true).where.not(email: [nil, ''])
+    # Get Agent and Customer roles by exact name
+    agent_role = Role.lookup(name: 'Agent')
+    customer_role = Role.lookup(name: 'Customer')
     
-    Rails.logger.info "[CC_SEARCH] Initial user count (active with email): #{users.count}"
+    Rails.logger.info "[CC_SEARCH] Agent role: #{agent_role&.id}, Customer role: #{customer_role&.id}"
     
-    # Filter to only Agent and Customer roles
-    # Use permissions check instead of role names for more robust filtering
-    user_ids_with_permissions = []
-    
-    users.find_each do |user|
-      # Check if user has ticket.agent OR ticket.customer permission
-      if user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
-        user_ids_with_permissions << user.id
-      end
+    if agent_role.nil? && customer_role.nil?
+      Rails.logger.warn "[CC_SEARCH] ⚠️  No Agent or Customer roles found!"
+      return render json: { record_ids: [], assets: {} }
     end
     
-    Rails.logger.info "[CC_SEARCH] Users with agent/customer permissions: #{user_ids_with_permissions.count}"
+    role_ids = [agent_role&.id, customer_role&.id].compact
     
-    # Filter to only these users
-    users = User.where(id: user_ids_with_permissions, active: true)
+    # Get users with Agent or Customer role using JOIN
+    users = User.joins(:roles)
+                .where(active: true)
+                .where.not(email: [nil, ''])
+                .where(roles: { id: role_ids })
+                .where.not(id: current_user.id)  # Exclude current user
+                .distinct
+    
+    Rails.logger.info "[CC_SEARCH] Users with Agent/Customer role (excluding current user): #{users.count}"
     
     # Filter by query if provided
     if query.present?
       search_term = "%#{User.sanitize_sql_like(query.downcase)}%"
       users = users.where(
-        'LOWER(firstname) LIKE ? OR LOWER(lastname) LIKE ? OR LOWER(email) LIKE ? OR LOWER(login) LIKE ?',
+        'LOWER(users.firstname) LIKE ? OR LOWER(users.lastname) LIKE ? OR LOWER(users.email) LIKE ? OR LOWER(users.login) LIKE ?',
         search_term, search_term, search_term, search_term
       )
       Rails.logger.info "[CC_SEARCH] After query filter: #{users.count} users"
     end
     
     # Order and limit results
-    users = users.order(Arel.sql('LOWER(firstname), LOWER(lastname), LOWER(email)'))
+    users = users.order(Arel.sql('LOWER(users.firstname), LOWER(users.lastname), LOWER(users.email)'))
                  .limit(limit)
     
-    Rails.logger.info "[CC_SEARCH] Final user count after order/limit: #{users.count}"
+    Rails.logger.info "[CC_SEARCH] Final user count: #{users.count}"
     
     # Build assets hash (required by user_autocompletion)
     assets = {}
     record_ids = []
     
     users.each do |user|
-      # Exclude current user (cannot CC themselves)
-      next if user.id == current_user.id
-      
       record_ids << user.id
       assets = user.assets(assets)
     end
     
-    Rails.logger.info "[CC_SEARCH] Final record_ids count (excluding current user): #{record_ids.count}"
-    Rails.logger.info "[CC_SEARCH] Returning users: #{users.map { |u| "#{u.fullname} (#{u.email})" }.join(', ')}"
+    Rails.logger.info "[CC_SEARCH] ✅ Returning #{record_ids.count} users"
     
     # Return in format expected by user_autocompletion (same as /users/search)
     render json: {
