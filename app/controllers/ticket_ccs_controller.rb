@@ -19,43 +19,13 @@ class TicketCcsController < ApplicationController
     # Get Agent and Customer roles
     agent_role = Role.find_by(name: 'Agent')
     customer_role = Role.find_by(name: 'Customer')
-    
-    if agent_role.blank? && customer_role.blank?
-      render json: { error: 'Agent or Customer roles not found' }, status: :unprocessable_entity
-      return
-    end
-    
     role_ids = [agent_role&.id, customer_role&.id].compact
     
-    # Search users with these roles
-    search_result = User.search(
-      query:            params[:query] || params[:term] || '',
-      role_ids:         role_ids,
-      limit:            params[:limit] || 50,
-      current_user:     current_user,
-      full:             true,
-      with_total_count: false,
-    )
+    # Add role_ids to params for filtering
+    params[:role_ids] = role_ids
     
-    users = search_result.is_a?(Hash) ? (search_result[:objects] || []) : []
-    
-    # Filter out current user and inactive users
-    users = users.select { |u| u.active && u.id != current_user.id }
-    
-    # Format for autocomplete
-    result = users.map do |user|
-      realname = user.fullname(recipient_line: true) || user.fullname || user.email || user.id.to_s
-      value = user.email || realname
-      
-      {
-        id: user.id,
-        label: realname,
-        value: realname,
-        inactive: !user.active
-      }
-    end
-    
-    render json: result, status: :ok
+    # Use the standard model_search_render (same as UsersController#search)
+    model_search_render(User, params)
   rescue StandardError => e
     Rails.logger.error "CC search_users error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
