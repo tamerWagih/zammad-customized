@@ -1,75 +1,41 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_autocompletion
   @render: (attribute, params = {}) ->
-    # Helper function to get role IDs (lazy loading)
-    getRoleIds = ->
-      roleIds = []
-      agentRole = App.Role.findByAttribute('name', 'Agent')
-      customerRole = App.Role.findByAttribute('name', 'Customer')
-      roleIds.push(agentRole.id) if agentRole
-      roleIds.push(customerRole.id) if customerRole
-      roleIds
+    # Simple approach: Get users from memory like approval system does
+    # This avoids API call complexity and potential errors
     
-    # Create a custom class that extends UserOrganizationAutocompletion
-    class CcUserAutocompletion extends App.UserOrganizationAutocompletion
-      ajax: (options) ->
-        # Only modify for CC field
-        if @attribute?.tag == 'cc_user_autocompletion'
-          # Get role IDs at runtime (when ajax is called, not at render time)
-          roleIds = getRoleIds()
-          
-          # Add role filtering to the API call
-          if options.data && roleIds.length > 0
-            options.data.role_ids = roleIds
-          
-          # Wrap the original success callback to filter results
-          if options.success
-            originalSuccess = options.success
-            options.success = (data, status, xhr) =>
-              # Check if data has the expected structure
-              if !data || typeof data != 'object'
-                return originalSuccess(data, status, xhr)
-              
-              # Get current user ID
-              current_user_id = App.User.current()?.id
-              
-              # /users/search returns: { record_ids: [...], assets: {...} }
-              # Filter record_ids to exclude current user and inactive users
-              if data.record_ids && Array.isArray(data.record_ids) && data.assets?.User
-                filteredRecordIds = data.record_ids.filter (id) ->
-                  user = data.assets.User[id]
-                  return false if !user
-                  return false if user.id is current_user_id
-                  return false if user.active is false
-                  return false if !user.email
-                  true
-                
-                data.record_ids = filteredRecordIds
-              
-              # Global search returns: { result: [{type: 'User', id: X}, ...], assets: {...} }
-              # Filter result array (for compatibility with global search)
-              if data.result && Array.isArray(data.result) && data.assets?.User
-                filteredResult = data.result.filter (item) ->
-                  # Only filter User items, leave Organizations as-is
-                  if item.type == 'User'
-                    user = data.assets.User[item.id]
-                    return false if !user
-                    return false if user.id is current_user_id
-                    return false if user.active is false
-                    return false if !user.email
-                    true
-                  else
-                    # Keep non-User items (like Organizations)
-                    true
-                
-                data.result = filteredResult
-              
-              # Call original success callback with filtered data
-              originalSuccess(data, status, xhr)
-        
-        # Call parent ajax method
-        super(options)
+    current_user_id = App.User.current()?.id
+    eligible_users = []
     
-    # Create instance with custom class
-    autocompletion = new CcUserAutocompletion(attribute: attribute, params: params)
-    autocompletion.element()
+    # Get all agents and customers (same as approval pattern)
+    for user_id, user of App.User.all()
+      continue if !user.active  # Skip inactive users
+      continue if !user.email   # Skip users without email
+      continue if user.id is current_user_id  # Skip current user (can't CC yourself)
+      
+      # Include agents and customers
+      if user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+        eligible_users.push(user)
+    
+    # Sort by display name (same as approval pattern)
+    eligible_users = _.sortBy(eligible_users, (u) -> u.displayName())
+    
+    # Build options for multiselect
+    options = []
+    for user in eligible_users
+      displayName = user.displayName()
+      if user.email && displayName != user.email
+        displayName = "#{displayName} <#{user.email}>"
+      
+      options.push
+        value: user.id
+        name: displayName
+    
+    # Use standard multiselect instead of autocomplete
+    attribute_new = _.clone(attribute)
+    attribute_new.options = options
+    attribute_new.tag = 'multiselect'  # Use standard multiselect
+    attribute_new.multiple = true
+    attribute_new.nulloption = false
+    
+    App.UiElement.multiselect.render(attribute_new, params)
