@@ -2,7 +2,7 @@
 class App.CcUserAutocompletion extends App.UserOrganizationAutocompletion
   
   # Override the buildObjectItem method to filter results
-  buildObjectItem: (object) =>
+  buildObjectItem: (object) ->
     # Only show Agents and Customers
     if !@isAgentOrCustomer(object)
       return null
@@ -11,7 +11,7 @@ class App.CcUserAutocompletion extends App.UserOrganizationAutocompletion
     super(object)
   
   # Check if user is Agent or Customer
-  isAgentOrCustomer: (user) =>
+  isAgentOrCustomer: (user) ->
     return false if !user || !user.role_ids
     
     # Get Agent and Customer role IDs
@@ -26,14 +26,14 @@ class App.CcUserAutocompletion extends App.UserOrganizationAutocompletion
     return false
   
   # Helper method to get role ID by name
-  getRoleId: (roleName) =>
+  getRoleId: (roleName) ->
     for id, role of App.Role.all()
       if role && role.name == roleName
         return role.id
     return null
   
   # Override searchObject to filter results
-  searchObject: (query) =>
+  searchObject: (query) ->
     # Call parent searchObject
     super(query)
     
@@ -41,7 +41,7 @@ class App.CcUserAutocompletion extends App.UserOrganizationAutocompletion
     @filterResults()
   
   # Filter the results to only show Agents and Customers
-  filterResults: =>
+  filterResults: ->
     @recipientList.find('.js-object').each (index, element) =>
       $element = $(element)
       userId = $element.data('id')
