@@ -40,8 +40,11 @@ class Transaction::CcNotification
     
     # Only process Ticket::Cc objects
     if @item[:object] != 'Ticket::Cc'
+      Rails.logger.info "[CC_NOTIFICATION] ⏭️  Skipped: Not a Ticket::Cc object (got #{@item[:object]})"
       return
     end
+    
+    Rails.logger.info "[CC_NOTIFICATION] ✅ Processing Ticket::Cc notification"
     
     # return if we run import mode
     if Setting.get('import_mode')
