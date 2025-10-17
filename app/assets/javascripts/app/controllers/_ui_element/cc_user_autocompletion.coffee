@@ -30,39 +30,41 @@ class App.UiElement.cc_user_autocompletion
           if options.success
             originalSuccess = options.success
             options.success = (data, status, xhr) =>
-              console.log "[CC_FILTER] Processing API response"
+              console.log "[CC_FILTER] Processing API response", data
               
-              # Safely extract users array
-              users = []
-              if Array.isArray(data)
-                users = data
-              else if data && typeof data == 'object' && Array.isArray(data.assets?.User)
-                users = data.assets.User
-              else if data && typeof data == 'object' && data.result == 'ok'
-                # For search results, don't filter here - already filtered by backend
+              # Check if data has the expected structure
+              if !data || typeof data != 'object'
+                console.log "[CC_FILTER] Invalid data structure, passing through"
                 return originalSuccess(data, status, xhr)
               
               # Get current user ID
               current_user_id = App.User.current()?.id
               
-              # Filter users
-              if users.length > 0
-                filteredUsers = users.filter (user) ->
-                  return false if !user || typeof user != 'object'
-                  return false if user.id is current_user_id
-                  return false if user.active is false
-                  return false if !user.email
-                  true
+              # Filter data.result array (expected format: [{type: 'User', id: X}, ...])
+              if data.result && Array.isArray(data.result)
+                console.log "[CC_FILTER] Filtering result array with #{data.result.length} items"
                 
-                console.log "[CC_FILTER] Filtered #{users.length} users to #{filteredUsers.length}"
+                # Filter the result array
+                filteredResult = data.result.filter (item) ->
+                  # Only filter User items, leave Organizations as-is
+                  if item.type == 'User'
+                    # Get the full user object from assets
+                    user = data.assets?.User?[item.id]
+                    return false if !user
+                    return false if user.id is current_user_id
+                    return false if user.active is false
+                    return false if !user.email
+                    true
+                  else
+                    # Keep non-User items (like Organizations)
+                    true
                 
-                # Update the data structure
-                if Array.isArray(data)
-                  data = filteredUsers
-                else if data?.assets?.User
-                  data.assets.User = filteredUsers
+                console.log "[CC_FILTER] Filtered #{data.result.length} items to #{filteredResult.length}"
+                data.result = filteredResult
+              else
+                console.log "[CC_FILTER] No result array found, passing through unchanged"
               
-              # Call original success callback
+              # Call original success callback with filtered data
               originalSuccess(data, status, xhr)
         
         # Call parent ajax method
