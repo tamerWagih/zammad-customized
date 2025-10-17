@@ -1,70 +1,73 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_autocompletion
   @render: (attribute, params = {}) ->
-    # Find Agent and Customer role IDs (same pattern as approver selection)
-    agentRole = App.Role.findByAttribute('name', 'Agent')
-    customerRole = App.Role.findByAttribute('name', 'Customer')
+    # Helper function to get role IDs (lazy loading)
+    getRoleIds = ->
+      roleIds = []
+      agentRole = App.Role.findByAttribute('name', 'Agent')
+      customerRole = App.Role.findByAttribute('name', 'Customer')
+      roleIds.push(agentRole.id) if agentRole
+      roleIds.push(customerRole.id) if customerRole
+      console.log "[CC_FILTER] Found role IDs: #{JSON.stringify(roleIds)}"
+      roleIds
     
-    if !agentRole && !customerRole
-      console.error "[CC_FILTER] Neither Agent nor Customer role found"
-      return new App.UserOrganizationAutocompletion(attribute: attribute, params: params).element()
-    
-    # Create modified attribute with backend filtering (same pattern as approver)
-    ccAttribute = $.extend(true, {}, attribute)
-    
-    # Override the ajax method to add role filtering to API call
-    originalAjax = App.UserOrganizationAutocompletion.prototype.ajax
-    App.UserOrganizationAutocompletion.prototype.ajax = (options) ->
-      # Only modify CC-related calls
-      if @attribute?.tag == 'cc_user_autocompletion'
-        console.log "[CC_FILTER] Modifying API call for CC filtering"
+    # Create a custom class that extends UserOrganizationAutocompletion
+    class CcUserAutocompletion extends App.UserOrganizationAutocompletion
+      ajax: (options) ->
+        # Only modify for CC field
+        if @attribute?.tag == 'cc_user_autocompletion'
+          console.log "[CC_FILTER] Intercepting ajax call for CC field"
+          
+          # Get role IDs at runtime (when ajax is called, not at render time)
+          roleIds = getRoleIds()
+          
+          # Add role filtering to the API call
+          if options.data && roleIds.length > 0
+            options.data.role_ids = roleIds
+            console.log "[CC_FILTER] Added role_ids to API call"
+          
+          # Wrap the original success callback to filter results
+          if options.success
+            originalSuccess = options.success
+            options.success = (data, status, xhr) =>
+              console.log "[CC_FILTER] Processing API response"
+              
+              # Safely extract users array
+              users = []
+              if Array.isArray(data)
+                users = data
+              else if data && typeof data == 'object' && Array.isArray(data.assets?.User)
+                users = data.assets.User
+              else if data && typeof data == 'object' && data.result == 'ok'
+                # For search results, don't filter here - already filtered by backend
+                return originalSuccess(data, status, xhr)
+              
+              # Get current user ID
+              current_user_id = App.User.current()?.id
+              
+              # Filter users
+              if users.length > 0
+                filteredUsers = users.filter (user) ->
+                  return false if !user || typeof user != 'object'
+                  return false if user.id is current_user_id
+                  return false if user.active is false
+                  return false if !user.email
+                  true
+                
+                console.log "[CC_FILTER] Filtered #{users.length} users to #{filteredUsers.length}"
+                
+                # Update the data structure
+                if Array.isArray(data)
+                  data = filteredUsers
+                else if data?.assets?.User
+                  data.assets.User = filteredUsers
+              
+              # Call original success callback
+              originalSuccess(data, status, xhr)
         
-        # Add role filtering to the API call (same as approver selection)
-        if options.data
-          options.data.role_ids = []
-          options.data.role_ids.push(agentRole.id) if agentRole
-          options.data.role_ids.push(customerRole.id) if customerRole
-          console.log "[CC_FILTER] Added role_ids to API call: #{JSON.stringify(options.data.role_ids)}"
-        
-        # Override success callback to filter results (same pattern as approver)
-        originalSuccess = options.success
-        options.success = (data, status, xhr) =>
-          console.log "[CC_FILTER] API response received, filtering users"
-          
-          # Process the response data (same as approver selection)
-          users = if Array.isArray(data) then data else (data?.users || [])
-          current_user_id = App.User.current()?.id
-          
-          # Filter users (same logic as approver selection)
-          filteredUsers = users.filter (user) ->
-            return false if user.id is current_user_id  # Exclude current user
-            return false if user.active is false        # Exclude inactive users
-            return false if !user.email                 # Exclude users without email
-            true
-          
-          console.log "[CC_FILTER] Filtered #{users.length} users down to #{filteredUsers.length}"
-          
-          # Modify the response to only include filtered users
-          if Array.isArray(data)
-            # Replace the array with filtered users
-            filteredData = filteredUsers
-          else if data?.users
-            # Replace the users array
-            data.users = filteredUsers
-            filteredData = data
-          else
-            filteredData = data
-          
-          # Call original success with filtered data
-          originalSuccess(filteredData, status, xhr)
-      
-      # Call original ajax method
-      originalAjax.call(this, options)
+        # Call parent ajax method
+        super(options)
     
-    # Create the autocompletion instance
-    autocompletion = new App.UserOrganizationAutocompletion(attribute: ccAttribute, params: params)
-    
-    # Restore original ajax method after creating instance
-    App.UserOrganizationAutocompletion.prototype.ajax = originalAjax
-    
+    # Create instance with custom class
+    autocompletion = new CcUserAutocompletion(attribute: attribute, params: params)
     autocompletion.element()
