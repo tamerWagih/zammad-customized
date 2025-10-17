@@ -2,8 +2,8 @@
 
 class TicketCcsController < ApplicationController
   before_action :authenticate_and_authorize!
-  before_action :set_ticket, except: [:search_users]
-  before_action :check_permissions, except: [:search_users]
+  before_action :set_ticket
+  before_action :check_permissions
   before_action :set_cc, only: %i[destroy]
   
   def index
@@ -14,23 +14,6 @@ class TicketCcsController < ApplicationController
     render json: { ccs: ccs.map { |cc| serialize_cc(cc) } }
   end
   
-  # Search for users that can be CC'd (agents and customers only)
-  def search_users
-    # Get Agent and Customer roles
-    agent_role = Role.find_by(name: 'Agent')
-    customer_role = Role.find_by(name: 'Customer')
-    role_ids = [agent_role&.id, customer_role&.id].compact
-    
-    # Add role_ids to params for filtering
-    params[:role_ids] = role_ids
-    
-    # Use the standard model_search_render (same as UsersController#search)
-    model_search_render(User, params)
-  rescue StandardError => e
-    Rails.logger.error "CC search_users error: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-    render json: { error: "Search failed: #{e.message}" }, status: :internal_server_error
-  end
   
   def create
     cc = Service::Ticket::Cc::Create
