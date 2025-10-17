@@ -2,5 +2,6 @@
 
 class Controllers::UsersControllerPolicy < Controllers::ApplicationControllerPolicy
   permit! %i[import_example import_start unlock], to: 'admin.user'
-  permit! %i[search history create update], to: ['ticket.agent', 'admin.user', 'ticket.customer']
+  permit! %i[history create update], to: ['ticket.agent', 'admin.user']
+  permit! %i[search], to: ['ticket.agent', 'admin.user', 'ticket.customer']
 end
