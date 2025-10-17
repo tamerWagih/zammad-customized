@@ -4,13 +4,27 @@ class App.UiElement.cc_user_autocompletion
     # Use standard user autocompletion but with CC filtering
     autocompletion = new App.UserOrganizationAutocompletion(attribute: attribute, params: params)
     
-    # Override the buildObjectItem method to filter results
-    originalBuildObjectItem = autocompletion.buildObjectItem
-    autocompletion.buildObjectItem = (object) ->
-      # Only show Agents and Customers
-      if @isAgentOrCustomer(object)
-        return originalBuildObjectItem.call(this, object)
-      return null
+    # Override the searchObject method to filter results after loading
+    originalSearchObject = autocompletion.searchObject
+    autocompletion.searchObject = (query) ->
+      # Call original search method
+      originalSearchObject.call(this, query)
+      
+      # Filter results after they're loaded
+      setTimeout =>
+        @filterResults()
+      , 100
+    
+    # Add filtering method to remove non-Agent/Customer users
+    autocompletion.filterResults = ->
+      @recipientList.find('.js-object').each (index, element) =>
+        $element = $(element)
+        userId = $element.data('id')
+        
+        if userId
+          user = App.User.find(userId)
+          if !@isAgentOrCustomer(user)
+            $element.remove()
     
     # Add filtering method
     autocompletion.isAgentOrCustomer = (user) ->
