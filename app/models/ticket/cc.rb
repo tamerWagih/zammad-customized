@@ -107,6 +107,11 @@ class Ticket::Cc < ApplicationModel
   end
   
   def trigger_create_notification
+    Rails.logger.info "[CC_MODEL] 🔔 trigger_create_notification called for CC ##{id}"
+    Rails.logger.info "[CC_MODEL]    Ticket: ##{ticket_id}"
+    Rails.logger.info "[CC_MODEL]    User: #{user&.email} (#{user_id})"
+    Rails.logger.info "[CC_MODEL]    Created by: #{created_by&.email} (#{created_by_id})"
+    
     OnlineNotification.add(
       type:          'You were CC\'d on a ticket',
       object:        'Ticket',
@@ -115,6 +120,11 @@ class Ticket::Cc < ApplicationModel
       user_id:       user_id,
       created_by_id: created_by_id || 1,
     )
+    
+    Rails.logger.info "[CC_MODEL] ✅ OnlineNotification created successfully"
+  rescue => e
+    Rails.logger.error "[CC_MODEL] ❌ Failed to create OnlineNotification: #{e.message}"
+    Rails.logger.error e.backtrace.first(5).join("\n")
   end
   
   def trigger_destroy_notification
