@@ -22,15 +22,41 @@ class App.UiElement.cc_user_select
       all_users = App.User.all()
       console.log('[CC_DEBUG] All users from App.User.all():', all_users.length)
       
-      # Get Agent and Customer roles
+      # If we have very few users, try to load more via AJAX
+      if all_users.length < 10
+        console.log('[CC_DEBUG] Few users loaded, trying AJAX to get more...')
+        # This is a fallback - the native searchable_select should handle this
+        # But let's see what we get from the search results
+        console.log('[CC_DEBUG] Search results users:', users.length)
+        console.log('[CC_DEBUG] Search results:', users)
+      
+      # Get Agent and Customer roles - try multiple ways
       agent_role = App.Role.findByAttribute('name', 'Agent')
       customer_role = App.Role.findByAttribute('name', 'Customer')
+      
+      # If not found by name, try to find by permissions
+      if !agent_role
+        agent_roles = App.Role.withPermissions('ticket.agent')
+        agent_role = agent_roles[0] if agent_roles.length > 0
+        console.log('[CC_DEBUG] Agent role by permissions:', agent_role)
+      
+      if !customer_role
+        customer_roles = App.Role.withPermissions('ticket.customer')
+        customer_role = customer_roles[0] if customer_roles.length > 0
+        console.log('[CC_DEBUG] Customer role by permissions:', customer_role)
+      
       console.log('[CC_DEBUG] Agent role:', agent_role)
       console.log('[CC_DEBUG] Customer role:', customer_role)
+      console.log('[CC_DEBUG] All roles:', App.Role.all())
       
       # Filter to only show agents and customers, exclude current user
       filtered_users = []
-      for user_id, user of all_users
+      
+      # Try to use search results if they have more complete data
+      users_to_check = if users.length > all_users.length then users else all_users
+      console.log('[CC_DEBUG] Using users_to_check:', users_to_check.length)
+      
+      for user in users_to_check
         console.log('[CC_DEBUG] Checking user:', user.login, 'ID:', user.id, 'Active:', user.active)
         console.log('[CC_DEBUG] User role_ids:', user.role_ids)
         
