@@ -158,26 +158,9 @@ class Transaction::CcNotification
       return
     end
 
-    # NOTE: Online notifications are handled by ChecksClientNotification (WebSocket broadcasts)
+    # NOTE: Online notifications are handled by the controller's notify_user method
     # This backend is ONLY responsible for EMAIL notifications
     used_channels = []
-
-    # Add online notification
-    if channels['online']
-      seen = false
-      created_by_id = cc_record.created_by_id || current_user.id || 1
-
-      OnlineNotification.add(
-        type:          @item[:type],
-        object:        'Ticket',
-        o_id:          ticket.id,
-        seen:          seen,
-        created_by_id: created_by_id,
-        user_id:       user.id,
-      )
-      Rails.logger.debug { "sent CC online notification to user (#{@item[:type]}/#{ticket.id}/#{user.email})" }
-      used_channels.push 'online'
-    end
 
     # ignore email channel notification and empty emails
     if !channels['email']
