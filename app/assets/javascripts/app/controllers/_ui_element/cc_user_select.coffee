@@ -31,6 +31,8 @@ class App.UiElement.cc_user_select
         customer_role = customer_roles[0] if customer_roles?.length > 0
       
       console.log('[CC_DEBUG] Filtering users - Agent role:', agent_role?.id, 'Customer role:', customer_role?.id)
+      console.log('[CC_DEBUG] Agent role object:', agent_role)
+      console.log('[CC_DEBUG] Customer role object:', customer_role)
       
       # Filter users
       filtered = []
@@ -42,14 +44,22 @@ class App.UiElement.cc_user_select
         # If role_ids is not available (permission issue), show all active users
         if !user.role_ids || user.role_ids.length == 0
           # Permission issue - can't see role_ids, so include all active users
+          console.log('[CC_DEBUG] User', user.login, 'has no role_ids - including (permission issue)')
           filtered.push(user)
           continue
+        
+        console.log('[CC_DEBUG] User', user.login, 'role_ids:', user.role_ids)
         
         has_agent_role = agent_role && agent_role.id in user.role_ids
         has_customer_role = customer_role && customer_role.id in user.role_ids
         
+        console.log('[CC_DEBUG] User', user.login, 'has_agent_role:', has_agent_role, 'has_customer_role:', has_customer_role)
+        
         if has_agent_role || has_customer_role
+          console.log('[CC_DEBUG] User', user.login, 'included in results')
           filtered.push(user)
+        else
+          console.log('[CC_DEBUG] User', user.login, 'excluded - no matching roles')
       
       console.log('[CC_DEBUG] Filtered', filtered.length, 'users from', users.length, 'total')
       filtered
