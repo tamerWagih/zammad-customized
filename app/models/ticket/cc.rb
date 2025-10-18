@@ -6,6 +6,7 @@ class Ticket::Cc < ApplicationModel
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Cc::TriggersNotifications
+  include Ticket::Cc::TriggersSubscriptions
 
   PERMISSIONS = %w[read comment full].freeze
 
