@@ -12,6 +12,12 @@ class App.UiElement.cc_user_select
       # Try to trigger loading more users
       App.User.fetch()
       console.log('[CC_DEBUG] After App.User.fetch():', App.User.all().length)
+      
+      # If still few users, try loading with different parameters
+      if App.User.all().length < 10
+        console.log('[CC_DEBUG] Still few users, trying to load with limit...')
+        App.User.fetch(limit: 1000)
+        console.log('[CC_DEBUG] After App.User.fetch(limit: 1000):', App.User.all().length)
     
     # SOLUTION: Use searchable_select with 'User' relation
     # This uses App.User.all() which is already loaded in frontend
@@ -34,21 +40,26 @@ class App.UiElement.cc_user_select
       current_user_id = App.User.current()?.id
       
       # Get Agent and Customer roles
-      agent_role = App.Role.findByAttribute('name', 'Agent')
-      customer_role = App.Role.findByAttribute('name', 'Customer')
+      # ISSUE: Both roles have same ID (1) - they're the same role!
+      # SOLUTION: Find roles by permissions instead of name
+      agent_roles = App.Role.withPermissions('ticket.agent')
+      customer_roles = App.Role.withPermissions('ticket.customer')
       
-      # Fallback: try by permissions if not found by name
+      agent_role = agent_roles[0] if agent_roles?.length > 0
+      customer_role = customer_roles[0] if customer_roles?.length > 0
+      
+      # If not found by permissions, try by name as fallback
       if !agent_role
-        agent_roles = App.Role.withPermissions('ticket.agent')
-        agent_role = agent_roles[0] if agent_roles?.length > 0
-      
+        agent_role = App.Role.findByAttribute('name', 'Agent')
       if !customer_role
-        customer_roles = App.Role.withPermissions('ticket.customer')
-        customer_role = customer_roles[0] if customer_roles?.length > 0
+        customer_role = App.Role.findByAttribute('name', 'Customer')
       
       console.log('[CC_DEBUG] Filtering users - Agent role:', agent_role?.id, 'Customer role:', customer_role?.id)
       console.log('[CC_DEBUG] Agent role object:', agent_role)
       console.log('[CC_DEBUG] Customer role object:', customer_role)
+      console.log('[CC_DEBUG] All available roles:', App.Role.all())
+      console.log('[CC_DEBUG] Roles with ticket.agent permission:', agent_roles)
+      console.log('[CC_DEBUG] Roles with ticket.customer permission:', customer_roles)
       
       # Filter users
       filtered = []
