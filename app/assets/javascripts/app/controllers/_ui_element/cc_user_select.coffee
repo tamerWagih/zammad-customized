@@ -1,35 +1,47 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
-    # Get Agent and Customer roles
-    agentRole = App.Role.findByAttribute('name', 'Agent')
-    customerRole = App.Role.findByAttribute('name', 'Customer')
-    
-    if !agentRole && !customerRole
-      return $('<div class="alert alert-warning">Agent or Customer roles not found</div>')
-    
-    role_ids = [agentRole?.id, customerRole?.id].filter((id) -> id?)
-    
     # Create container
     container = $('<div class="cc-user-select-container"></div>')
     
     # Add loading state
     container.html('<p class="loading">Loading users...</p>')
     
-    # Make AJAX call exactly like approval system
-    App.Ajax.request(
-      id: 'users_for_cc'
-      type: 'GET'
-      url: "#{App.Config.get('api_path')}/users/search"
-      data:
-        role_ids: role_ids  # Backend filters by Agent + Customer roles
-        limit: 1000
-      processData: true
-      success: (data, status, xhr) ->
-        renderWithUsers(data, status, xhr, container, attribute, params)
-      error: (xhr, status, error) ->
-        container.html('<div class="alert alert-warning">Unable to load users. Please try again.</div>')
-    )
+    # Wait for roles to be loaded, then proceed
+    loadUsers = ->
+      # Get Agent and Customer roles
+      agentRole = App.Role.findByAttribute('name', 'Agent')
+      customerRole = App.Role.findByAttribute('name', 'Customer')
+      
+      if !agentRole && !customerRole
+        container.html('<div class="alert alert-warning">Agent or Customer roles not found</div>')
+        return
+      
+      role_ids = [agentRole?.id, customerRole?.id].filter((id) -> id?)
+      
+      # Make AJAX call exactly like approval system
+      App.Ajax.request(
+        id: 'users_for_cc'
+        type: 'GET'
+        url: "#{App.Config.get('api_path')}/users/search"
+        data:
+          role_ids: role_ids  # Backend filters by Agent + Customer roles
+          limit: 1000
+        processData: true
+        success: (data, status, xhr) ->
+          renderWithUsers(data, status, xhr, container, attribute, params)
+        error: (xhr, status, error) ->
+          container.html('<div class="alert alert-warning">Unable to load users. Please try again.</div>')
+      )
+    
+    # Check if roles are already loaded
+    if App.Role.all().length > 0
+      loadUsers()
+    else
+      # Wait for roles to be loaded
+      App.Role.bind('refresh', ->
+        loadUsers()
+      )
     
     container
 
