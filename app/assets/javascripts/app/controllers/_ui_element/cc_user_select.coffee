@@ -2,6 +2,16 @@
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
     console.log('[CC_DEBUG] Rendering CC user select with searchable_select')
+    console.log('[CC_DEBUG] App.User.all() before render:', App.User.all().length)
+    console.log('[CC_DEBUG] App.User.all() users before render:', App.User.all())
+    
+    # Check if we need to load more users
+    all_users = App.User.all()
+    if all_users.length < 10
+      console.log('[CC_DEBUG] Few users loaded, attempting to load more...')
+      # Try to trigger loading more users
+      App.User.fetch()
+      console.log('[CC_DEBUG] After App.User.fetch():', App.User.all().length)
     
     # SOLUTION: Use searchable_select with 'User' relation
     # This uses App.User.all() which is already loaded in frontend
@@ -15,6 +25,12 @@ class App.UiElement.cc_user_select
     
     # Apply custom filter to show only agents and customers (excluding current user)
     attribute.filter = (users) ->
+      console.log('[CC_DEBUG] === FILTER FUNCTION CALLED ===')
+      console.log('[CC_DEBUG] Total users passed to filter:', users.length)
+      console.log('[CC_DEBUG] Users passed to filter:', users)
+      console.log('[CC_DEBUG] App.User.all() count:', App.User.all().length)
+      console.log('[CC_DEBUG] App.User.all() users:', App.User.all())
+      
       current_user_id = App.User.current()?.id
       
       # Get Agent and Customer roles
