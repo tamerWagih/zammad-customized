@@ -10,21 +10,28 @@ class App.UiElement.cc_user_select
     attribute.placeholder = __('Search for users...')
     attribute.filter = (users, type, params) ->
       console.log('[CC_DEBUG] Filter called with users:', users.length)
-      console.log('[CC_DEBUG] All users:', users)
       
-      # Filter to only show agents and customers, exclude current user
+      # The issue: App.User.search() returns minimal data without permissions
+      # We need to get full user objects with permissions
       current_user_id = App.User.current()?.id
       console.log('[CC_DEBUG] Current user ID:', current_user_id)
       
-      filtered_users = users.filter (user) ->
+      # Get full user objects from App.User.all() which have permissions
+      all_users = App.User.all()
+      console.log('[CC_DEBUG] All users from App.User.all():', all_users.length)
+      
+      # Filter to only show agents and customers, exclude current user
+      filtered_users = []
+      for user_id, user of all_users
         console.log('[CC_DEBUG] Checking user:', user.login, 'ID:', user.id, 'Active:', user.active)
         console.log('[CC_DEBUG] User permissions:', user.permissions)
         console.log('[CC_DEBUG] Has ticket.agent:', user.permissions?('ticket.agent'))
         console.log('[CC_DEBUG] Has ticket.customer:', user.permissions?('ticket.customer'))
         
-        return false if user.id is current_user_id
-        return false if !user.active
-        return user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+        continue if user.id is current_user_id
+        continue if !user.active
+        if user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+          filtered_users.push(user)
       
       console.log('[CC_DEBUG] Filtered users:', filtered_users.length)
       console.log('[CC_DEBUG] Filtered users list:', filtered_users)
