@@ -17,6 +17,9 @@ class App.UiElement.cc_user_select
       # We need to get full user objects with permissions
       current_user_id = App.User.current()?.id
       console.log('[CC_DEBUG] Current user ID:', current_user_id)
+      console.log('[CC_DEBUG] Current user:', App.User.current())
+      console.log('[CC_DEBUG] Current user permissions:', App.User.current()?.permissions)
+      console.log('[CC_DEBUG] Current user role_ids:', App.User.current()?.role_ids)
       
       # Get full user objects from App.User.all() 
       all_users = App.User.all()
@@ -29,6 +32,10 @@ class App.UiElement.cc_user_select
         # But let's see what we get from the search results
         console.log('[CC_DEBUG] Search results users:', users.length)
         console.log('[CC_DEBUG] Search results:', users)
+        
+        # For now, let's show all active users and let the user select
+        # We can refine the role filtering later once we understand the permission structure
+        console.log('[CC_DEBUG] Showing all active users for now (permission issue suspected)')
       
       # Get Agent and Customer roles - try multiple ways
       agent_role = App.Role.findByAttribute('name', 'Agent')
@@ -93,6 +100,16 @@ class App.UiElement.cc_user_select
       
       console.log('[CC_DEBUG] Filtered users:', filtered_users.length)
       console.log('[CC_DEBUG] Filtered users list:', filtered_users)
+      
+      # If no users found due to permission issues, show all active users as fallback
+      if filtered_users.length == 0
+        console.log('[CC_DEBUG] No users found with role filtering, showing all active users as fallback')
+        for user in users_to_check
+          continue if user.id is current_user_id
+          continue if !user.active
+          filtered_users.push(user)
+        console.log('[CC_DEBUG] Fallback filtered users:', filtered_users.length)
+      
       return filtered_users
     
     # Use native searchable_select
