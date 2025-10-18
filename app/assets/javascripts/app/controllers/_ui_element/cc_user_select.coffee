@@ -15,6 +15,7 @@ class App.CcUserSelect extends Spine.Controller
     'click .js-user-option': 'onUserSelect'
     'click .js-remove-user': 'onUserRemove'
     'click .js-clear': 'clearAll'
+    'click .js-load-more': 'loadMoreUsers'
     'keydown .js-search': 'onSearchKeydown'
 
   className: 'form-control cc-user-select'
@@ -26,6 +27,9 @@ class App.CcUserSelect extends Spine.Controller
     @selectedUsers = []
     @allUsers = []
     @searchTimeout = null
+    @currentPage = 1
+    @hasMore = true
+    @isLoading = false
     @render()
 
   element: =>
@@ -38,18 +42,58 @@ class App.CcUserSelect extends Spine.Controller
     )
     @loadUsers()
 
-  loadUsers: ->
-    # Get all agents and customers (following approval pattern)
-    users = []
+  loadUsers: (query = '', page = 1, append = false) ->
+    return if @isLoading
+    @isLoading = true
+    @showLoading()
+
+    # Use the same pattern as approval widget - get all users and filter
+    allUsers = []
     for user_id, user of App.User.all()
       if user.active && (user.permissions?('ticket.agent') || user.permissions?('ticket.customer'))
         # Exclude current user (can't CC yourself)
         if user.id isnt App.User.current()?.id
-          users.push(user)
-    
+          allUsers.push(user)
+
+    # Apply search filter if query provided
+    if query && query.trim() isnt ''
+      queryLower = query.toLowerCase()
+      allUsers = allUsers.filter (user) ->
+        name = user.displayName().toLowerCase()
+        email = (user.email || '').toLowerCase()
+        login = (user.login || '').toLowerCase()
+        return name.includes(queryLower) or email.includes(queryLower) or login.includes(queryLower)
+
     # Sort by name (following approval pattern)
-    @allUsers = _.sortBy(users, (user) -> user.displayName())
+    allUsers = _.sortBy(allUsers, (user) -> user.displayName())
+
+    # Simulate pagination for large datasets
+    pageSize = 50
+    startIndex = (page - 1) * pageSize
+    endIndex = startIndex + pageSize
+    pageUsers = allUsers.slice(startIndex, endIndex)
+    
+    # Simulate response structure
+    responseData = {
+      users: pageUsers
+      total_count: allUsers.length
+    }
+    
+    @handleUsersResponse(responseData, { getResponseHeader: -> allUsers.length }, append)
+
+  handleUsersResponse: (data, xhr, append = false) ->
+    users = if Array.isArray(data) then data else (data?.users || [])
+    total_count = data?.total_count || users.length
+
+    if append
+      @allUsers = @allUsers.concat(users)
+    else
+      @allUsers = users
+
+    @hasMore = (@currentPage * 50) < total_count
     @renderResults()
+    @hideLoading()
+    @isLoading = false
 
   renderResults: ->
     # Remove already selected users from results
@@ -59,6 +103,7 @@ class App.CcUserSelect extends Spine.Controller
     
     @resultsContainer.html App.view('ui_element/cc_user_select_results')(
       users: available_users
+      hasMore: @hasMore
     )
 
   renderSelected: ->
@@ -67,23 +112,17 @@ class App.CcUserSelect extends Spine.Controller
     )
 
   onSearchInput: (e) ->
-    query = $(e.target).val().toLowerCase()
+    query = $(e.target).val()
     
-    # Filter users based on search query
-    filtered_users = @allUsers.filter (user) ->
-      name = user.displayName().toLowerCase()
-      return name.includes(query) or 
-             (user.email && user.email.toLowerCase().includes(query)) or
-             (user.login && user.login.toLowerCase().includes(query))
+    # Clear previous timeout
+    clearTimeout(@searchTimeout) if @searchTimeout
     
-    # Remove already selected users
-    selected_ids = @selectedUsers.map((user) -> user.id)
-    available_users = filtered_users.filter (user) ->
-      !selected_ids.includes(user.id)
-    
-    @resultsContainer.html App.view('ui_element/cc_user_select_results')(
-      users: available_users
-    )
+    # Debounce search
+    @searchTimeout = setTimeout =>
+      @currentPage = 1
+      @allUsers = []
+      @loadUsers(query, 1, false)
+    , 300
 
   onUserSelect: (e) ->
     user_id = parseInt($(e.currentTarget).data('user-id'))
@@ -115,6 +154,28 @@ class App.CcUserSelect extends Spine.Controller
       firstOption = @resultsContainer.find('.js-user-option').first()
       if firstOption.length
         firstOption.click()
+
+  loadMoreUsers: ->
+    return if @isLoading || !@hasMore
+    @currentPage += 1
+    query = @searchInput.val() || ''
+    @loadUsers(query, @currentPage, true)
+
+  showLoading: ->
+    @loadingIndicator.show()
+
+  hideLoading: ->
+    @loadingIndicator.hide()
+
+  showError: (message) ->
+    @resultsContainer.html """
+      <div class="alert alert-danger">
+        <i class="icon icon-warning"></i>
+        #{message}
+      </div>
+    """
+    @hideLoading()
+    @isLoading = false
 
   updateHiddenInput: ->
     # Update the hidden input with selected user IDs
