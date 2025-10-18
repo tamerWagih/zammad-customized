@@ -5,10 +5,10 @@
     .selected-users-list {
       max-height: 150px;
       overflow-y: auto;
-      border: 1px solid var(--border);
+      border: 1px solid #ddd;
       border-radius: 3px;
       padding: 5px;
-      background-color: var(--background-secondary);
+      background-color: #f9f9f9;
     }
 
     .selected-user-item {
@@ -17,8 +17,8 @@
       align-items: center;
       padding: 5px 10px;
       margin-bottom: 5px;
-      background-color: var(--background-base);
-      border: 1px solid var(--border);
+      background-color: #fff;
+      border: 1px solid #ddd;
       border-radius: 3px;
 
       .user-info {
@@ -32,7 +32,7 @@
 
       .user-email {
         font-size: 0.8em;
-        color: var(--text-light);
+        color: #666;
       }
 
       .js-remove-user {
@@ -59,11 +59,11 @@
   }
 
   .user-results {
-    border: 1px solid var(--border);
+    border: 1px solid #ddd;
     border-radius: 3px;
     max-height: 200px;
     overflow-y: auto;
-    background-color: var(--background-secondary);
+    background-color: #f9f9f9;
 
     .user-options-list {
       list-style: none;
@@ -77,14 +77,14 @@
       align-items: center;
       padding: 8px 10px;
       cursor: pointer;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid #ddd;
 
       &:last-child {
         border-bottom: none;
       }
 
       &:hover {
-        background-color: var(--background-modifier-hover);
+        background-color: #f0f0f0;
       }
 
       .user-info {
@@ -98,7 +98,7 @@
 
       .user-email {
         font-size: 0.8em;
-        color: var(--text-light);
+        color: #666;
       }
 
       .user-roles {
@@ -107,29 +107,29 @@
           font-size: 0.7em;
           padding: 3px 6px;
           border-radius: 3px;
-          color: var(--text-inverted);
+          color: #fff;
 
           &.label-primary {
-            background-color: var(--primary-color);
+            background-color: #337ab7;
           }
 
           &.label-default {
-            background-color: var(--secondary-color);
+            background-color: #777;
           }
         }
       }
 
       .user-action {
         margin-left: 10px;
-        color: var(--text-light);
+        color: #666;
       }
     }
 
     .load-more-container {
       padding: 10px;
       text-align: center;
-      border-top: 1px solid var(--border);
-      background-color: var(--background-base);
+      border-top: 1px solid #ddd;
+      background-color: #fff;
 
       .js-load-more {
         width: 100%;
@@ -141,13 +141,13 @@
   .js-loading {
     text-align: center;
     padding: 20px;
-    color: var(--text-muted);
+    color: #666;
   }
 
   .help-block {
     margin-top: 10px;
     font-size: 12px;
-    color: var(--text-muted);
+    color: #666;
   }
 }
 

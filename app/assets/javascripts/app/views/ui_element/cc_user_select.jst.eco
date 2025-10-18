@@ -1,7 +1,7 @@
-<div class="cc-user-select-container">
-  <!-- Hidden input to store selected user IDs -->
-  <input type="hidden" name="<%= @attribute.name %>" value="<%= JSON.stringify(@selectedUsers.map((u) -> u.id)) %>">
-  
+<!-- Hidden input to store selected user IDs -->
+<input type="hidden" name="<%= @attribute.name %>" value="<%= JSON.stringify(@selectedUsers.map((u) -> u.id)) %>">
+
+<div class="cc-user-select-container" style="border: 1px solid #ddd; border-radius: 3px; padding: 10px; background-color: #f9f9f9;">
   <!-- Search input -->
   <div class="form-group">
     <input type="text" class="form-control js-search" placeholder="<%- @T('Search for agents or customers...') %>" autocomplete="off">
