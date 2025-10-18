@@ -22,6 +22,8 @@ class Ticket::Cc < ApplicationModel
   validate :valid_permissions
   validate :user_is_agent_or_customer
 
+  before_validation :set_default_permissions
+
   scope :active, -> { joins(:user).where(users: { active: true }) }
 
   def read_access?

@@ -85,6 +85,10 @@ class TicketPolicy < ApplicationPolicy
     approval_decision = approval_access?(access)
     return approval_decision unless approval_decision.nil?
     
+    # Check CC access
+    cc_decision = cc_access?(access)
+    return cc_decision unless cc_decision.nil?
+    
     share_decision = share_access?(access)
     return share_decision unless share_decision.nil?
 
@@ -115,6 +119,33 @@ class TicketPolicy < ApplicationPolicy
     case access.to_s
     when 'read', 'change', 'create', 'full'
       true
+    else
+      nil
+    end
+  end
+
+  # Allow access via Ticket::Cc for CC'd users.
+  # Both agents and customers can be CC'd on tickets.
+  # CC'd users get access based on their permissions (read, comment, or full).
+  def cc_access?(access)
+    return nil unless user
+    
+    # Check if user is CC'd on this ticket
+    cc = record.ccs.find_by(user_id: user.id)
+    return nil unless cc
+
+    # Map access to CC permissions
+    case access.to_s
+    when 'read'
+      cc.read_access? ? true : nil
+    when 'create', 'change'
+      if user.permissions?('ticket.agent')
+        cc.full_access? ? true : nil
+      else
+        cc.comment_access? ? true : nil
+      end
+    when 'full'
+      cc.full_access? ? true : nil
     else
       nil
     end
