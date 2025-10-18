@@ -29,21 +29,27 @@ class App.UiElement.cc_user_select
     # Load users via AJAX (like approval modal does)
     # This should work for customers since we're not using /users/search
     $.ajax(
-      type: 'GET'
+        type: 'GET'
       url: "#{App.Config.get('api_path')}/users"
-      data:
+        data:
         role_ids: role_ids
-        limit: 1000
-      processData: true
+          limit: 1000
+        processData: true
       success: (data) =>
         users = if Array.isArray(data) then data else (data?.users || [])
         console.log('[CC_DEBUG] AJAX loaded users:', users.length)
+        console.log('[CC_DEBUG] AJAX loaded users data:', users)
+        console.log('[CC_DEBUG] Current user ID to exclude:', current_user_id)
         
         # Filter out current user and inactive users
         filtered_users = users.filter (user) ->
+          console.log('[CC_DEBUG] Checking user:', user.login, 'ID:', user.id, 'Active:', user.active, 'Is current user:', (user.id is current_user_id))
           return false if user.id is current_user_id
           return false if user.active is false
           true
+        
+        console.log('[CC_DEBUG] After filtering - users count:', filtered_users.length)
+        console.log('[CC_DEBUG] After filtering - users:', filtered_users)
         
         # Build options for select
         attribute.options = {}
@@ -68,10 +74,18 @@ class App.UiElement.cc_user_select
         
       error: (xhr, status, error) =>
         console.error('[CC_DEBUG] Failed to load users via AJAX:', error)
+        console.error('[CC_DEBUG] XHR status:', xhr.status)
+        console.error('[CC_DEBUG] XHR response:', xhr.responseText)
+        console.error('[CC_DEBUG] Status:', status)
+        
         # Fallback: show all active users from App.User.all()
+        console.log('[CC_DEBUG] Using fallback - App.User.all()')
         all_users = App.User.all()
+        console.log('[CC_DEBUG] App.User.all() count:', all_users.length)
+        
         attribute.options = {}
         for user_id, user of all_users
+          console.log('[CC_DEBUG] Fallback checking user:', user?.login, 'ID:', user?.id, 'Active:', user?.active)
           continue if user.id is current_user_id
           continue if !user.active
           
@@ -83,6 +97,11 @@ class App.UiElement.cc_user_select
           attribute.options[user.id] = display_name
         
         console.log('[CC_DEBUG] Fallback options:', Object.keys(attribute.options).length)
+        
+        # Re-render the select with fallback users
+        $element = $(element)
+        new_element = App.UiElement.select.render(attribute, params)
+        $element.replaceWith(new_element)
     )
     
     # Start with empty options - will be populated by AJAX
