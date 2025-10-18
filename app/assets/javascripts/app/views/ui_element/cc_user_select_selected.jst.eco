@@ -1,0 +1,23 @@
+<% if @selectedUsers.length > 0: %>
+  <div class="selected-users">
+    <label class="control-label">
+      <%- @T('Selected Users') %> (<%= @selectedUsers.length %>)
+    </label>
+    <div class="selected-users-list">
+      <% for user in @selectedUsers: %>
+        <div class="selected-user-item">
+          <span class="user-name">
+            <% name = "#{user.firstname || ''} #{user.lastname || ''}".trim() || user.login || user.email || "User ##{user.id}" %>
+            <%- name %><% if user.email && name != user.email: %> (<%- user.email %>)<% end %>
+          </span>
+          <button type="button" class="btn btn--small btn--secondary js-remove-user" data-user-id="<%= user.id %>">
+            <i class="icon icon-times"></i>
+          </button>
+        </div>
+      <% end %>
+    </div>
+    <button type="button" class="btn btn--text js-clear">
+      <%- @T('Clear All') %>
+    </button>
+  </div>
+<% end %>
