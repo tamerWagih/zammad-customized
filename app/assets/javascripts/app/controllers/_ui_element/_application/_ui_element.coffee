@@ -98,6 +98,8 @@ class App.UiElement.ApplicationUiElement
       sortBy: attribute.sortBy
     if attribute.filter && _.isArray(attribute.filter) && attribute.tag is 'select'
       result.translate = attribute.translate
+    if attribute.permissions
+      result.permissions = attribute.permissions
     result
 
   @getRelationOptionList: (attribute, params) ->
