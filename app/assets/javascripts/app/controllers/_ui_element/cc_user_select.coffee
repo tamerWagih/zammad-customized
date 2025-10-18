@@ -34,14 +34,15 @@ class App.UiElement.cc_user_select
           container.html('<div class="alert alert-warning">Unable to load users. Please try again.</div>')
       )
     
-    # Check if roles are already loaded
-    if App.Role.all().length > 0
-      loadUsers()
-    else
-      # Wait for roles to be loaded
-      App.Role.bind('refresh', ->
+    # Wait for roles to be loaded with a simple polling approach
+    checkRoles = ->
+      if App.Role.all().length > 0
         loadUsers()
-      )
+      else
+        # Try again in 100ms
+        setTimeout(checkRoles, 100)
+    
+    checkRoles()
     
     container
 
