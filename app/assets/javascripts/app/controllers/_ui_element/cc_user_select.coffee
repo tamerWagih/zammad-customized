@@ -49,6 +49,17 @@ class App.UiElement.cc_user_select
       console.log('[CC_DEBUG] Customer role:', customer_role)
       console.log('[CC_DEBUG] All roles:', App.Role.all())
       
+      # Log all role details to see what exists
+      all_roles = App.Role.all()
+      for role_id, role of all_roles
+        console.log('[CC_DEBUG] Role:', role.name, 'ID:', role.id, 'Permissions:', role.permissions)
+      
+      # Log the specific role IDs we found
+      if agent_role
+        console.log('[CC_DEBUG] Agent role ID:', agent_role.id, 'Name:', agent_role.name)
+      if customer_role
+        console.log('[CC_DEBUG] Customer role ID:', customer_role.id, 'Name:', customer_role.name)
+      
       # Filter to only show agents and customers, exclude current user
       filtered_users = []
       
@@ -59,6 +70,13 @@ class App.UiElement.cc_user_select
       for user in users_to_check
         console.log('[CC_DEBUG] Checking user:', user.login, 'ID:', user.id, 'Active:', user.active)
         console.log('[CC_DEBUG] User role_ids:', user.role_ids)
+        
+        # If user has role_ids, log them in detail
+        if user.role_ids && user.role_ids.length > 0
+          console.log('[CC_DEBUG] User role_ids details:', user.role_ids)
+          for role_id in user.role_ids
+            role = App.Role.find(role_id)
+            console.log('[CC_DEBUG] User role:', role_id, 'Name:', role?.name, 'Permissions:', role?.permissions)
         
         continue if user.id is current_user_id
         continue if !user.active
