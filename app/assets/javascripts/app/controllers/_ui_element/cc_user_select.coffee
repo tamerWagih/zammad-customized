@@ -1,18 +1,21 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
-    console.log('[CC_DEBUG] Rendering CC user select - using simple select tag (approval pattern)')
+    console.log('[CC_DEBUG] Rendering CC user select with AJAX search support')
     
-    # SOLUTION: Use simple 'select' tag like approval uses <select> in its template
-    # The searchable_select was causing issues because it doesn't work well with inline ticket form
-    # Approval modal uses a simple <select> dropdown rendered in a template, not searchable_select!
-    
-    attribute.tag = 'select'
+    # Use searchable_select with backend AJAX for search and pagination
+    # This allows searching for users beyond the initially loaded set
+    attribute.tag = 'searchable_select'
     attribute.relation = 'User'
     attribute.multiple = true
     attribute.nulloption = false
+    attribute.placeholder = __('Search for agents or customers...')
     
-    # Get Agent and Customer roles
+    # Don't use the default relation loading - we'll provide our own options
+    # This prevents loading ALL users upfront
+    delete attribute.relation
+    
+    # Get Agent and Customer role IDs for backend filtering
     agent_role = App.Role.findByAttribute('name', 'Agent')
     customer_role = App.Role.findByAttribute('name', 'Customer')
     
@@ -25,47 +28,72 @@ class App.UiElement.cc_user_select
       customer_roles = App.Role.withPermissions('ticket.customer')
       customer_role = customer_roles[0] if customer_roles?.length > 0
     
-    console.log('[CC_DEBUG] Agent role:', agent_role)
-    console.log('[CC_DEBUG] Customer role:', customer_role)
+    role_ids = []
+    role_ids.push(agent_role.id) if agent_role
+    role_ids.push(customer_role.id) if customer_role
     
-    # Filter users to only show agents and customers
+    console.log('[CC_DEBUG] Role IDs for filtering:', role_ids)
+    
+    # Get current user to exclude from results
     current_user_id = App.User.current()?.id
-    all_users = App.User.all()
     
-    filtered_users = []
-    for user_id, user of all_users
-      continue if user.id is current_user_id
-      continue if !user.active
-      
-      # Check if user has Agent or Customer role
-      has_agent_role = agent_role && user.role_ids && agent_role.id in user.role_ids
-      has_customer_role = customer_role && user.role_ids && customer_role.id in user.role_ids
-      
-      if has_agent_role || has_customer_role
-        filtered_users.push(user)
-    
-    console.log('[CC_DEBUG] Filtered users for select:', filtered_users.length)
-    
-    # If no users found (permission issue), show all active users
-    if filtered_users.length == 0
-      console.log('[CC_DEBUG] No users with roles found, showing all active users')
-      for user_id, user of all_users
-        continue if user.id is current_user_id
-        continue if !user.active
-        filtered_users.push(user)
-    
-    # Create options for the select
+    # Start with empty options - will be populated dynamically
     attribute.options = {}
-    for user in filtered_users
-      display_name = "#{user.firstname} #{user.lastname}".trim()
-      display_name = user.login if display_name == ''
-      display_name = user.email if !display_name
-      attribute.options[user.id] = display_name || "User ##{user.id}"
     
-    console.log('[CC_DEBUG] Select options count:', Object.keys(attribute.options).length)
+    # First, render the searchable_select with empty options
+    element = App.UiElement.searchable_select.render(attribute, params)
     
-    # Use standard select renderer
-    App.UiElement.select.render(attribute, params)
+    # Then load users via AJAX in the background (like approval modal does)
+    # This is more efficient and supports searching all users
+    $.ajax(
+      type: 'GET'
+      url: "#{App.Config.get('api_path')}/users/search"
+      data:
+        role_ids: role_ids
+        limit: 1000
+      processData: true
+      success: (data) =>
+        users = if Array.isArray(data) then data else (data?.users || [])
+        
+        # Filter out current user and inactive users
+        filtered_users = users.filter (user) ->
+          return false if user.id is current_user_id
+          return false if user.active is false
+          true
+        
+        # Build options for searchable_select
+        new_options = {}
+        for user in filtered_users
+          display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
+          display_name = user.login if display_name == ''
+          display_name = user.email if !display_name
+          display_name = "User ##{user.id}" if !display_name
+          
+          # Add email in parentheses if different from display name
+          if user.email && display_name != user.email
+            display_name += " (#{user.email})"
+          
+          new_options[user.id] = display_name
+        
+        console.log('[CC_DEBUG] Loaded users via AJAX:', Object.keys(new_options).length)
+        
+        # Update the attribute options
+        attribute.options = new_options
+        
+        # Re-render the searchable_select with loaded users
+        # Find the element and update it
+        $element = $(element)
+        $parent = $element.parent()
+        new_element = App.UiElement.searchable_select.render(attribute, params)
+        $element.replaceWith(new_element)
+        
+      error: (xhr, status, error) =>
+        console.error('[CC_DEBUG] Failed to load users:', error)
+    )
+    
+    # Return the initial element (will be updated when AJAX completes)
+    element
 
-# This follows the approval pattern more closely
-# Approval uses a simple <select> in the template, not searchable_select
+# This uses searchable_select with AJAX backend loading
+# Supports searching and finding users beyond initial page load
+# More similar to how approval modal works (AJAX backend call)
