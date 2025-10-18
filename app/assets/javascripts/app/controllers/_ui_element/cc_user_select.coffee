@@ -96,7 +96,17 @@ class App.UiElement.cc_user_select
         console.log('[CC_DEBUG] Has customer role:', has_customer_role)
         
         if has_agent_role || has_customer_role
-          filtered_users.push(user)
+          # Ensure user object has proper structure for searchable_select
+          user_obj = {
+            id: user.id
+            login: user.login || "user_#{user.id}"
+            firstname: user.firstname || ""
+            lastname: user.lastname || ""
+            email: user.email || ""
+            active: user.active
+            toString: -> "#{@firstname} #{@lastname} (#{@login})".trim()
+          }
+          filtered_users.push(user_obj)
       
       console.log('[CC_DEBUG] Filtered users:', filtered_users.length)
       console.log('[CC_DEBUG] Filtered users list:', filtered_users)
@@ -107,7 +117,18 @@ class App.UiElement.cc_user_select
         for user in users_to_check
           continue if user.id is current_user_id
           continue if !user.active
-          filtered_users.push(user)
+          
+          # Ensure user object has proper structure for searchable_select
+          user_obj = {
+            id: user.id
+            login: user.login || "user_#{user.id}"
+            firstname: user.firstname || ""
+            lastname: user.lastname || ""
+            email: user.email || ""
+            active: user.active
+            toString: -> "#{@firstname} #{@lastname} (#{@login})".trim()
+          }
+          filtered_users.push(user_obj)
         console.log('[CC_DEBUG] Fallback filtered users:', filtered_users.length)
       
       return filtered_users
