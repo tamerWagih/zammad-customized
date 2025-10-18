@@ -68,6 +68,8 @@ class App.CcUserSelect extends Spine.Controller
     
     if query && query.trim() isnt ''
       searchParams.query = query
+      # When searching, we want to search the entire database, not just current page
+      # The backend will handle the search across all users with these roles
 
     # Make AJAX call to backend (like approval modal)
     App.Ajax.request(
@@ -93,7 +95,7 @@ class App.CcUserSelect extends Spine.Controller
         if user.id isnt App.User.current()?.id
           allUsers.push(user)
 
-    # Apply search filter if query provided
+    # Apply search filter if query provided (searches ALL users, not just current page)
     if query && query.trim() isnt ''
       queryLower = query.toLowerCase()
       allUsers = allUsers.filter (user) ->
@@ -176,6 +178,7 @@ class App.CcUserSelect extends Spine.Controller
     @searchTimeout = setTimeout =>
       @currentPage = 1
       @allUsers = []
+      # Always search from page 1 when user types (searches entire database)
       @loadUsers(query, 1, false)
     , 300
 
