@@ -47,12 +47,27 @@ class App.CcUserSelect extends Spine.Controller
     @isLoading = true
     @showLoading()
     
-    # Get Agent and Customer role IDs
+    # Get Agent and Customer role IDs with fallback
+    console.log('All roles:', App.Role.all())
     agentRole = App.Role.findByAttribute('name', 'Agent')
     customerRole = App.Role.findByAttribute('name', 'Customer')
     
+    console.log('Agent role by name:', agentRole)
+    console.log('Customer role by name:', customerRole)
+    
+    # If roles not found by name, try to find by permissions
+    if !agentRole
+      agentRoles = App.Role.withPermissions('ticket.agent')
+      console.log('Agent roles by permission:', agentRoles)
+      agentRole = agentRoles[0] if agentRoles.length > 0
+    
+    if !customerRole
+      customerRoles = App.Role.withPermissions('ticket.customer')
+      console.log('Customer roles by permission:', customerRoles)
+      customerRole = customerRoles[0] if customerRoles.length > 0
+    
     if !agentRole && !customerRole
-      @showError('Agent or Customer roles not found')
+      @showError('No suitable roles found. Please ensure Agent and Customer roles exist.')
       return
     
     role_ids = [agentRole?.id, customerRole?.id].filter((id) -> id?)
@@ -72,12 +87,16 @@ class App.CcUserSelect extends Spine.Controller
       success: (data, status, xhr) =>
         @handleUsersResponse(data, xhr, append)
       error: (xhr, status, error) =>
+        console.log('CC User Search Error:', xhr, status, error)
         @showError('Unable to load users. Please try again.')
     )
 
   handleUsersResponse: (data, xhr, append = false) ->
+    console.log('CC User Search Response:', data)
     users = if Array.isArray(data) then data else (data?.users || [])
     total_count = parseInt(xhr?.getResponseHeader('X-Paginate-Total') || users.length)
+    
+    console.log('Found users:', users.length, 'Total:', total_count)
     
     # Filter users (exclude current user and inactive users)
     current_user_id = App.User.current()?.id
@@ -85,6 +104,8 @@ class App.CcUserSelect extends Spine.Controller
       return false if user.id is current_user_id
       return false if user.active is false
       true
+    
+    console.log('Eligible users after filtering:', eligible_users.length)
     
     if append
       @allUsers = @allUsers.concat(eligible_users)
