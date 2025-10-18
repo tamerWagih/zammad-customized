@@ -29,18 +29,9 @@ class App.Ticket extends App.Model
       { name: 'created_at',               display: __('Created at'),   tag: 'datetime', width: '110px', readonly: 1 },
       { name: 'updated_by_id',            display: __('Updated by'),   relation: 'User', readonly: 1 },
       { name: 'updated_at',               display: __('Updated at'),   tag: 'datetime', width: '110px', readonly: 1 },
-      { name: 'cc_user_ids',              display: __('CC'),           tag: 'select', multiple: true, limit: 100, null: true, relation: 'User', edit: true, filter: (users) ->
-        console.log 'CC Filter: Total users loaded:', users.length
-        console.log 'CC Filter: Current user ID:', App.User.current()?.id
-        filtered = users.filter (user) ->
-          isActive = user.active
-          hasAgentPerm = user.permissions?('ticket.agent')
-          hasCustomerPerm = user.permissions?('ticket.customer')
-          isNotCurrent = user.id isnt App.User.current()?.id
-          console.log "User #{user.id} (#{user.email}): active=#{isActive}, agent=#{hasAgentPerm}, customer=#{hasCustomerPerm}, notCurrent=#{isNotCurrent}"
-          isActive and (hasAgentPerm or hasCustomerPerm) and isNotCurrent
-        console.log 'CC Filter: Filtered users:', filtered.length
-        filtered
+      { name: 'cc_user_ids',              display: __('CC'),           tag: 'column_select', multiple: true, limit: 100, null: true, relation: 'User', sortBy: 'firstname', edit: true, filter: (users) ->
+        users.filter (user) ->
+          user.active and (user.permissions?('ticket.agent') or user.permissions?('ticket.customer')) and user.id isnt App.User.current()?.id
       , screen: { create_middle: { shown: true, item_class: 'column' } } },
     ]
 
