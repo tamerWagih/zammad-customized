@@ -29,13 +29,30 @@ class Ticket::PerformChanges::Action::ShareCreate < Ticket::PerformChanges::Acti
     # Get the sharing user (current user or default to system)
     shared_by_id = user_id || 1
 
-    # Parse expiry date if provided as string
-    if expires_at.is_a?(String)
-      begin
-        expires_at = Time.zone.parse(expires_at)
-      rescue ArgumentError
-        expires_at = nil
+    # Parse expiry date if provided (set to end of day)
+    if expires_at.present?
+      if expires_at.is_a?(String) && expires_at !~ /^\s*$/
+        begin
+          # Parse the date and set to end of day (23:59:59)
+          parsed_date = Date.parse(expires_at)
+          expires_at = parsed_date.end_of_day
+        rescue ArgumentError
+          Rails.logger.warn "Invalid expires_at date format: #{expires_at}"
+          expires_at = nil
+        end
+      elsif expires_at.respond_to?(:end_of_day)
+        # If it's already a date/time object, set to end of day
+        expires_at = expires_at.to_date.end_of_day
       end
+    else
+      # Explicitly set to nil if blank/empty
+      expires_at = nil
+    end
+
+    # Verify the group exists
+    unless Group.exists?(group_id)
+      Rails.logger.warn "Share trigger: Group with ID #{group_id} does not exist for ticket #{record.id}"
+      return
     end
 
     # Create the share
@@ -50,9 +67,12 @@ class Ticket::PerformChanges::Action::ShareCreate < Ticket::PerformChanges::Acti
       updated_by_id: user_id || 1,
     )
 
-    share.save!
-
-    Rails.logger.info { "Created share for ticket #{record.id} with group #{group_id} via trigger" }
+    if share.save
+      expiry_info = expires_at ? " (expires: #{expires_at.strftime('%Y-%m-%d %H:%M:%S')})" : " (no expiry)"
+      Rails.logger.info { "Created share ##{share.id} for ticket #{record.id} with group #{group_id}#{expiry_info} via trigger" }
+    else
+      Rails.logger.error { "Failed to create share for ticket #{record.id}: #{share.errors.full_messages.join(', ')}" }
+    end
   end
 end
 

@@ -792,11 +792,12 @@ class App.UiElement.ApplicationAction
 
     name = "#{attribute.name}::approval.#{approvalType}"
     
-    # Build approver selection (user autocompletion)
+    # Build approver selection (user autocompletion with proper relation)
     approverSelection = App.UiElement.user_autocompletion.render(
       name: "#{name}::approver_id"
       multiple: false
       null: false
+      relation: 'User'
       placeholder: __('Select approver...')
       value: meta.approver_id
       disableCreateObject: true
@@ -852,10 +853,11 @@ class App.UiElement.ApplicationAction
       nulloption: false
     )
     
-    # Build expiry date selection (optional)
-    expirySelection = App.UiElement.datetime.render(
+    # Build expiry date selection (optional - date only, no time)
+    expirySelection = App.UiElement.date.render(
       name: "#{name}::expires_at"
       null: true
+      nulloption: true
       value: meta.expires_at
     )
     
