@@ -65,11 +65,26 @@ class Ticket::PerformChanges::Action::ApprovalCreate < Ticket::PerformChanges::A
       updated_by_id: user_id || 1,
     )
 
-    if approval.save
-      Rails.logger.info { "Created approval request ##{approval.id} for ticket #{record.id} with approver #{approver_id} (priority: #{priority}) via trigger" }
-    else
-      Rails.logger.error { "Failed to create approval request for ticket #{record.id}: #{approval.errors.full_messages.join(', ')}" }
-    end
+        if approval.save
+          Rails.logger.info { "Created approval request ##{approval.id} for ticket #{record.id} with approver #{approver_id} (priority: #{priority}) via trigger" }
+          
+          # Add online notification (same as original approval creation)
+          begin
+            OnlineNotification.add(
+              type:          'Approval request',
+              object:        'Ticket',
+              o_id:          record.id,
+              seen:          false,
+              user_id:       approver_id,
+              created_by_id: user_id || 1,
+            )
+            Rails.logger.info { "Created online notification for approver #{approver_id}" }
+          rescue StandardError => e
+            Rails.logger.warn { "Failed to create online notification for approver: #{e.message}" }
+          end
+        else
+          Rails.logger.error { "Failed to create approval request for ticket #{record.id}: #{approval.errors.full_messages.join(', ')}" }
+        end
   end
 end
 

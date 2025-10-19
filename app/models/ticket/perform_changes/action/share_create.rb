@@ -71,12 +71,37 @@ class Ticket::PerformChanges::Action::ShareCreate < Ticket::PerformChanges::Acti
       updated_by_id: user_id || 1,
     )
 
-    if share.save
-      expiry_info = expires_at ? " (expires: #{expires_at.strftime('%Y-%m-%d %H:%M:%S')})" : " (no expiry)"
-      Rails.logger.info { "Created share ##{share.id} for ticket #{record.id} with group #{group_id}#{expiry_info} via trigger" }
-    else
-      Rails.logger.error { "Failed to create share for ticket #{record.id}: #{share.errors.full_messages.join(', ')}" }
-    end
+        if share.save
+          expiry_info = expires_at ? " (expires: #{expires_at.strftime('%Y-%m-%d %H:%M:%S')})" : " (no expiry)"
+          Rails.logger.info { "Created share ##{share.id} for ticket #{record.id} with group #{group_id}#{expiry_info} via trigger" }
+          
+          # Add online notifications for all group members (same as original share creation)
+          begin
+            group = Group.find(group_id)
+            # Get all active agents in the group
+            group.users.where(active: true).each do |group_user|
+              # Skip if the sharer is the same as the recipient (they already know they shared it)
+              next if group_user.id == shared_by_id
+              
+              # Only notify if user has ticket.agent permission
+              next unless group_user.permissions?('ticket.agent')
+              
+              OnlineNotification.add(
+                type:          'Ticket shared with your group',
+                object:        'Ticket',
+                o_id:          record.id,
+                seen:          false,
+                user_id:       group_user.id,
+                created_by_id: shared_by_id,
+              )
+            end
+            Rails.logger.info { "Created online notifications for group #{group.name} members" }
+          rescue StandardError => e
+            Rails.logger.warn { "Failed to create online notifications for group members: #{e.message}" }
+          end
+        else
+          Rails.logger.error { "Failed to create share for ticket #{record.id}: #{share.errors.full_messages.join(', ')}" }
+        end
   end
 end
 
