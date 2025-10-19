@@ -34,9 +34,14 @@ class Ticket < ApplicationModel
   include ::Ticket::PerformChanges
 
   store :preferences
+  
+  # Virtual attribute for CC user IDs during ticket creation
+  attr_accessor :cc_user_ids
+  
   after_initialize :check_defaults, if: :new_record?
   before_create  :check_generate, :check_defaults, :check_title, :set_default_state, :set_default_priority
   before_update  :check_defaults, :check_title, :reset_pending_time, :check_owner_active
+  after_create   :create_cc_records
 
   # This must be loaded late as it depends on the internal before_create and before_update handlers of ticket.rb.
   include Ticket::SetsLastOwnerUpdateTime
@@ -816,6 +821,32 @@ returns a hex color code
     rescue StandardError => e
       Rails.logger.warn "Failed to revoke expired shares for ticket #{id}: #{e.message}"
     end
+  end
+
+  # Create CC records after ticket creation if cc_user_ids is provided
+  def create_cc_records
+    return if cc_user_ids.blank?
+    return unless cc_user_ids.is_a?(Array)
+
+    current_user = UserInfo.current_user_id
+    
+    cc_user_ids.each do |user_id|
+      next if user_id.blank?
+      
+      # Skip if user doesn't exist or is the creator
+      user = User.find_by(id: user_id)
+      next unless user
+      next if user.id == current_user
+
+      # Create CC record (will trigger notifications via HasTransactionDispatcher)
+      ccs.create!(
+        user_id: user.id,
+        created_by_id: current_user,
+        updated_by_id: current_user
+      )
+    end
+  rescue StandardError => e
+    Rails.logger.error "Failed to create CC records for ticket #{id}: #{e.message}"
   end
 end
 

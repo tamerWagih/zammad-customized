@@ -53,8 +53,14 @@ class App.UiElement.cc_user_select
         attribute.options = {}
         filtered_count = 0
         for user in users
-          continue if user.id is current_user_id  # Exclude current user
-          continue if !user.active                # Exclude inactive users
+          # Exclude current user (convert to string for comparison)
+          if user.id.toString() == current_user_id.toString()
+            console.log '[CC] Excluding current user:', user.id
+            continue
+          # Exclude inactive users
+          if !user.active
+            console.log '[CC] Excluding inactive user:', user.id
+            continue
           
           display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
           display_name = user.login if display_name == ''
