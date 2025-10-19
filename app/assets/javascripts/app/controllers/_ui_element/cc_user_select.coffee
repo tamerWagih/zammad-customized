@@ -32,14 +32,12 @@ class App.UiElement.cc_user_select
     current_user_id = App.User.current()?.id
     console.log '[CC] Current user ID:', current_user_id
     
-    # Make AJAX call using App.Ajax (same as approval modal uses @ajax)
+    # Make AJAX call to custom CC endpoint (accessible by all users)
     App.Ajax.request(
       id: 'cc_users_search'
       type: 'GET'
-      url: "#{App.Config.get('api_path')}/users/search"
-      data:
-        role_ids: role_ids
-        limit: 1000
+      url: "#{App.Config.get('api_path')}/tickets/cc_users"
+      data: {}
       processData: true
       success: (data, status, xhr) =>
         console.log '[CC] Users loaded successfully'
