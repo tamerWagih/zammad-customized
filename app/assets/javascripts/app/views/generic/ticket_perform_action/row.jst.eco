@@ -8,6 +8,8 @@
     <div class="controls js-setAttribute horizontal span-width"></div>
     <div class="horizontal-filter-group js-setNotification flex"></div>
     <div class="horizontal-filter-group js-setArticle flex"></div>
+    <div class="horizontal-filter-group js-setApproval flex"></div>
+    <div class="horizontal-filter-group js-setShare flex"></div>
   </div>
   <div class="filter-controls js-rowActions">
     <div class="filter-control filter-control-remove js-remove" title="<%- @Ti('Remove') %>">
