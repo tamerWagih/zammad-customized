@@ -7,6 +7,7 @@ class Ticket::PerformChanges::Action::ApprovalCreate < Ticket::PerformChanges::A
   end
 
   def execute(...)
+    Rails.logger.info "[APPROVAL_CREATE_TRIGGER] Executing approval creation trigger for ticket ##{record.id}"
     create_approval(execution_data)
   end
 

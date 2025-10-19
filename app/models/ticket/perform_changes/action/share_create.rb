@@ -7,6 +7,7 @@ class Ticket::PerformChanges::Action::ShareCreate < Ticket::PerformChanges::Acti
   end
 
   def execute(...)
+    Rails.logger.info "[SHARE_CREATE_TRIGGER] Executing share creation trigger for ticket ##{record.id}"
     create_share(execution_data)
   end
 
