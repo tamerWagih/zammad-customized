@@ -43,6 +43,9 @@ class App.UiElement.cc_user_select
       processData: true
       success: (data, status, xhr) =>
         console.log '[CC] Users loaded successfully'
+        console.log '[CC] Raw data:', data
+        console.log '[CC] Data type:', typeof data
+        console.log '[CC] Is array?:', Array.isArray(data)
         users = if Array.isArray(data) then data else (data?.users || [])
         console.log '[CC] Total users received:', users.length
         
