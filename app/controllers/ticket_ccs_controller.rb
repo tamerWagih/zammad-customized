@@ -13,16 +13,16 @@ class TicketCcsController < ApplicationController
   def index
     # Use the same User.search method that /users/search uses
     # This ensures we get the same results as the approval modal
-    
+
     # Get Agent and Customer roles
     agent_roles = Role.with_permissions('ticket.agent')
     customer_roles = Role.with_permissions('ticket.customer')
-    
+
     role_ids = []
     role_ids += agent_roles.pluck(:id) if agent_roles.present?
     role_ids += customer_roles.pluck(:id) if customer_roles.present?
     role_ids.uniq!
-    
+
     # Use User.search with role_ids (same as approval modal)
     search_result = User.search(
       role_ids:     role_ids,
@@ -30,14 +30,14 @@ class TicketCcsController < ApplicationController
       current_user: current_user,
       full:         true,
     ) || { objects: [] }
-    
+
     users = search_result[:objects] || []
-    
+
     # Exclude current user and inactive users
     users = users.select do |user|
       user.id != current_user&.id && user.active
     end
-    
+
     # Format response (same format as before)
     users_list = users.map do |user|
       {
@@ -49,8 +49,7 @@ class TicketCcsController < ApplicationController
         active: user.active
       }
     end
-    
+
     render json: users_list, status: :ok
   end
 end
-
