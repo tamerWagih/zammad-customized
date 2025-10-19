@@ -23,6 +23,7 @@ class App.UiElement.cc_user_select
     if customer_roles
       for role in customer_roles
         role_ids.push(role.id)
+    role_ids = _.uniq(role_ids) # Remove duplicates
     
     console.log '[CC] Role IDs to search:', role_ids
     
@@ -32,12 +33,14 @@ class App.UiElement.cc_user_select
     current_user_id = App.User.current()?.id
     console.log '[CC] Current user ID:', current_user_id
     
-    # Make AJAX call to custom CC endpoint (accessible by all users)
+    # Make AJAX call using App.Ajax (same as approval modal uses @ajax)
     App.Ajax.request(
       id: 'cc_users_search'
       type: 'GET'
-      url: "#{App.Config.get('api_path')}/tickets/cc_users"
-      data: {}
+      url: "#{App.Config.get('api_path')}/users/search"
+      data:
+        role_ids: role_ids
+        limit: 1000
       processData: true
       success: (data, status, xhr) =>
         console.log '[CC] Users loaded successfully'
