@@ -16,10 +16,14 @@ class Ticket::Approval < ApplicationModel
   
   def log_approval_created
     Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Approval ##{id} created - should trigger online notification"
+    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Import mode: #{Setting.get('import_mode')}"
+    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Client notification events ignored: #{client_notification_events_ignored}"
   end
   
   def log_approval_updated
     Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Approval ##{id} updated - should trigger online notification"
+    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Import mode: #{Setting.get('import_mode')}"
+    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Client notification events ignored: #{client_notification_events_ignored}"
   end
 
   PRIORITIES = %w[low normal high urgent].freeze

@@ -30,8 +30,12 @@ module ChecksClientNotification
   end
 
   def notify_clients_send(data)
-    return notify_clients_send_to(data[:message]) if client_notification_send_to.present?
+    if client_notification_send_to.present?
+      Rails.logger.info "[CLIENT_NOTIFICATION] Sending to specific users: #{client_notification_send_to}"
+      return notify_clients_send_to(data[:message])
+    end
 
+    Rails.logger.info "[CLIENT_NOTIFICATION] Sending broadcast notification: #{data[:message][:event]}"
     PushMessages.send(data)
   end
 
@@ -44,12 +48,18 @@ module ChecksClientNotification
   def notify_clients_after_create
 
     # return if we run import mode
-    return if Setting.get('import_mode')
+    if Setting.get('import_mode')
+      Rails.logger.info "[CLIENT_NOTIFICATION] Skipping #{self.class.name}##{id} create notification - import mode"
+      return
+    end
 
     # skip if ignored
-    return if client_notification_events_ignored.include?(:create)
+    if client_notification_events_ignored.include?(:create)
+      Rails.logger.info "[CLIENT_NOTIFICATION] Skipping #{self.class.name}##{id} create notification - ignored"
+      return
+    end
 
-    logger.debug { "#{self.class.name}.find(#{id}) notify created #{created_at}" }
+    Rails.logger.info "[CLIENT_NOTIFICATION] Sending #{self.class.name}##{id} create notification"
 
     data = notify_clients_data(:create)
     notify_clients_send(data)

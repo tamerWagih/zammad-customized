@@ -16,10 +16,14 @@ class Ticket::Share < ApplicationModel
   
   def log_share_created
     Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Share ##{id} created - should trigger online notification"
+    Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Import mode: #{Setting.get('import_mode')}"
+    Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Client notification events ignored: #{client_notification_events_ignored}"
   end
   
   def log_share_updated
     Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Share ##{id} updated - should trigger online notification"
+    Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Import mode: #{Setting.get('import_mode')}"
+    Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Client notification events ignored: #{client_notification_events_ignored}"
   end
 
   VALID_PERMISSIONS = %w[full].freeze
