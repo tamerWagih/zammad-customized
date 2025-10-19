@@ -4,7 +4,8 @@ class UsersController < ApplicationController
   include ChecksUserAttributesByCurrentUserPermission
   include CanPaginate
 
-  prepend_before_action -> { authorize! }, only: %i[import_example import_start search history unlock]
+  prepend_before_action -> { authorize! }, only: %i[import_example import_start history unlock]
+  prepend_before_action :authorize_search, only: %i[search]
   prepend_before_action :authentication_check, except: %i[create password_reset_send password_reset_verify image email_verify email_verify_send admin_password_auth_send admin_password_auth_verify]
   prepend_before_action :authentication_check_only, only: %i[create]
 
@@ -825,6 +826,22 @@ curl http://localhost/api/v1/users/avatar -v -u #{login}:#{password} -H "Content
   end
 
   private
+
+  def authorize_search
+    # Allow admins and agents (existing behavior)
+    return true if current_user.permissions?('admin.user')
+    return true if current_user.permissions?('ticket.agent')
+    
+    # Allow customers to search for agents and other customers (for CC functionality)
+    # This is safe because:
+    # 1. User.search already filters results based on current_user permissions
+    # 2. Customers can only see limited user fields (controlled by UserPolicy)
+    # 3. This is needed for CC feature where customers can CC agents/customers on tickets
+    return true if current_user.permissions?('ticket.customer')
+    
+    # Deny all others
+    authorize!
+  end
 
   def password_login?
     return true if Setting.get('user_show_password_login')
