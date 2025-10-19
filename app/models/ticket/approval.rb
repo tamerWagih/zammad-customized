@@ -3,10 +3,28 @@
 class Ticket::Approval < ApplicationModel
   include HasActivityStreamLog
   include HasSearchIndexBackend
-  # NOTE: ChecksClientNotification removed - parent Ticket model handles WebSocket via TriggersSubscriptions
+  include ChecksClientNotification
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Approval::TriggersNotifications
+  
+  # Debug: Add logging for online notifications
+  after_create :log_approval_created
+  after_update :log_approval_updated
+  
+  private
+  
+  def log_approval_created
+    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Approval ##{id} created - should trigger online notification"
+    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Import mode: #{Setting.get('import_mode')}"
+    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Client notification events ignored: #{client_notification_events_ignored}"
+  end
+  
+  def log_approval_updated
+    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Approval ##{id} updated - should trigger online notification"
+    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Import mode: #{Setting.get('import_mode')}"
+    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Client notification events ignored: #{client_notification_events_ignored}"
+  end
 
   PRIORITIES = %w[low normal high urgent].freeze
   STATUSES   = %w[pending approved rejected].freeze

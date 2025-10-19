@@ -58,6 +58,15 @@ class App.UiElement.ApplicationAction
       groups.notification =
         name: __('Notification')
         model: 'Notification'
+    
+    # Add approval and share groups for triggers
+    if attribute.trigger
+      groups.approval =
+        name: __('Approval')
+        model: null
+      groups.share =
+        name: __('Share')
+        model: null
 
     # merge config
     elements = {}
@@ -69,6 +78,10 @@ class App.UiElement.ApplicationAction
           elements["#{groupKey}.webhook"] = { name: 'webhook', display: __('Webhook') }
         else if groupKey is 'article'
           elements["#{groupKey}.note"] = { name: 'note', display: __('Note') }
+        else if groupKey is 'approval'
+          elements["#{groupKey}.create"] = { name: 'create', display: __('Create Approval Request') }
+        else if groupKey is 'share'
+          elements["#{groupKey}.create"] = { name: 'create', display: __('Share Ticket') }
       else
         for row in App[groupMeta.model].configure_attributes
 
@@ -318,18 +331,38 @@ class App.UiElement.ApplicationAction
 
     notificationTypeMatch = groupAndAttribute.match(/^notification.([\w]+)$/)
     articleTypeMatch = groupAndAttribute.match(/^article.([\w]+)$/)
+    approvalTypeMatch = groupAndAttribute.match(/^approval.([\w]+)$/)
+    shareTypeMatch = groupAndAttribute.match(/^share.([\w]+)$/)
 
     if _.isArray(notificationTypeMatch) && notificationType = notificationTypeMatch[1]
       elementRow.find('.js-setAttribute').html('').addClass('hide')
       elementRow.find('.js-setArticle').html('').addClass('hide')
+      elementRow.find('.js-setApproval').html('').addClass('hide')
+      elementRow.find('.js-setShare').html('').addClass('hide')
       @buildNotificationArea(notificationType, elementFull, elementRow, groupAndAttribute, elements, meta, attribute)
     else if !attribute.article_body_cc_only && _.isArray(articleTypeMatch) && articleType = articleTypeMatch[1]
       elementRow.find('.js-setAttribute').html('').addClass('hide')
       elementRow.find('.js-setNotification').html('').addClass('hide')
+      elementRow.find('.js-setApproval').html('').addClass('hide')
+      elementRow.find('.js-setShare').html('').addClass('hide')
       @buildArticleArea(articleType, elementFull, elementRow, groupAndAttribute, elements, meta, attribute)
+    else if _.isArray(approvalTypeMatch) && approvalType = approvalTypeMatch[1]
+      elementRow.find('.js-setAttribute').html('').addClass('hide')
+      elementRow.find('.js-setNotification').html('').addClass('hide')
+      elementRow.find('.js-setArticle').html('').addClass('hide')
+      elementRow.find('.js-setShare').html('').addClass('hide')
+      @buildApprovalArea(approvalType, elementFull, elementRow, groupAndAttribute, elements, meta, attribute)
+    else if _.isArray(shareTypeMatch) && shareType = shareTypeMatch[1]
+      elementRow.find('.js-setAttribute').html('').addClass('hide')
+      elementRow.find('.js-setNotification').html('').addClass('hide')
+      elementRow.find('.js-setArticle').html('').addClass('hide')
+      elementRow.find('.js-setApproval').html('').addClass('hide')
+      @buildShareArea(shareType, elementFull, elementRow, groupAndAttribute, elements, meta, attribute)
     else
       elementRow.find('.js-setNotification').html('').addClass('hide')
       elementRow.find('.js-setArticle').html('').addClass('hide')
+      elementRow.find('.js-setApproval').html('').addClass('hide')
+      elementRow.find('.js-setShare').html('').addClass('hide')
       if !elementRow.find('.js-setAttribute div').get(0)
         attributeSelectorElement = $( App.view('generic/ticket_perform_action/attribute_selector')(
           attribute: attribute
@@ -751,3 +784,131 @@ class App.UiElement.ApplicationAction
   @removeAlerts: (item, elementRow) ->
     item.find(".js-alert[data-element-row-id='#{elementRow.data('id')}']")
       .remove()
+
+  @buildApprovalArea: (approvalType, elementFull, elementRow, groupAndAttribute, elements, meta, attribute) ->
+    return if elementRow.find(".js-setApproval .js-approval-#{approvalType}").get(0)
+
+    elementRow.find('.js-setApproval').empty()
+
+    name = "#{attribute.name}::approval.#{approvalType}"
+    
+    # Build approver selection (filtered to only users with Approver role)
+    # Use EXACT same approach as approval request modal - simple select dropdown
+    approverSelection = $('<select name="' + "#{name}::approver_id" + '" class="form-control" required></select>')
+    approverSelection.append('<option value="">' + App.i18n.translateInline('Select approver...') + '</option>')
+    
+    # Load approvers via AJAX ONCE when element is created (same as modal)
+    approverRole = App.Role.findByAttribute('name', 'Approver')
+    if approverRole
+      App.Ajax.request(
+        id: 'load_approvers_for_trigger'
+        type: 'GET'
+        url: "#{App.Config.get('api_path')}/users/search"
+        data:
+          role_ids: [approverRole.id]
+          limit: 1000
+        processData: true
+        success: (data) ->
+          users = if Array.isArray(data) then data else (data?.users || [])
+          # Filter out inactive users and current user
+          current_user_id = App.User.current()?.id
+          approvers = users.filter (user) ->
+            return false if user.id is current_user_id
+            return false if user.active is false
+            true
+          
+          # Sort by name
+          approvers.sort (a, b) ->
+            nameA = ((a.firstname || '') + ' ' + (a.lastname || '')).trim() || a.login || a.email || ''
+            nameB = ((b.firstname || '') + ' ' + (b.lastname || '')).trim() || b.login || b.email || ''
+            nameA.toLowerCase().localeCompare(nameB.toLowerCase())
+          
+          # Add options
+          for approver in approvers
+            name = ((approver.firstname || '') + ' ' + (approver.lastname || '')).trim() || approver.login || approver.email || "User ##{approver.id}"
+            displayName = name
+            displayName += " (#{approver.email})" if approver.email && name != approver.email
+            
+            option = $('<option></option>')
+            option.val(approver.id)
+            option.text(displayName)
+            option.prop('selected', true) if meta.approver_id && approver.id.toString() == meta.approver_id.toString()
+            approverSelection.append(option)
+        error: ->
+          # Keep placeholder on error
+      )
+    
+    # Build priority selection
+    prioritySelection = App.UiElement.select.render(
+      name: "#{name}::priority"
+      multiple: false
+      null: false
+      options: {
+        'low': 'Low'
+        'normal': 'Normal'
+        'high': 'High'
+        'urgent': 'Urgent'
+      }
+      value: meta.priority || 'normal'
+      translate: true
+    )
+    
+    # Create container element
+    approvalElement = $('<div class="js-approval-' + approvalType + '"></div>')
+    
+    # Create form group for approver
+    approverGroup = $('<div class="form-group"></div>')
+    approverGroup.append('<label>' + App.i18n.translateInline('Approver') + '</label>')
+    approverGroup.append(approverSelection)
+    approvalElement.append(approverGroup)
+    
+    # Create form group for priority
+    priorityGroup = $('<div class="form-group"></div>')
+    priorityGroup.append('<label>' + App.i18n.translateInline('Priority') + '</label>')
+    priorityGroup.append(prioritySelection)
+    approvalElement.append(priorityGroup)
+    
+    elementRow.find('.js-setApproval').html(approvalElement).removeClass('hide')
+
+  @buildShareArea: (shareType, elementFull, elementRow, groupAndAttribute, elements, meta, attribute) ->
+    return if elementRow.find(".js-setShare .js-share-#{shareType}").get(0)
+
+    elementRow.find('.js-setShare').empty()
+
+    name = "#{attribute.name}::share.#{shareType}"
+    
+    # Build group selection
+    groupSelection = App.UiElement.select.render(
+      name: "#{name}::group_id"
+      multiple: false
+      null: false
+      relation: 'Group'
+      value: meta.group_id
+      translate: false
+      nulloption: false
+    )
+    
+    # Build expiry date selection (optional - date only, no time)
+    expirySelection = App.UiElement.date.render(
+      name: "#{name}::expires_at"
+      null: true
+      nulloption: true
+      value: meta.expires_at
+    )
+    
+    # Create container element
+    shareElement = $('<div class="js-share-' + shareType + '"></div>')
+    
+    # Create form group for group selection
+    groupGroup = $('<div class="form-group"></div>')
+    groupGroup.append('<label>' + App.i18n.translateInline('Share with Group') + '</label>')
+    groupGroup.append(groupSelection)
+    shareElement.append(groupGroup)
+    
+    # Create form group for expiry date
+    expiryGroup = $('<div class="form-group"></div>')
+    expiryGroup.append('<label>' + App.i18n.translateInline('Expires At (optional)') + '</label>')
+    expiryGroup.append(expirySelection)
+    shareElement.append(expiryGroup)
+    
+    elementRow.find('.js-setShare').html(shareElement).removeClass('hide')

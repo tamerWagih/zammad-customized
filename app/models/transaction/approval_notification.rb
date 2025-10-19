@@ -60,8 +60,11 @@ class Transaction::ApprovalNotification
   def perform
     # Only process Ticket::Approval objects
     if @item[:object] != 'Ticket::Approval'
+      Rails.logger.debug "[APPROVAL_NOTIFICATION] Skipping - not a Ticket::Approval object: #{@item[:object]}"
       return
     end
+    
+    Rails.logger.info "[APPROVAL_NOTIFICATION] Processing approval notification for #{@item[:type]} event"
     
     # return if we run import mode
     if Setting.get('import_mode')

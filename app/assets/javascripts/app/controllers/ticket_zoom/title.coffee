@@ -9,13 +9,26 @@ class App.TicketZoomTitle extends App.ControllerObserver
     'blur .js-objectTitle': 'update'
 
   renderPost: (object) =>
-    @$('.js-objectTitle').ce({
+    # Make title field read-only (immutable after creation)
+    titleElement = @$('.js-objectTitle')
+    titleElement.ce({
       mode:      'textonly'
       multiline: false
       maxlength: 250
     })
+    
+    # Disable editing of title after ticket creation
+    titleElement.attr('contenteditable', 'false')
+    titleElement.addClass('is-disabled')
+    titleElement.css({
+      'cursor': 'not-allowed'
+      'opacity': '0.6'
+    })
 
   update: (e) =>
+    # Title is immutable after creation - prevent any updates
+    return
+    
     title = $(e.target).ceg() || ''
 
     # update title

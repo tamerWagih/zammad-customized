@@ -58,11 +58,13 @@ class Transaction::ShareNotification
   end
 
   def perform
-    
     # Only process Ticket::Share objects
     if @item[:object] != 'Ticket::Share'
+      Rails.logger.debug "[SHARE_NOTIFICATION] Skipping - not a Ticket::Share object: #{@item[:object]}"
       return
     end
+    
+    Rails.logger.info "[SHARE_NOTIFICATION] Processing share notification for #{@item[:type]} event"
     
     
     # return if we run import mode

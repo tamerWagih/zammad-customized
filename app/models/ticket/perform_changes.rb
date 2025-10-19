@@ -12,7 +12,9 @@ module Ticket::PerformChanges
                                      :notification_email,
                                      :notification_sms,
                                      :notification_webhook,
-                                     :article_note
+                                     :article_note,
+                                     :approval_create,
+                                     :share_create
   end
 
   def pre_execute(perform_changes_data)
@@ -28,9 +30,21 @@ module Ticket::PerformChanges
   end
 
   def additional_object_action(object_name, object_key, action_value, _prepared_actions)
-    return if object_name != 'article'
-    return if %w[note].exclude?(object_key)
+    # Handle article actions
+    if object_name == 'article' && %w[note].include?(object_key)
+      return { name: :"article_#{object_key.to_sym}", value: action_value }
+    end
 
-    { name: :"article_#{object_key.to_sym}", value: action_value }
+    # Handle approval actions
+    if object_name == 'approval' && %w[create].include?(object_key)
+      return { name: :"approval_#{object_key.to_sym}", value: action_value }
+    end
+
+    # Handle share actions
+    if object_name == 'share' && %w[create].include?(object_key)
+      return { name: :"share_#{object_key.to_sym}", value: action_value }
+    end
+
+    nil
   end
 end
