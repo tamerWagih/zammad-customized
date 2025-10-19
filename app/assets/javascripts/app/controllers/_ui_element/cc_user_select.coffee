@@ -1,15 +1,20 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
-    # Load users via AJAX call to /users/search
+    console.log '[CC] Rendering CC user select'
+    
+    # Load users via AJAX call to /users/search (same as approval modal)
     attribute.tag = 'searchable_select'
     attribute.multiple = true
     attribute.nulloption = false
     attribute.placeholder = __('Search for users to CC...')
     
-    # Get role IDs for agents and customers
+    # Get role IDs for agents and customers (same pattern as approval)
     agent_roles = App.Role.withPermissions('ticket.agent')
     customer_roles = App.Role.withPermissions('ticket.customer')
+    
+    console.log '[CC] Agent roles:', agent_roles?.length || 0
+    console.log '[CC] Customer roles:', customer_roles?.length || 0
     
     role_ids = []
     if agent_roles
@@ -19,27 +24,34 @@ class App.UiElement.cc_user_select
       for role in customer_roles
         role_ids.push(role.id)
     
+    console.log '[CC] Role IDs to search:', role_ids
+    
     # Start with empty options
     attribute.options = {}
     
     current_user_id = App.User.current()?.id
+    console.log '[CC] Current user ID:', current_user_id
     
-    # Make AJAX call to load users
-    $.ajax(
+    # Make AJAX call using App.Ajax (same as approval modal uses @ajax)
+    App.Ajax.request(
+      id: 'cc_users_search'
       type: 'GET'
       url: "#{App.Config.get('api_path')}/users/search"
       data:
         role_ids: role_ids
         limit: 1000
       processData: true
-      success: (data) =>
+      success: (data, status, xhr) =>
+        console.log '[CC] Users loaded successfully'
         users = if Array.isArray(data) then data else (data?.users || [])
+        console.log '[CC] Total users received:', users.length
         
-        # Build options
+        # Build options (same filtering as approval)
         attribute.options = {}
+        filtered_count = 0
         for user in users
-          continue if user.id is current_user_id
-          continue if !user.active
+          continue if user.id is current_user_id  # Exclude current user
+          continue if !user.active                # Exclude inactive users
           
           display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
           display_name = user.login if display_name == ''
@@ -50,14 +62,23 @@ class App.UiElement.cc_user_select
             display_name += " (#{user.email})"
           
           attribute.options[user.id] = display_name
+          filtered_count++
+        
+        console.log '[CC] Filtered users for dropdown:', filtered_count
+        console.log '[CC] Options:', Object.keys(attribute.options).length
         
         # Re-render with loaded users
         $element = $(element)
         new_element = App.UiElement.searchable_select.render(attribute, params)
         $element.replaceWith(new_element)
+        console.log '[CC] Dropdown re-rendered with users'
         
       error: (xhr, status, error) =>
-        console.error 'CC: Failed to load users', status, error
+        console.error '[CC] Failed to load users'
+        console.error '[CC] Status:', status
+        console.error '[CC] Error:', error
+        console.error '[CC] XHR:', xhr
+        
         # Fallback to empty
         attribute.options = {}
         $element = $(element)
@@ -65,6 +86,7 @@ class App.UiElement.cc_user_select
         $element.replaceWith(new_element)
     )
     
-    # Render initial element
+    # Render initial element (will be replaced after AJAX completes)
     element = App.UiElement.searchable_select.render(attribute, params)
+    console.log '[CC] Initial element rendered (empty)'
     element
