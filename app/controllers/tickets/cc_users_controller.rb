@@ -1,6 +1,6 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
-class TicketCcsController < ApplicationController
+class Tickets::CcUsersController < ApplicationController
   prepend_before_action :authentication_check
 
   # GET /api/v1/tickets/cc_users
