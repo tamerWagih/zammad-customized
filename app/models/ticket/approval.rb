@@ -7,6 +7,20 @@ class Ticket::Approval < ApplicationModel
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Approval::TriggersNotifications
+  
+  # Debug: Add logging for online notifications
+  after_create :log_approval_created
+  after_update :log_approval_updated
+  
+  private
+  
+  def log_approval_created
+    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Approval ##{id} created - should trigger online notification"
+  end
+  
+  def log_approval_updated
+    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Approval ##{id} updated - should trigger online notification"
+  end
 
   PRIORITIES = %w[low normal high urgent].freeze
   STATUSES   = %w[pending approved rejected].freeze

@@ -793,42 +793,58 @@ class App.UiElement.ApplicationAction
     name = "#{attribute.name}::approval.#{approvalType}"
     
     # Build approver selection (filtered to only users with Approver role)
-    # Use the same approach as the approval request modal
-    approverSelection = App.UiElement.user_autocompletion.render(
-      name: "#{name}::approver_id"
-      multiple: false
-      null: false
-      relation: 'User'
-      relation_condition: { roles: 'Approver' }
-      placeholder: __('Select approver...')
-      value: meta.approver_id
-      disableCreateObject: true
-      # Add custom search to filter by Approver role
-      search: (query, callback) ->
-        # Find Approver role
-        approverRole = App.Role.findByAttribute('name', 'Approver')
-        if !approverRole
-          callback([])
-          return
-        
-        # Search users with Approver role
-        App.Ajax.request(
-          id: 'approver_search'
-          type: 'GET'
-          url: "#{App.Config.get('api_path')}/users/search"
-          data:
-            query: query
-            role_ids: [approverRole.id]
-            limit: 50
-          success: (data) ->
-            users = if Array.isArray(data) then data else (data?.users || [])
-            # Filter out inactive users
-            activeUsers = users.filter (user) -> user.active isnt false
-            callback(activeUsers)
-          error: ->
-            callback([])
-        )
-    )
+    # Create a custom select element that loads approvers via AJAX
+    approverSelection = $('<select name="' + "#{name}::approver_id" + '" class="form-control"></select>')
+    approverSelection.append('<option value="">' + App.i18n.translateInline('Select approver...') + '</option>')
+    
+    # Load approvers via AJAX (same approach as approval request modal)
+    approverRole = App.Role.findByAttribute('name', 'Approver')
+    if approverRole
+      App.Ajax.request(
+        id: 'load_approvers_for_trigger'
+        type: 'GET'
+        url: "#{App.Config.get('api_path')}/users/search"
+        data:
+          role_ids: [approverRole.id]
+          limit: 1000
+        success: (data) ->
+          users = if Array.isArray(data) then data else (data?.users || [])
+          # Filter out inactive users and current user
+          current_user_id = App.User.current()?.id
+          approvers = users.filter (user) ->
+            return false if user.id is current_user_id
+            return false if user.active is false
+            true
+          
+          # Sort approvers by name
+          approvers.sort (a, b) ->
+            nameA = (a.firstname || '') + ' ' + (a.lastname || '')
+            nameA = a.login if nameA.trim() == ''
+            nameA = a.email if !nameA
+            nameA = (nameA || '').toLowerCase()
+            
+            nameB = (b.firstname || '') + ' ' + (b.lastname || '')
+            nameB = b.login if nameB.trim() == ''
+            nameB = b.email if !nameB
+            nameB = (nameB || '').toLowerCase()
+            
+            if nameA < nameB then -1 else if nameA > nameB then 1 else 0
+          
+          # Add options to select
+          for approver in approvers
+            displayName = approver.firstname + ' ' + approver.lastname
+            displayName = approver.login if displayName.trim() == ''
+            displayName = approver.email if !displayName
+            displayName += " <#{approver.email}>" if approver.email
+            
+            option = $('<option></option>')
+            option.val(approver.id)
+            option.text(displayName)
+            option.prop('selected', approver.id == meta.approver_id)
+            approverSelection.append(option)
+        error: ->
+          # Keep the placeholder option if loading fails
+      )
     
     # Build priority selection
     prioritySelection = App.UiElement.select.render(

@@ -7,6 +7,20 @@ class Ticket::Share < ApplicationModel
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Share::TriggersNotifications
+  
+  # Debug: Add logging for online notifications
+  after_create :log_share_created
+  after_update :log_share_updated
+  
+  private
+  
+  def log_share_created
+    Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Share ##{id} created - should trigger online notification"
+  end
+  
+  def log_share_updated
+    Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Share ##{id} updated - should trigger online notification"
+  end
 
   VALID_PERMISSIONS = %w[full].freeze
 
