@@ -305,6 +305,9 @@ class TicketsController < ApplicationController
 
     # disable changes on ticket number
     clean_params.delete('number')
+    
+    # disable changes on ticket title (after creation, title is immutable)
+    clean_params.delete('title')
 
     # overwrite params
     if !current_user.permissions?('ticket.agent')
