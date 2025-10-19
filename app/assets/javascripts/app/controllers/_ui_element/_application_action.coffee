@@ -793,6 +793,7 @@ class App.UiElement.ApplicationAction
     name = "#{attribute.name}::approval.#{approvalType}"
     
     # Build approver selection (filtered to only users with Approver role)
+    # Use the same approach as the approval request modal
     approverSelection = App.UiElement.user_autocompletion.render(
       name: "#{name}::approver_id"
       multiple: false
@@ -802,6 +803,31 @@ class App.UiElement.ApplicationAction
       placeholder: __('Select approver...')
       value: meta.approver_id
       disableCreateObject: true
+      # Add custom search to filter by Approver role
+      search: (query, callback) ->
+        # Find Approver role
+        approverRole = App.Role.findByAttribute('name', 'Approver')
+        if !approverRole
+          callback([])
+          return
+        
+        # Search users with Approver role
+        App.Ajax.request(
+          id: 'approver_search'
+          type: 'GET'
+          url: "#{App.Config.get('api_path')}/users/search"
+          data:
+            query: query
+            role_ids: [approverRole.id]
+            limit: 50
+          success: (data) ->
+            users = if Array.isArray(data) then data else (data?.users || [])
+            # Filter out inactive users
+            activeUsers = users.filter (user) -> user.active isnt false
+            callback(activeUsers)
+          error: ->
+            callback([])
+        )
     )
     
     # Build priority selection

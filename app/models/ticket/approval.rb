@@ -3,7 +3,7 @@
 class Ticket::Approval < ApplicationModel
   include HasActivityStreamLog
   include HasSearchIndexBackend
-  # NOTE: ChecksClientNotification removed - parent Ticket model handles WebSocket via TriggersSubscriptions
+  include ChecksClientNotification
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Approval::TriggersNotifications
