@@ -17,6 +17,9 @@ class Ticket::PerformChanges::Action::ShareCreate < Ticket::PerformChanges::Acti
     group_id = share_data['group_id'] || share_data[:group_id]
     expires_at = share_data['expires_at'] || share_data[:expires_at]
     
+    # Log the ticket context (for debugging)
+    Rails.logger.info { "Creating share for ticket ##{record.id} (#{record.title}) via trigger" }
+    
     # Support both group_id and group name formats
     if group_id.is_a?(String) && group_id !~ /^\d+$/
       # It's a group name, find the group

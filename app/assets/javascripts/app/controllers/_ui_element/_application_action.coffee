@@ -792,12 +792,13 @@ class App.UiElement.ApplicationAction
 
     name = "#{attribute.name}::approval.#{approvalType}"
     
-    # Build approver selection (user autocompletion with proper relation)
+    # Build approver selection (filtered to only users with Approver role)
     approverSelection = App.UiElement.user_autocompletion.render(
       name: "#{name}::approver_id"
       multiple: false
       null: false
       relation: 'User'
+      relation_condition: { roles: 'Approver' }
       placeholder: __('Select approver...')
       value: meta.approver_id
       disableCreateObject: true

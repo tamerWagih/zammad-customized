@@ -17,6 +17,9 @@ class Ticket::PerformChanges::Action::ApprovalCreate < Ticket::PerformChanges::A
     approver_id = approval_data['approver_id'] || approval_data[:approver_id]
     priority = approval_data['priority'] || approval_data[:priority] || 'normal'
     
+    # Log the ticket context (for debugging)
+    Rails.logger.info { "Creating approval for ticket ##{record.id} (#{record.title}) via trigger" }
+    
     # Support both user_id and login/email formats
     if approver_id.is_a?(String)
       if approver_id =~ /^\d+$/
