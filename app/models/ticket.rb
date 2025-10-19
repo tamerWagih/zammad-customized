@@ -825,28 +825,43 @@ returns a hex color code
 
   # Create CC records after ticket creation if cc_user_ids is provided
   def create_cc_records
+    Rails.logger.info "[CC] create_cc_records called for ticket #{id}"
+    Rails.logger.info "[CC] cc_user_ids: #{cc_user_ids.inspect}"
+    
     return if cc_user_ids.blank?
     return unless cc_user_ids.is_a?(Array)
 
     current_user = UserInfo.current_user_id
+    Rails.logger.info "[CC] Current user: #{current_user}"
     
     cc_user_ids.each do |user_id|
       next if user_id.blank?
       
       # Skip if user doesn't exist or is the creator
       user = User.find_by(id: user_id)
-      next unless user
-      next if user.id == current_user
+      unless user
+        Rails.logger.warn "[CC] User #{user_id} not found"
+        next
+      end
+      
+      if user.id == current_user
+        Rails.logger.info "[CC] Skipping current user #{user.id}"
+        next
+      end
 
       # Create CC record (will trigger notifications via HasTransactionDispatcher)
-      ccs.create!(
+      Rails.logger.info "[CC] Creating CC record for user #{user.id} (#{user.fullname})"
+      cc = ccs.create!(
         user_id: user.id,
         created_by_id: current_user,
         updated_by_id: current_user
       )
+      Rails.logger.info "[CC] CC record created: #{cc.id}"
     end
+    Rails.logger.info "[CC] Finished creating CC records for ticket #{id}"
   rescue StandardError => e
-    Rails.logger.error "Failed to create CC records for ticket #{id}: #{e.message}"
+    Rails.logger.error "[CC] Failed to create CC records for ticket #{id}: #{e.message}"
+    Rails.logger.error "[CC] Backtrace: #{e.backtrace.join("\n")}"
   end
 end
 
