@@ -797,7 +797,6 @@ class App.UiElement.ApplicationAction
       name: "#{name}::approver_id"
       multiple: false
       null: false
-      label: __('Approver')
       placeholder: __('Select approver...')
       value: meta.approver_id
       disableCreateObject: true
@@ -808,20 +807,30 @@ class App.UiElement.ApplicationAction
       name: "#{name}::priority"
       multiple: false
       null: false
-      label: __('Priority')
-      options: [
-        { value: 'low', name: __('Low') }
-        { value: 'normal', name: __('Normal') }
-        { value: 'high', name: __('High') }
-        { value: 'urgent', name: __('Urgent') }
-      ]
+      options: {
+        'low': 'Low'
+        'normal': 'Normal'
+        'high': 'High'
+        'urgent': 'Urgent'
+      }
       value: meta.priority || 'normal'
       translate: true
     )
     
+    # Create container element
     approvalElement = $('<div class="js-approval-' + approvalType + '"></div>')
-    approvalElement.append('<div class="form-group"><label>' + App.i18n.translateInline('Approver') + '</label>' + approverSelection + '</div>')
-    approvalElement.append('<div class="form-group"><label>' + App.i18n.translateInline('Priority') + '</label>' + prioritySelection + '</div>')
+    
+    # Create form group for approver
+    approverGroup = $('<div class="form-group"></div>')
+    approverGroup.append('<label>' + App.i18n.translateInline('Approver') + '</label>')
+    approverGroup.append(approverSelection)
+    approvalElement.append(approverGroup)
+    
+    # Create form group for priority
+    priorityGroup = $('<div class="form-group"></div>')
+    priorityGroup.append('<label>' + App.i18n.translateInline('Priority') + '</label>')
+    priorityGroup.append(prioritySelection)
+    approvalElement.append(priorityGroup)
     
     elementRow.find('.js-setApproval').html(approvalElement).removeClass('hide')
 
@@ -837,7 +846,6 @@ class App.UiElement.ApplicationAction
       name: "#{name}::group_id"
       multiple: false
       null: false
-      label: __('Group')
       relation: 'Group'
       value: meta.group_id
       translate: false
@@ -848,12 +856,22 @@ class App.UiElement.ApplicationAction
     expirySelection = App.UiElement.datetime.render(
       name: "#{name}::expires_at"
       null: true
-      label: __('Expires At (optional)')
       value: meta.expires_at
     )
     
+    # Create container element
     shareElement = $('<div class="js-share-' + shareType + '"></div>')
-    shareElement.append('<div class="form-group"><label>' + App.i18n.translateInline('Share with Group') + '</label>' + groupSelection + '</div>')
-    shareElement.append('<div class="form-group"><label>' + App.i18n.translateInline('Expires At (optional)') + '</label>' + expirySelection + '</div>')
+    
+    # Create form group for group selection
+    groupGroup = $('<div class="form-group"></div>')
+    groupGroup.append('<label>' + App.i18n.translateInline('Share with Group') + '</label>')
+    groupGroup.append(groupSelection)
+    shareElement.append(groupGroup)
+    
+    # Create form group for expiry date
+    expiryGroup = $('<div class="form-group"></div>')
+    expiryGroup.append('<label>' + App.i18n.translateInline('Expires At (optional)') + '</label>')
+    expiryGroup.append(expirySelection)
+    shareElement.append(expiryGroup)
     
     elementRow.find('.js-setShare').html(shareElement).removeClass('hide')
