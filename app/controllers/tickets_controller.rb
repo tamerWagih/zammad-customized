@@ -201,9 +201,16 @@ class TicketsController < ApplicationController
         clean_params[:customer_id] = local_customer.id
       end
 
+      # Extract cc_user_ids before param_cleanup strips it out
+      cc_user_ids = clean_params.delete(:cc_user_ids)
+      
       clean_params = Ticket.param_cleanup(clean_params, true)
       clean_params[:screen] = 'create_middle'
       ticket = Ticket.new(clean_params)
+      
+      # Assign cc_user_ids to ticket (will be processed in after_create callback)
+      ticket.cc_user_ids = cc_user_ids if cc_user_ids.present?
+      
       authorize!(ticket, :create?)
 
       # create ticket

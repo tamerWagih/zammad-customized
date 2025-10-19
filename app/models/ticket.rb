@@ -826,7 +826,9 @@ returns a hex color code
   # Create CC records after ticket creation if cc_user_ids is provided
   def create_cc_records
     Rails.logger.info "[CC] create_cc_records called for ticket #{id}"
-    Rails.logger.info "[CC] cc_user_ids: #{cc_user_ids.inspect}"
+    Rails.logger.info "[CC] cc_user_ids attribute: #{cc_user_ids.inspect}"
+    Rails.logger.info "[CC] All ticket attributes: #{attributes.keys.join(', ')}"
+    Rails.logger.info "[CC] Checking for cc_user_ids in attributes: #{attributes['cc_user_ids'].inspect}"
     
     return if cc_user_ids.blank?
     return unless cc_user_ids.is_a?(Array)
