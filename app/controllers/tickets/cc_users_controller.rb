@@ -11,18 +11,23 @@ class Tickets::CcUsersController < ApplicationController
   # @response_message 200 [Array<User>] List of users available for CC
   # @response_message 403               Forbidden / Invalid session
   def index
-    # Use the same User.search method that /users/search uses
-    # This ensures we get the same results as the approval modal
-    
+    Rails.logger.info "[CC_API] CC users endpoint called by user #{current_user.id}"
+
     # Get Agent and Customer roles
     agent_roles = Role.with_permissions('ticket.agent')
     customer_roles = Role.with_permissions('ticket.customer')
-    
+
+    Rails.logger.info "[CC_API] Agent roles found: #{agent_roles.count}"
+    Rails.logger.info "[CC_API] Customer roles found: #{customer_roles.count}"
+
     role_ids = []
     role_ids += agent_roles.pluck(:id) if agent_roles.present?
     role_ids += customer_roles.pluck(:id) if customer_roles.present?
     role_ids.uniq!
-    
+
+    Rails.logger.info "[CC_API] Role IDs: #{role_ids.inspect}"
+    Rails.logger.info "[CC_API] Current user: #{current_user.id} (#{current_user.permissions})"
+
     # Use User.search with role_ids (same as approval modal)
     search_result = User.search(
       role_ids:     role_ids,
@@ -30,6 +35,9 @@ class Tickets::CcUsersController < ApplicationController
       current_user: current_user,
       full:         true,
     ) || { objects: [] }
+
+    Rails.logger.info "[CC_API] Search result count: #{search_result[:objects]&.count || 0}"
+    Rails.logger.info "[CC_API] Search result: #{search_result.inspect}"
     
     users = search_result[:objects] || []
     

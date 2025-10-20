@@ -202,12 +202,16 @@ class TicketsController < ApplicationController
       end
 
       # Extract cc_user_ids before param_cleanup strips it out
+      Rails.logger.info "[CC_TICKET] Clean params keys: #{clean_params.keys.join(', ')}"
+      Rails.logger.info "[CC_TICKET] cc_user_ids in params: #{clean_params[:cc_user_ids].inspect}"
       cc_user_ids = clean_params.delete(:cc_user_ids)
-      
+
+      Rails.logger.info "[CC_TICKET] Extracted cc_user_ids: #{cc_user_ids.inspect}"
+
       clean_params = Ticket.param_cleanup(clean_params, true)
       clean_params[:screen] = 'create_middle'
       ticket = Ticket.new(clean_params)
-      
+
       # Assign cc_user_ids to ticket (will be processed in after_create callback)
       ticket.cc_user_ids = cc_user_ids if cc_user_ids.present?
       
