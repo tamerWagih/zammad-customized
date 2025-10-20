@@ -1,6 +1,6 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
-class AddCcToUserNotifications < ActiveRecord::Migration[6.1]
+class AddCcToUserNotifications < ActiveRecord::Migration[7.2]
   def up
     Rails.logger.info '[CC_USER_NOTIFICATION] 🚀 Adding CC notification settings to all active users...'
 
