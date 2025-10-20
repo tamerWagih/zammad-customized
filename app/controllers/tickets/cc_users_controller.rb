@@ -31,13 +31,23 @@ class Tickets::CcUsersController < ApplicationController
     # Try a simpler approach - get all active users and filter by roles
     all_users = User.where(active: true).limit(1000)
 
+    Rails.logger.info "[CC_API] All active users: #{all_users.count}"
+
+    # Debug: Check what roles users actually have
+    sample_users = all_users.first(5)
+    sample_users.each do |user|
+      user_roles = user.roles.pluck(:id, :name)
+      Rails.logger.info "[CC_API] User #{user.id} roles: #{user_roles.inspect}"
+    end
+
     # Filter users that have agent or customer roles
     users_with_roles = all_users.select do |user|
       user_role_ids = user.roles.pluck(:id)
-      (user_role_ids & role_ids).any?
+      has_role = (user_role_ids & role_ids).any?
+      Rails.logger.info "[CC_API] User #{user.id} (#{user.fullname}) - role_ids: #{user_role_ids}, target_roles: #{role_ids}, has_role: #{has_role}"
+      has_role
     end
 
-    Rails.logger.info "[CC_API] All active users: #{all_users.count}"
     Rails.logger.info "[CC_API] Users with target roles: #{users_with_roles.count}"
 
     # Use the filtered users as the result

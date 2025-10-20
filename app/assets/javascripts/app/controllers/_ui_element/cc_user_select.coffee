@@ -101,15 +101,28 @@ class App.UiElement.cc_user_select
     console.log '[CC] Initial element rendered (empty)'
 
     # Ensure form submission includes cc_user_ids
-    # The searchable_select should handle this automatically, but let's ensure it
-    $(element).on 'change', ->
-      selectedValues = $(@).val() || []
-      # Update a hidden field if it exists, or ensure the component handles form serialization
-      hiddenField = $(@).closest('form').find("input[name='cc_user_ids']")
-      if hiddenField.length > 0
-        hiddenField.val(selectedValues.join(','))
+    # Store selected values for form submission
+    $(element).data('cc_selected_values', [])
+
+    # Override the val() method to ensure form serialization works
+    originalVal = $(element).val
+    $(element).val = (value) ->
+      if value?
+        $(element).data('cc_selected_values', value)
+        return originalVal.call(@, value)
       else
-        # Create a hidden field if it doesn't exist
-        $(@).closest('form').append("<input type='hidden' name='cc_user_ids' value='#{selectedValues.join(',')}' />")
+        return $(element).data('cc_selected_values') || originalVal.call(@)
+
+    # Ensure the searchable_select component includes cc_user_ids in form data
+    # The component should handle this, but let's make sure
+    $(element).closest('form').on 'submit.cc_user_select', ->
+      selectedValues = $(element).val() || []
+      if selectedValues.length > 0
+        hiddenField = $(@).find("input[name='cc_user_ids']")
+        if hiddenField.length == 0
+          $(@).append("<input type='hidden' name='cc_user_ids' value='#{selectedValues.join(',')}' />")
+        else
+          hiddenField.val(selectedValues.join(','))
+      return true
 
     element
