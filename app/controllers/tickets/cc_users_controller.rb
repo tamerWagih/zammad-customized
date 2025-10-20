@@ -28,16 +28,22 @@ class Tickets::CcUsersController < ApplicationController
     Rails.logger.info "[CC_API] Role IDs: #{role_ids.inspect}"
     Rails.logger.info "[CC_API] Current user: #{current_user.id} (#{current_user.permissions})"
 
-    # Use User.search with role_ids (same as approval modal)
-    search_result = User.search(
-      role_ids:     role_ids,
-      limit:        1000,
-      current_user: current_user,
-      full:         true,
-    ) || { objects: [] }
+    # Try a simpler approach - get all active users and filter by roles
+    all_users = User.where(active: true).limit(1000)
 
-    Rails.logger.info "[CC_API] Search result count: #{search_result[:objects]&.count || 0}"
-    Rails.logger.info "[CC_API] Search result: #{search_result.inspect}"
+    # Filter users that have agent or customer roles
+    users_with_roles = all_users.select do |user|
+      user_role_ids = user.roles.pluck(:id)
+      (user_role_ids & role_ids).any?
+    end
+
+    Rails.logger.info "[CC_API] All active users: #{all_users.count}"
+    Rails.logger.info "[CC_API] Users with target roles: #{users_with_roles.count}"
+
+    # Use the filtered users as the result
+    search_result = { objects: users_with_roles }
+
+    Rails.logger.info "[CC_API] Final result count: #{search_result[:objects]&.count || 0}"
     
     users = search_result[:objects] || []
     
