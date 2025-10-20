@@ -6,7 +6,7 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
   content: =>
     configure_attributes = [
       { name: 'name',       display: __('Name'),                tag: 'input',    type: 'text', limit: 100, 'null': false },
-      { name: 'condition',  display: __('Conditions for shown tickets'), tag: 'ticket_selector', null: false },
+      { name: 'condition',  display: __('Conditions for shown tickets'), tag: 'ticket_selector', null: false, default: { operator: 'AND', children: [] } },
       {
         name:    'view::s'
         display: __('Attributes')

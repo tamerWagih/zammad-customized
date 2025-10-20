@@ -29,6 +29,19 @@ class User::CustomFiltersController < ApplicationController
   def create
     filter_params = params.permit(:name, :prio, :active, condition: {}, order: {}, view: {}, group_by: [])
     
+    # Handle nested parameters properly
+    if params[:condition].present?
+      filter_params[:condition] = params[:condition].to_unsafe_h
+    end
+    
+    if params[:order].present?
+      filter_params[:order] = params[:order].to_unsafe_h
+    end
+    
+    if params[:view].present?
+      filter_params[:view] = params[:view].to_unsafe_h
+    end
+    
     # Initialize custom_filters if not exists
     current_user.preferences[:custom_filters] ||= []
     
@@ -57,8 +70,13 @@ class User::CustomFiltersController < ApplicationController
     if current_user.save
       render json: new_filter, status: :created
     else
+      Rails.logger.error "Failed to save custom filter: #{current_user.errors.full_messages}"
       render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
     end
+  rescue => e
+    Rails.logger.error "Error creating custom filter: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    render json: { error: 'Internal server error' }, status: :internal_server_error
   end
 
   # PUT /api/v1/user_custom_filters/:id
