@@ -1,29 +1,52 @@
-You were CC'd on a ticket (<%= ticket.title %>)
+You were CC'd on ticket #<%= ticket.number %> - <%= ticket.title %>
 
 <div>Hi <%= recipient.firstname %>,</div>
 <br>
-<% if @objects[:recipient].id == @objects[:cc].user_id %>
-  <% created_by_name = @objects[:cc].created_by.respond_to?(:fullname) ? @objects[:cc].created_by.fullname : (@objects[:cc].created_by_name || 'Someone') %>
-  <div>You have been <b>CC'd</b> on ticket "<b><%= ticket.title %></b>" by "<b><%= created_by_name %></b>".</div>
+<% if @objects[:action] == 'create' %>
+  <% if @objects[:recipient].id.to_s == @objects[:cc].user_id.to_s %>
+    <div>You have been <b>CC'd</b> on ticket "<b><%= ticket.title %></b>" by <b><%= @objects[:creator_name] %></b>.</div>
+  <% else %>
+    <div>You have <b>CC'd</b> user "<b><%= @objects[:cc_user_name] %></b>" on ticket "<b><%= ticket.title %></b>".</div>
+  <% end %>
+<% elsif @objects[:action] == 'delete' %>
+  <% if @objects[:recipient].id.to_s == @objects[:cc].user_id.to_s %>
+    <div>You have been <b>removed from CC</b> on ticket "<b><%= ticket.title %></b>".</div>
+  <% else %>
+    <div>User "<b><%= @objects[:cc_user_name] %></b>" has been <b>removed from CC</b> on ticket "<b><%= ticket.title %></b>".</div>
+  <% end %>
 <% else %>
-  <% cc_user_name = @objects[:cc].user.respond_to?(:fullname) ? @objects[:cc].user.fullname : (@objects[:cc].user_name || 'Unknown User') %>
-  <div>You have <b>CC'd</b> user "<b><%= cc_user_name %></b>" on ticket "<b><%= ticket.title %></b>".</div>
+  <% if @objects[:recipient].id.to_s == @objects[:cc].user_id.to_s %>
+    <div>Your CC on ticket "<b><%= ticket.title %></b>" has been <b>updated</b>.</div>
+  <% else %>
+    <div>CC for user "<b><%= @objects[:cc_user_name] %></b>" on ticket "<b><%= ticket.title %></b>" has been <b>updated</b>.</div>
+  <% end %>
 <% end %>
 <br>
 <div>
-Ticket: #<%= ticket.number %><br>
-<% if @objects[:cc].message.present? %>
+<b>Ticket Details:</b><br>
+Number: #<%= ticket.number %><br>
+Title: <%= ticket.title %><br>
+<% if ticket.customer %>
+Customer: <%= ticket.customer.fullname %> (<%= ticket.customer.email %>)<br>
+<% end %>
+<% if @objects[:cc].respond_to?(:message) && @objects[:cc].message.present? %>
 Message: <%= @objects[:cc].message %><br>
 <% end %>
-<% if @objects[:recipient].id == @objects[:cc].user_id %>
-  <% if @objects[:cc].full_access? %>
-Access Level: Full Access<br>
+<% if @objects[:action] == 'create' && @objects[:recipient].id.to_s == @objects[:cc].user_id.to_s %>
+  <% if @objects[:cc].respond_to?(:full_access?) && @objects[:cc].full_access? %>
+Access Level: <b>Full Access</b> (can view, comment, and modify)<br>
   <% else %>
-Access Level: Read and Comment<br>
+Access Level: <b>Read and Comment</b> (can view and add comments)<br>
   <% end %>
 <% end %>
 </div>
 <br>
+<% if @objects[:reason].present? %>
+<div style="color: #999; font-size: 12px;">
+<%= @objects[:reason] %>
+</div>
+<br>
+<% end %>
 <div>
-  <a href="<%= config.http_type %>://<%= config.fqdn %>/#ticket/zoom/<%= ticket.id %>" target="zammad_app">View this in <%= config.product_name %></a>
+  <a href="<%= config.http_type %>://<%= config.fqdn %>/#ticket/zoom/<%= ticket.id %>" target="zammad_app" style="display: inline-block; padding: 10px 20px; background-color: #0088cc; color: #ffffff; text-decoration: none; border-radius: 4px;">View Ticket in <%= config.product_name %></a>
 </div>

@@ -266,27 +266,34 @@ class Transaction::CcNotification
     cc_user = nil
     creator = nil
     
-    if cc_obj.respond_to?(:user_id) && cc_obj.user_id
-      cc_user = ::User.find_by(id: cc_obj.user_id)
+    # Handle both active record objects and OpenStruct (for delete operations)
+    user_id = cc_obj.respond_to?(:user_id) ? cc_obj.user_id : cc_obj[:user_id]
+    created_by_id = cc_obj.respond_to?(:created_by_id) ? cc_obj.created_by_id : cc_obj[:created_by_id]
+    
+    if user_id
+      cc_user = ::User.find_by(id: user_id)
     end
     
-    if cc_obj.respond_to?(:created_by_id) && cc_obj.created_by_id
-      creator = ::User.find_by(id: cc_obj.created_by_id)
+    if created_by_id
+      creator = ::User.find_by(id: created_by_id)
     end
+    
+    # Get user_id for comparison (handle both AR and OpenStruct)
+    cc_user_id = cc_obj.respond_to?(:user_id) ? cc_obj.user_id : (cc_obj[:user_id] || user_id)
     
     # Build comprehensive objects hash for email template
     {
-      ticket:    ticket,
-      cc:        cc_obj,
-      recipient: user,
-      current_user: current_user,
-      changes:   @item[:changes] || {},
-      reason:    recipients_reason[user.id] || get_reason_for_user(user),
-      action:    @item[:type],
-      cc_user:   cc_user,
-      creator:   creator,
-      cc_user_name: cc_user&.fullname || 'Unknown User',
-      creator_name: creator&.fullname || 'Unknown User',
+      ticket:        ticket,
+      cc:            cc_obj,
+      recipient:     user,
+      current_user:  current_user,
+      changes:       @item[:changes] || {},
+      reason:        recipients_reason[user.id] || get_reason_for_user(user),
+      action:        @item[:type],
+      cc_user:       cc_user,
+      creator:       creator,
+      cc_user_name:  cc_user&.fullname || 'Unknown User',
+      creator_name:  creator&.fullname || 'Unknown User',
     }
   end
 end

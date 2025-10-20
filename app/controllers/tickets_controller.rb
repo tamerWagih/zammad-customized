@@ -204,9 +204,20 @@ class TicketsController < ApplicationController
       # Extract cc_user_ids before param_cleanup strips it out
       Rails.logger.info "[CC_TICKET] Clean params keys: #{clean_params.keys.join(', ')}"
       Rails.logger.info "[CC_TICKET] cc_user_ids in params: #{clean_params[:cc_user_ids].inspect}"
-      cc_user_ids = clean_params.delete(:cc_user_ids)
+      cc_user_ids_raw = clean_params.delete(:cc_user_ids)
 
-      Rails.logger.info "[CC_TICKET] Extracted cc_user_ids: #{cc_user_ids.inspect}"
+      # Normalize cc_user_ids to array (could be array, string, or comma-separated string)
+      cc_user_ids = if cc_user_ids_raw.is_a?(Array)
+                      cc_user_ids_raw.map(&:to_i).reject(&:zero?)
+                    elsif cc_user_ids_raw.is_a?(String)
+                      cc_user_ids_raw.split(',').map(&:strip).map(&:to_i).reject(&:zero?)
+                    elsif cc_user_ids_raw.is_a?(Integer)
+                      [cc_user_ids_raw]
+                    else
+                      []
+                    end
+
+      Rails.logger.info "[CC_TICKET] Normalized cc_user_ids: #{cc_user_ids.inspect}"
 
       clean_params = Ticket.param_cleanup(clean_params, true)
       clean_params[:screen] = 'create_middle'
