@@ -181,6 +181,7 @@ class App.TicketOverviewNavbar extends App.Controller
 
     @html App.view("agent_ticket_view/navbar#{ if @vertical then '_vertical' else '' }")
       items: data
+      isAgent: @permissionCheck('ticket.agent')
 
     if @vertical
       @autoFoldTabs()
