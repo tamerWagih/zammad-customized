@@ -53,7 +53,7 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
     ]
     
     @model = new App.UserCustomFilter()
-    @model.set('condition', { operator: 'AND', children: [] })
+    @model.condition = { operator: 'AND', children: [] }
     
     @controller = new App.ControllerForm(
       model: @model

@@ -14,12 +14,12 @@
       </li>
     <% end %>
   <% end %>
-  <% if @isAgent: %>
-    <li class="add-filter-item">
-      <a class="btn btn--text btn--create js-create-filter" href="#" title="<%- @Ti('Create Custom Filter') %>">
-        <%- @Icon('plus') %>
-        <span><%- @T('Add Filter') %></span>
-      </a>
-    </li>
-  <% end %>
 </ul>
+<% if @isAgent: %>
+<div class="sidebar-footer">
+  <a class="btn btn--text btn--create js-create-filter" href="#" title="<%- @Ti('Create Custom Filter') %>">
+    <%- @Icon('plus') %>
+    <span><%- @T('Add Filter') %></span>
+  </a>
+</div>
+<% end %>
