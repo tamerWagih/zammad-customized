@@ -33,10 +33,40 @@ class TicketOverviewsController < ApplicationController
         }
         indexes.push meta
       end
+      
+      # Add custom filters
+      custom_filters = current_user.preferences[:custom_filters] || []
+      custom_filters.each do |filter|
+        next unless filter['active']
+        
+        # Count tickets for this custom filter
+        count = count_tickets_for_filter(filter)
+        
+        meta = {
+          id:        filter['id'],
+          name:      filter['name'],
+          prio:      filter['prio'],
+          link:      filter['link'],
+          count:     count,
+          is_custom: true,
+        }
+        indexes.push meta
+      end
+      
       render json: indexes
       return
     end
 
+    # Check if this is a custom filter
+    custom_filter = find_custom_filter_by_link(params[:view])
+    
+    if custom_filter
+      # Handle custom filter view
+      render_custom_filter_tickets(custom_filter)
+      return
+    end
+
+    # Handle regular overview
     index_and_lists = Ticket::Overviews.index(current_user)
 
     assets = {}
@@ -57,6 +87,88 @@ class TicketOverviewsController < ApplicationController
       assets: assets,
       index:  result,
     }
+  end
+
+  private
+
+  def find_custom_filter_by_link(link)
+    custom_filters = current_user.preferences[:custom_filters] || []
+    custom_filters.find { |f| f['link'] == link && f['active'] }
+  end
+
+  def count_tickets_for_filter(filter)
+    condition = filter['condition'] || {}
+    
+    # Use Ticket selector to count tickets
+    query, bind_params = Ticket.selector2sql(condition, current_user: current_user)
+    
+    return 0 if query.blank?
+    
+    Ticket.where(query, *bind_params).count
+  rescue => e
+    Rails.logger.error "Error counting tickets for custom filter: #{e.message}"
+    0
+  end
+
+  def render_custom_filter_tickets(filter)
+    condition = filter['condition'] || {}
+    order = filter['order'] || { 'by' => 'created_at', 'direction' => 'DESC' }
+    view = filter['view'] || { 's' => ['number', 'title', 'customer', 'state', 'created_at'] }
+    
+    # Get tickets based on condition
+    query, bind_params = Ticket.selector2sql(condition, current_user: current_user)
+    
+    tickets = []
+    assets = {}
+    
+    if query.present?
+      # Apply ordering
+      order_by = order['by'] || 'created_at'
+      order_direction = order['direction'] || 'DESC'
+      
+      # Limit to reasonable number
+      ticket_list = Ticket.where(query, *bind_params)
+                         .order("#{order_by} #{order_direction}")
+                         .limit(2000)
+      
+      ticket_list.each do |ticket|
+        ticket_meta = {
+          id:         ticket.id,
+          title:      ticket.title,
+          number:     ticket.number,
+          created_at: ticket.created_at,
+        }
+        
+        tickets.push ticket_meta
+        assets = ticket.assets(assets)
+      end
+    end
+    
+    result = {
+      overview: {
+        id:    filter['id'],
+        name:  filter['name'],
+        link:  filter['link'],
+        view:  view['s'] || ['number', 'title', 'customer', 'state', 'created_at'],
+        order: {
+          by:        order['by'] || 'created_at',
+          direction: order['direction'] || 'DESC',
+        },
+        group_by: filter['group_by'] || '',
+        is_custom: true,
+      },
+      tickets: tickets,
+      tickets_count: tickets.length,
+      count:   tickets.length,
+    }
+    
+    render json: {
+      assets: assets,
+      index:  result,
+    }
+  rescue => e
+    Rails.logger.error "Error rendering custom filter tickets: #{e.message}"
+    render json: { assets: {}, index: { tickets: [], count: 0 } }
   end
 
 end

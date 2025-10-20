@@ -2,9 +2,14 @@
   <div class="tabs tabs--inline tabs--big js-tabs">
     <% if @items: %>
       <% for item in @items: %>
-        <a class="tab js-tab<%= ' active' if item.active %>" href="<%= item.target %>">
+        <a class="tab js-tab<%= ' active' if item.active %>" href="<%= item.target %>" data-is-custom="<%= item.is_custom %>">
           <span class="tab-name"><%- @T(item.name) %></span>
           <span class="tab-badge"><%= item.count %></span>
+          <% if item.is_custom: %>
+            <span class="js-delete-filter" data-filter-id="<%= item.id %>" title="<%- @Ti('Delete Filter') %>">
+              <%- @Icon('trash') %>
+            </span>
+          <% end %>
         </a>
       <% end %>
       <div class="tab tab-dropdown js-toggle" data-toggle="dropdown">
@@ -20,6 +25,14 @@
       </ul>
     <% end %>
   </div>
+  <% if @isAgent: %>
+    <div class="sidebar-block">
+      <a class="btn btn--text btn--create js-create-filter" href="#" title="<%- @Ti('Create Custom Filter') %>">
+        <%- @Icon('plus') %>
+        <span><%- @T('Add Filter') %></span>
+      </a>
+    </div>
+  <% end %>
 </div>
 <% if @isAgent: %>
 <a class="btn btn--success btn--quad" href="#ticket/create">
