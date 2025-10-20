@@ -99,4 +99,17 @@ class App.UiElement.cc_user_select
     # Render initial element (will be replaced after AJAX completes)
     element = App.UiElement.searchable_select.render(attribute, params)
     console.log '[CC] Initial element rendered (empty)'
+
+    # Ensure form submission includes cc_user_ids
+    # The searchable_select should handle this automatically, but let's ensure it
+    $(element).on 'change', ->
+      selectedValues = $(@).val() || []
+      # Update a hidden field if it exists, or ensure the component handles form serialization
+      hiddenField = $(@).closest('form').find("input[name='cc_user_ids']")
+      if hiddenField.length > 0
+        hiddenField.val(selectedValues.join(','))
+      else
+        # Create a hidden field if it doesn't exist
+        $(@).closest('form').append("<input type='hidden' name='cc_user_ids' value='#{selectedValues.join(',')}' />")
+
     element
