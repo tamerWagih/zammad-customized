@@ -1,8 +1,8 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
-    # Use the same pattern as other searchable selects but with proper async user loading
-    # This follows Zammad's standard pattern for remote data loading
+    # Use synchronous pattern - load users first, then render
+    # This is simpler and more reliable than async replacement
     
     attribute.tag = 'searchable_select'
     attribute.multiple = true
@@ -24,50 +24,35 @@ class App.UiElement.cc_user_select
       role_ids = role_ids.concat(customer_roles.map (role) -> role.id)
     role_ids = _.uniq(role_ids)
     
-    # Build options from AJAX call
+    # Build options - try to get from cached User collection first
     attribute.options = {}
     
-    # Create a wrapper to handle async loading
-    wrapper = $('<div class="cc-user-select-wrapper"></div>')
-    placeholder = $('<div class="loading">Loading users...</div>')
-    wrapper.append(placeholder)
+    # Get users from User collection (cached in frontend)
+    all_users = App.User.all()
     
-    # Load users via AJAX (same pattern as approval modal)
-    $.ajax(
-      type: 'GET'
-      url: "#{App.Config.get('api_path')}/users/search"
-      data:
-        role_ids: role_ids
-        limit: 1000
-      dataType: 'json'
-      success: (data, status, xhr) =>
-        # Parse response (could be array or object with users key)
-        users = if Array.isArray(data) then data else (data?.users || data?.records || [])
-        
-        # Build options, excluding current user and inactive users
-        for user in users
-          continue if user.id.toString() == current_user_id.toString()
-          continue if !user.active
-          
-          display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
-          display_name = user.login if display_name == ''
-          display_name = user.email if !display_name
-          display_name = "User ##{user.id}" if !display_name
-          
-          if user.email && display_name != user.email
-            display_name += " (#{user.email})"
-          
-          attribute.options[user.id] = display_name
-        
-        # Replace placeholder with actual select element
-        element = App.UiElement.searchable_select.render(attribute, params)
-        wrapper.find('.loading').replaceWith(element)
-        
-      error: (xhr, status, error) =>
-        console.error '[CC] Failed to load users:', error
-        # Still render select but with empty options
-        element = App.UiElement.searchable_select.render(attribute, params)
-        wrapper.find('.loading').replaceWith(element)
-    )
+    for user in all_users
+      # Skip if not in target roles
+      continue if !user.role_ids
+      has_role = false
+      for role_id in user.role_ids
+        if role_id in role_ids
+          has_role = true
+          break
+      continue if !has_role
+      
+      # Skip current user and inactive users
+      continue if user.id.toString() == current_user_id.toString()
+      continue if !user.active
+      
+      display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
+      display_name = user.login if display_name == ''
+      display_name = user.email if !display_name
+      display_name = "User ##{user.id}" if !display_name
+      
+      if user.email && display_name != user.email
+        display_name += " (#{user.email})"
+      
+      attribute.options[user.id] = display_name
     
-    wrapper[0]
+    # Render the searchable select with the options
+    App.UiElement.searchable_select.render(attribute, params)
