@@ -10,7 +10,8 @@ class CustomFilterSelectorsController < ApplicationController
     # Only allow ticket selectors for custom filters
     raise Exceptions::UnprocessableEntity, __('Only ticket selectors are supported') if params[:object] != 'tickets'
 
-    condition = params[:condition] || {}
+    # Convert ActionController::Parameters to hash
+    condition = params[:condition].to_h rescue {}
     
     # Handle empty or invalid conditions gracefully
     if condition.blank? || !has_valid_conditions?(condition)
