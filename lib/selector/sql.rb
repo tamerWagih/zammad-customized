@@ -260,7 +260,7 @@ class Selector::Sql < Selector::Base
                  end
       else
         if block_condition[:operator] == 'is'
-          tables << "LEFT JOIN mentions ON tickets.id = mentions.mentionable_id AND mentions.mentionable_type = 'Ticket'"
+          tables |= ["LEFT JOIN mentions ON tickets.id = mentions.mentionable_id AND mentions.mentionable_type = 'Ticket'"]
           query << 'mentions.user_id IN (?)'
         else
           query << "tickets.id NOT IN (SELECT mentionable_id FROM mentions WHERE mentionable_type = 'Ticket' AND user_id IN (?))"
