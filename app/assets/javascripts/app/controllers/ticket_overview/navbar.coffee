@@ -161,7 +161,7 @@ class App.TicketOverviewNavbar extends App.Controller
       App.WebSocket.send(event:'ticket_overview_select', data: { view: data[0].link })
 
     # redirect to first view
-    if @activeState && !@view && !@vertical
+    if @activeState && !@view && !@vertical && data[0]?.link
       view = data[0].link
       @navigate "#ticket/view/#{view}", { hideCurrentLocationFromHistory: true }
       return
