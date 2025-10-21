@@ -138,7 +138,14 @@ class App.UiElement.ApplicationSelector
             { name: 'customer_id', display: __('Customer'), tag: 'select', relation: 'User', searchable: true },
             { name: 'group_id', display: __('Group'), tag: 'select', relation: 'Group', searchable: true },
             { name: 'created_at', display: __('Created'), tag: 'datetime', searchable: true },
-            { name: 'updated_at', display: __('Updated'), tag: 'datetime', searchable: true }
+            { name: 'updated_at', display: __('Updated'), tag: 'datetime', searchable: true },
+            { name: 'shared_with_me', display: __('Shared with Me'), tag: 'select', type: 'boolean', searchable: true, operator: [__('is'), __('is not')] },
+            { name: 'approval_status', display: __('Approval Status'), tag: 'select', type: 'select', searchable: true, operator: [__('is'), __('is not')], options: [
+              { value: 'pending', name: __('Pending') },
+              { value: 'approved', name: __('Approved') },
+              { value: 'rejected', name: __('Rejected') }
+            ] },
+            { name: 'requested_for_approval', display: __('Requested for Approval'), tag: 'select', type: 'boolean', searchable: true, operator: [__('is'), __('is not')] }
           ]
         for config in configureAttributes
           config.objectName    = groupMeta.model

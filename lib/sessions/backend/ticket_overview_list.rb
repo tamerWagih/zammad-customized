@@ -138,7 +138,7 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
       meta = {
         id:        filter['id'],
         name:      filter['name'],
-        prio:      filter['prio'],
+        prio:      filter['prio'] || 900,  # Default to 900 to appear before standard filters
         link:      filter['link'],
         count:     count,
         is_custom: true,

@@ -271,6 +271,31 @@ class Selector::Sql < Selector::Base
           bind_params.push block_condition[:value]
         end
       end
+    elsif attribute_table == 'ticket' && attribute_name == 'shared_with_me'
+      # Handle shared with me selector
+      if block_condition[:operator] == 'is'
+        query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
+        bind_params.push current_user.group_ids_access('read')
+      else
+        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
+        bind_params.push current_user.group_ids_access('read')
+      end
+    elsif attribute_table == 'ticket' && attribute_name == 'approval_status'
+      # Handle approval status selector
+      if block_condition[:operator] == 'is'
+        query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = ?)"
+        bind_params.push block_condition[:value]
+      else
+        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = ?)"
+        bind_params.push block_condition[:value]
+      end
+    elsif attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
+      # Handle requested for approval selector
+      if block_condition[:operator] == 'is'
+        query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending')"
+      else
+        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending')"
+      end
     elsif attribute_table == 'user' && attribute_name == 'role_ids'
       query << if block_condition[:operator] == 'is'
                  "users.id IN (

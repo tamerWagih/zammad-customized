@@ -126,10 +126,13 @@ class TicketOverviewsController < ApplicationController
       order_by = order['by'] || 'created_at'
       order_direction = order['direction'] || 'DESC'
       
-      # Limit to reasonable number
-      ticket_list = Ticket.where(query, *bind_params)
-                         .order("#{order_by} #{order_direction}")
-                         .limit(2000)
+      # Apply user permissions using the existing scope system
+      ticket_scope = TicketPolicy::Scope.new(current_user, Ticket).resolve
+      
+      # Apply the custom filter condition to the permitted tickets
+      ticket_list = ticket_scope.where(query, *bind_params)
+                               .order("#{order_by} #{order_direction}")
+                               .limit(2000)
       
       ticket_list.each do |ticket|
         ticket_meta = {
