@@ -45,9 +45,13 @@ class App.TicketOverviewNavbar extends App.Controller
   createFilter: (e) =>
     e.preventDefault()
     e.stopPropagation()
-    new App.TicketCustomFilterCreate(
-      container: @el.closest('.content')
-    )
+    
+    # Ensure ticket attributes are loaded before opening modal
+    App.ObjectManagerAttribute.refresh(=>
+      new App.TicketCustomFilterCreate(
+        container: @el.closest('.content')
+      )
+    , force: true)
 
   deleteFilter: (e) =>
     e.preventDefault()
