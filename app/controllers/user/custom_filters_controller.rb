@@ -27,25 +27,14 @@ class User::CustomFiltersController < ApplicationController
 
   # POST /api/v1/user_custom_filters
   def create
-    filter_params = params.permit(:name, :prio, :active, :group_by, condition: {}, order: {}, view: {})
-    
-    # Handle nested parameters properly
-    if params[:condition].present?
-      filter_params[:condition] = params[:condition].to_unsafe_h
-    end
-    
-    if params[:order].present?
-      filter_params[:order] = params[:order].to_unsafe_h
-    end
-    
-    if params[:view].present?
-      filter_params[:view] = params[:view].to_unsafe_h
-    end
-    
-    # Handle group_by as string
-    if params[:group_by].present?
-      filter_params[:group_by] = params[:group_by].to_s
-    end
+    # Extract and convert nested parameters to plain hashes BEFORE any database operations
+    condition_hash = params[:condition].present? ? params[:condition].to_unsafe_h : {}
+    order_hash = params[:order].present? ? params[:order].to_unsafe_h : { 'by' => 'created_at', 'direction' => 'DESC' }
+    view_hash = params[:view].present? ? params[:view].to_unsafe_h : { 's' => ['number', 'title', 'customer', 'state', 'created_at'] }
+    group_by_value = params[:group_by].present? ? params[:group_by].to_s : ''
+    name_value = params[:name].to_s
+    prio_value = params[:prio].present? ? params[:prio].to_i : nil
+    active_value = params[:active].nil? ? true : params[:active]
     
     # Initialize custom_filters if not exists
     current_user.preferences[:custom_filters] ||= []
@@ -53,17 +42,17 @@ class User::CustomFiltersController < ApplicationController
     # Generate unique ID for the filter
     filter_id = SecureRandom.uuid
     
-    # Build the filter object
+    # Build the filter object using plain Ruby hashes (not ActionController::Parameters)
     new_filter = {
       'id' => filter_id,
-      'name' => filter_params[:name],
-      'link' => generate_link(filter_params[:name], filter_id),
-      'condition' => filter_params[:condition] || {},
-      'order' => filter_params[:order] || { 'by' => 'created_at', 'direction' => 'DESC' },
-      'view' => filter_params[:view] || { 's' => ['number', 'title', 'customer', 'state', 'created_at'] },
-      'group_by' => filter_params[:group_by] || '',
-      'prio' => filter_params[:prio] || (current_user.preferences[:custom_filters].length + 1000),
-      'active' => filter_params[:active].nil? ? true : filter_params[:active],
+      'name' => name_value,
+      'link' => generate_link(name_value, filter_id),
+      'condition' => condition_hash,
+      'order' => order_hash,
+      'view' => view_hash,
+      'group_by' => group_by_value,
+      'prio' => prio_value || (current_user.preferences[:custom_filters].length + 1000),
+      'active' => active_value,
       'is_custom' => true,
       'user_id' => current_user.id,
       'created_at' => Time.zone.now.iso8601,
@@ -86,25 +75,14 @@ class User::CustomFiltersController < ApplicationController
 
   # PUT /api/v1/user_custom_filters/:id
   def update
-    filter_params = params.permit(:name, :prio, :active, :group_by, condition: {}, order: {}, view: {})
-    
-    # Handle nested parameters properly
-    if params[:condition].present?
-      filter_params[:condition] = params[:condition].to_unsafe_h
-    end
-    
-    if params[:order].present?
-      filter_params[:order] = params[:order].to_unsafe_h
-    end
-    
-    if params[:view].present?
-      filter_params[:view] = params[:view].to_unsafe_h
-    end
-    
-    # Handle group_by as string
-    if params[:group_by].present?
-      filter_params[:group_by] = params[:group_by].to_s
-    end
+    # Extract and convert nested parameters to plain hashes BEFORE any database operations
+    condition_hash = params[:condition].present? ? params[:condition].to_unsafe_h : nil
+    order_hash = params[:order].present? ? params[:order].to_unsafe_h : nil
+    view_hash = params[:view].present? ? params[:view].to_unsafe_h : nil
+    group_by_value = params[:group_by].present? ? params[:group_by].to_s : nil
+    name_value = params[:name].present? ? params[:name].to_s : nil
+    prio_value = params[:prio].present? ? params[:prio].to_i : nil
+    active_value = params.key?(:active) ? params[:active] : nil
     
     custom_filters = current_user.preferences[:custom_filters] || []
     filter_index = custom_filters.find_index { |f| f['id'] == params[:id] }
@@ -116,19 +94,19 @@ class User::CustomFiltersController < ApplicationController
     
     filter = custom_filters[filter_index]
     
-    # Update filter attributes
-    filter['name'] = filter_params[:name] if filter_params[:name].present?
-    filter['condition'] = filter_params[:condition] if filter_params[:condition].present?
-    filter['order'] = filter_params[:order] if filter_params[:order].present?
-    filter['view'] = filter_params[:view] if filter_params[:view].present?
-    filter['group_by'] = filter_params[:group_by] if filter_params.key?(:group_by)
-    filter['prio'] = filter_params[:prio] if filter_params[:prio].present?
-    filter['active'] = filter_params[:active] unless filter_params[:active].nil?
+    # Update filter attributes using plain hashes
+    filter['name'] = name_value if name_value.present?
+    filter['condition'] = condition_hash if condition_hash
+    filter['order'] = order_hash if order_hash
+    filter['view'] = view_hash if view_hash
+    filter['group_by'] = group_by_value unless group_by_value.nil?
+    filter['prio'] = prio_value if prio_value
+    filter['active'] = active_value unless active_value.nil?
     filter['updated_at'] = Time.zone.now.iso8601
     
     # Update link if name changed
-    if filter_params[:name].present?
-      filter['link'] = generate_link(filter_params[:name], filter['id'])
+    if name_value.present?
+      filter['link'] = generate_link(name_value, filter['id'])
     end
     
     current_user.preferences[:custom_filters][filter_index] = filter
