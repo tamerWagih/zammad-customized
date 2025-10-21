@@ -88,6 +88,24 @@ class User::CustomFiltersController < ApplicationController
   def update
     filter_params = params.permit(:name, :prio, :active, :group_by, condition: {}, order: {}, view: {})
     
+    # Handle nested parameters properly
+    if params[:condition].present?
+      filter_params[:condition] = params[:condition].to_unsafe_h
+    end
+    
+    if params[:order].present?
+      filter_params[:order] = params[:order].to_unsafe_h
+    end
+    
+    if params[:view].present?
+      filter_params[:view] = params[:view].to_unsafe_h
+    end
+    
+    # Handle group_by as string
+    if params[:group_by].present?
+      filter_params[:group_by] = params[:group_by].to_s
+    end
+    
     custom_filters = current_user.preferences[:custom_filters] || []
     filter_index = custom_filters.find_index { |f| f['id'] == params[:id] }
     
@@ -118,8 +136,13 @@ class User::CustomFiltersController < ApplicationController
     if current_user.save
       render json: filter
     else
+      Rails.logger.error "Failed to update custom filter: #{current_user.errors.full_messages}"
       render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
     end
+  rescue => e
+    Rails.logger.error "Error updating custom filter: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    render json: { error: 'Internal server error' }, status: :internal_server_error
   end
 
   # DELETE /api/v1/user_custom_filters/:id
@@ -137,8 +160,13 @@ class User::CustomFiltersController < ApplicationController
     if current_user.save
       render json: { success: true }
     else
+      Rails.logger.error "Failed to delete custom filter: #{current_user.errors.full_messages}"
       render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
     end
+  rescue => e
+    Rails.logger.error "Error deleting custom filter: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    render json: { error: 'Internal server error' }, status: :internal_server_error
   end
 
   # POST /api/v1/user_custom_filters_prio
