@@ -6,7 +6,7 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
   content: =>
     configure_attributes = [
       { name: 'name',       display: __('Name'),                tag: 'input',    type: 'text', limit: 100, 'null': false },
-      { name: 'condition',  display: __('Conditions for shown tickets'), tag: 'ticket_selector', null: false },
+      { name: 'condition',  display: __('Conditions for shown tickets'), tag: 'ticket_selector', null: false, default: { operator: 'AND', children: [] } },
       {
         name:    'view::s'
         display: __('Attributes')
@@ -50,14 +50,12 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
           group:      __('Group')
           owner:      __('Owner')
       },
+      { name: 'active',         display: __('Active'),      tag: 'active', default: true },
     ]
     
-    @model = new App.UserCustomFilter()
-    @model.condition = { operator: 'AND', children: [] }
-    
     @controller = new App.ControllerForm(
-      model: @model
-      configure_attributes: configure_attributes
+      model:
+        configure_attributes: configure_attributes
       autofocus: true
     )
     @controller.form
