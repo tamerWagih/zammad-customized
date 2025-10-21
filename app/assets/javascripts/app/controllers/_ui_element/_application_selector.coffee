@@ -363,8 +363,8 @@ class App.UiElement.ApplicationSelector
   @preview: (item) ->
     params = App.ControllerForm.params(item)
     
-    # Check if we're in custom filter mode
-    isCustomFilterMode = item.closest('form').find('[data-custom-filter-mode]').length > 0
+    # Check if we're in custom filter mode by looking for the modal class
+    isCustomFilterMode = item.closest('.custom-filter-modal').length > 0
     
     # Use custom filter selector endpoint for custom filters
     previewUrl = if isCustomFilterMode

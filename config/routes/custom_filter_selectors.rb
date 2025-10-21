@@ -7,3 +7,4 @@ Zammad::Application.routes.draw do
   match api_path + '/custom_filter_selectors/preview', to: 'custom_filter_selectors#preview', via: :post
 end
 
+

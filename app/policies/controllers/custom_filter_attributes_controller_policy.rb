@@ -7,3 +7,4 @@ class Controllers::CustomFilterAttributesControllerPolicy < Controllers::Applica
   end
 end
 
+

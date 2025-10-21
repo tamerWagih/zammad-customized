@@ -168,6 +168,9 @@ class App.TicketOverviewNavbar extends App.Controller
 
     # add new views
     for item in data
+      # Skip items without link property (safety check)
+      continue if !item || !item.link
+      
       item.target = "#ticket/view/#{item.link}"
       if item.link is @view
         item.active = true

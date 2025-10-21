@@ -7,3 +7,4 @@ Zammad::Application.routes.draw do
   match api_path + '/custom_filter_attributes', to: 'custom_filter_attributes#index', via: :get
 end
 
+

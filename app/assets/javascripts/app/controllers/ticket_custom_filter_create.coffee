@@ -15,9 +15,12 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
     # Load custom filter attributes from dedicated endpoint
     @loadCustomFilterAttributes()
     
+    # Mark this modal as custom filter mode by setting class
+    @el.addClass('custom-filter-modal')
+    
     configure_attributes = [
       { name: 'name',       display: __('Name'),                tag: 'input',    type: 'text', limit: 100, 'null': false },
-      { name: 'condition',  display: __('Conditions for shown tickets'), tag: 'ticket_selector', null: false, customFilterMode: true, 'data-custom-filter-mode': true },
+      { name: 'condition',  display: __('Conditions for shown tickets'), tag: 'ticket_selector', null: false, customFilterMode: true },
       {
         name:    'view::s'
         display: __('Attributes')
