@@ -55,7 +55,7 @@ class User::CustomFiltersController < ApplicationController
       'order' => order_hash,
       'view' => view_hash,
       'group_by' => group_by_value,
-      'prio' => prio_value || (prefs['custom_filters'].length + 1000),
+      'prio' => prio_value || (prefs['custom_filters'].length + 2000),
       'active' => active_value,
       'is_custom' => true,
       'user_id' => current_user.id,
