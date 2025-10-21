@@ -130,9 +130,8 @@ class App.UiElement.ApplicationSelector
         # Fallback for agents if ObjectManagerAttribute data is not available or incomplete
         if groupMeta.model == 'Ticket'
           # Check if we have the essential attributes, if not, use fallback
-          hasEssentialAttributes = configureAttributes.some((attr) -> 
+          hasEssentialAttributes = configureAttributes.some (attr) ->
             attr.name in ['title', 'number', 'state_id', 'customer_id', 'owner_id']
-          )
           
           if configureAttributes.length == 0 || !hasEssentialAttributes
             configureAttributes = [
