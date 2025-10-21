@@ -127,14 +127,9 @@ class App.UiElement.ApplicationSelector
         attributesByObject = App.ObjectManagerAttribute.selectorAttributesByObject()
         configureAttributes = attributesByObject[groupMeta.model] || []
         
-        # Fallback for agents if ObjectManagerAttribute data is not available or incomplete
-        if groupMeta.model == 'Ticket'
-          # Check if we have the essential attributes, if not, use fallback
-          hasEssentialAttributes = configureAttributes.some (attr) ->
-            attr.name in ['title', 'number', 'state_id', 'customer_id', 'owner_id']
-          
-          if configureAttributes.length == 0 || !hasEssentialAttributes
-            configureAttributes = [
+        # Fallback for agents if ObjectManagerAttribute data is not available
+        if configureAttributes.length == 0 && groupMeta.model == 'Ticket'
+          configureAttributes = [
             { name: 'title', display: __('Title'), tag: 'input', type: 'text', searchable: true },
             { name: 'number', display: __('Number'), tag: 'input', type: 'text', searchable: true },
             { name: 'state_id', display: __('State'), tag: 'select', relation: 'TicketState', searchable: true },
@@ -159,7 +154,7 @@ class App.UiElement.ApplicationSelector
             ] },
             { name: 'article', display: __('Article'), tag: 'select', relation: 'TicketArticle', searchable: true },
             { name: 'organization_id', display: __('Organization'), tag: 'select', relation: 'Organization', searchable: true }
-            ]
+          ]
         
         for config in configureAttributes
           config.objectName    = groupMeta.model
