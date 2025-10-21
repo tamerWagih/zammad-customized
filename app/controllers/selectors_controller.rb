@@ -11,6 +11,10 @@ class SelectorsController < ApplicationController
   def preview
     # Handle case where no condition is provided (empty selector)
     condition = params[:condition] || {}
+    
+    # Filter out conditions with empty value arrays to prevent InvalidCondition errors
+    condition = filter_empty_conditions(condition)
+    
     object_count, objects = object_klass.selectors(condition, limit: 6, execution_time: true)
 
     assets     = {}
@@ -29,6 +33,25 @@ class SelectorsController < ApplicationController
   end
 
   private
+
+  def filter_empty_conditions(condition)
+    return condition if condition.blank?
+    
+    filtered = {}
+    condition.each do |key, value|
+      next if value.blank?
+      
+      # Handle nested condition objects
+      if value.is_a?(Hash) && value.key?('value')
+        # Skip conditions with empty value arrays
+        next if value['value'].is_a?(Array) && value['value'].empty?
+      end
+      
+      filtered[key] = value
+    end
+    
+    filtered
+  end
 
   def object_klass
     @object_klass ||= case params[:object]

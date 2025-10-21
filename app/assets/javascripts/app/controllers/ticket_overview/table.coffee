@@ -61,8 +61,11 @@ class App.TicketOverviewTable extends App.Controller
     # For custom filters, use the overview object directly
     if overview && overview.is_custom
       @overview = overview
-    else
+    else if overview
       @overview = App.Overview.find(overview.id)
+    else
+      # Handle case where overview is undefined
+      return
 
     @removePopovers()
 
