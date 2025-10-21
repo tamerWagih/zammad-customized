@@ -4,6 +4,11 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
   buttonCancel: __('Cancel')
 
   content: =>
+    # Initialize params with default condition structure
+    params = {
+      condition: {}
+    }
+    
     configure_attributes = [
       { name: 'name',       display: __('Name'),                tag: 'input',    type: 'text', limit: 100, 'null': false },
       { name: 'condition',  display: __('Conditions for shown tickets'), tag: 'ticket_selector', null: false },
@@ -56,6 +61,7 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
     @controller = new App.ControllerForm(
       model:
         configure_attributes: configure_attributes
+      params: params
       autofocus: true
     )
     @controller.form
