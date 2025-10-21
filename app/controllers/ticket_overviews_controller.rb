@@ -120,7 +120,7 @@ class TicketOverviewsController < ApplicationController
     view = filter['view'] || { 's' => ['number', 'title', 'customer', 'state', 'created_at'] }
     
     # Get tickets based on condition with custom filter context
-    query, bind_params = Ticket.selector2sql(
+    query, bind_params, tables = Ticket.selector2sql(
       condition, 
       current_user: current_user,
       custom_filter_context: true  # Enable custom filter attributes
@@ -134,10 +134,19 @@ class TicketOverviewsController < ApplicationController
       order_by = order['by'] || 'created_at'
       order_direction = order['direction'] || 'DESC'
       
-      # Apply the custom filter condition (selector2sql already handles user permissions)
-      ticket_list = Ticket.where(query, *bind_params)
-                               .order("#{order_by} #{order_direction}")
-                               .limit(2000)
+      # CRITICAL: Apply user permission scope first (like Zammad's overview system)
+      # Use OverviewScope for standard conditions, ReadScope for mentions
+      base_scope = if condition.key?('ticket.mention_user_ids')
+                     TicketPolicy::ReadScope.new(current_user).resolve
+                   else
+                     TicketPolicy::OverviewScope.new(current_user).resolve
+                   end
+      
+      # Apply the custom filter condition on top of permission scope
+      scoped_tickets = base_scope.where(query, *bind_params)
+      scoped_tickets = scoped_tickets.joins(tables) if tables.present?
+      
+      ticket_list = scoped_tickets.order("#{order_by} #{order_direction}").limit(2000)
       
       ticket_list.each do |ticket|
         ticket_meta = {

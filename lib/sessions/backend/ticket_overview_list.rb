@@ -232,7 +232,7 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
     condition = filter['condition'] || {}
     
     # Use Ticket selector to count tickets with custom filter context
-    query, bind_params = Ticket.selector2sql(
+    query, bind_params, tables = Ticket.selector2sql(
       condition, 
       current_user: @user,
       custom_filter_context: true  # Enable custom filter attributes
@@ -240,7 +240,18 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
     
     return 0 if query.blank?
     
-    Ticket.where(query, *bind_params).count
+    # CRITICAL: Apply user permission scope first (like Zammad's overview system)
+    base_scope = if condition.key?('ticket.mention_user_ids')
+                   TicketPolicy::ReadScope.new(@user).resolve
+                 else
+                   TicketPolicy::OverviewScope.new(@user).resolve
+                 end
+    
+    # Apply the custom filter condition on top of permission scope
+    scoped_tickets = base_scope.where(query, *bind_params)
+    scoped_tickets = scoped_tickets.joins(tables) if tables.present?
+    
+    scoped_tickets.count
   rescue => e
     Rails.logger.error "Error counting tickets for custom filter: #{e.message}"
     0

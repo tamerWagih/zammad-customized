@@ -24,7 +24,7 @@ class CustomFilterSelectorsController < ApplicationController
     
     # Use Ticket.selector2sql with custom filter context
     # This ensures custom attributes (shared_with_me, approval_status, etc.) work
-    query, bind_params = Ticket.selector2sql(
+    query, bind_params, tables = Ticket.selector2sql(
       condition, 
       current_user: current_user,
       custom_filter_context: true  # Mark this as custom filter context
@@ -35,9 +35,20 @@ class CustomFilterSelectorsController < ApplicationController
     ticket_count = 0
     
     if query.present?
-      # Get tickets with proper permission filtering (selector2sql handles this)
-      ticket_results = Ticket.where(query, *bind_params).limit(6)
-      ticket_count = Ticket.where(query, *bind_params).count
+      # Apply user permission scope first (like Zammad's overview system)
+      # Use OverviewScope for standard conditions, ReadScope for mentions
+      base_scope = if condition.key?('ticket.mention_user_ids')
+                     TicketPolicy::ReadScope.new(current_user).resolve
+                   else
+                     TicketPolicy::OverviewScope.new(current_user).resolve
+                   end
+      
+      # Apply the custom filter condition on top of permission scope
+      scoped_tickets = base_scope.where(query, *bind_params)
+      scoped_tickets = scoped_tickets.joins(tables) if tables.present?
+      
+      ticket_results = scoped_tickets.limit(6)
+      ticket_count = scoped_tickets.count
       
       ticket_results.each do |ticket|
         tickets.push ticket.id
