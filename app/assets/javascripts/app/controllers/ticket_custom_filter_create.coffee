@@ -4,9 +4,12 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
   buttonCancel: __('Cancel')
 
   content: =>
-    # Initialize params with default condition structure
+    # Initialize params with proper condition structure for ticket_selector
     params = {
-      condition: {}
+      condition: {
+        operator: 'AND'
+        conditions: []
+      }
     }
     
     configure_attributes = [

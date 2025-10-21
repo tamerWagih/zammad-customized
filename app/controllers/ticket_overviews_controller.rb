@@ -149,12 +149,15 @@ class TicketOverviewsController < ApplicationController
         id:    filter['id'],
         name:  filter['name'],
         link:  filter['link'],
-        view:  view['s'] || ['number', 'title', 'customer', 'state', 'created_at'],
+        view:  {
+          s: view['s'] || ['number', 'title', 'customer', 'state', 'created_at']
+        },
         order: {
           by:        order['by'] || 'created_at',
           direction: order['direction'] || 'DESC',
         },
         group_by: filter['group_by'] || '',
+        group_direction: 'DESC',
         is_custom: true,
       },
       tickets: tickets,

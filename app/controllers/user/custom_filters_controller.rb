@@ -28,9 +28,9 @@ class User::CustomFiltersController < ApplicationController
   # POST /api/v1/user_custom_filters
   def create
     # Extract and convert nested parameters to plain hashes BEFORE any database operations
-    condition_hash = params[:condition].present? ? params[:condition].to_unsafe_h : {}
-    order_hash = params[:order].present? ? params[:order].to_unsafe_h : { 'by' => 'created_at', 'direction' => 'DESC' }
-    view_hash = params[:view].present? ? params[:view].to_unsafe_h : { 's' => ['number', 'title', 'customer', 'state', 'created_at'] }
+    condition_hash = params[:condition].present? ? deep_to_hash(params[:condition]) : {}
+    order_hash = params[:order].present? ? deep_to_hash(params[:order]) : { 'by' => 'created_at', 'direction' => 'DESC' }
+    view_hash = params[:view].present? ? deep_to_hash(params[:view]) : { 's' => ['number', 'title', 'customer', 'state', 'created_at'] }
     group_by_value = params[:group_by].present? ? params[:group_by].to_s : ''
     name_value = params[:name].to_s
     prio_value = params[:prio].present? ? params[:prio].to_i : nil
@@ -76,9 +76,9 @@ class User::CustomFiltersController < ApplicationController
   # PUT /api/v1/user_custom_filters/:id
   def update
     # Extract and convert nested parameters to plain hashes BEFORE any database operations
-    condition_hash = params[:condition].present? ? params[:condition].to_unsafe_h : nil
-    order_hash = params[:order].present? ? params[:order].to_unsafe_h : nil
-    view_hash = params[:view].present? ? params[:view].to_unsafe_h : nil
+    condition_hash = params[:condition].present? ? deep_to_hash(params[:condition]) : nil
+    order_hash = params[:order].present? ? deep_to_hash(params[:order]) : nil
+    view_hash = params[:view].present? ? deep_to_hash(params[:view]) : nil
     group_by_value = params[:group_by].present? ? params[:group_by].to_s : nil
     name_value = params[:name].present? ? params[:name].to_s : nil
     prio_value = params[:prio].present? ? params[:prio].to_i : nil
@@ -173,6 +173,20 @@ class User::CustomFiltersController < ApplicationController
     base_link = name.to_s.downcase.parameterize(separator: '_')
     base_link = 'custom_filter' if base_link.blank?
     "#{base_link}_#{id[0..7]}" # Use first 8 chars of UUID for uniqueness
+  end
+
+  # Recursively convert ActionController::Parameters to plain Hash
+  def deep_to_hash(obj)
+    case obj
+    when ActionController::Parameters
+      obj.to_unsafe_h.transform_values { |v| deep_to_hash(v) }
+    when Hash
+      obj.transform_values { |v| deep_to_hash(v) }
+    when Array
+      obj.map { |item| deep_to_hash(item) }
+    else
+      obj
+    end
   end
 end
 
