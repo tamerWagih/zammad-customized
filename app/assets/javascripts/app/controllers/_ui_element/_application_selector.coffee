@@ -126,6 +126,20 @@ class App.UiElement.ApplicationSelector
       else
         attributesByObject = App.ObjectManagerAttribute.selectorAttributesByObject()
         configureAttributes = attributesByObject[groupMeta.model] || []
+        
+        # Fallback for agents if ObjectManagerAttribute data is not available
+        if configureAttributes.length == 0 && groupMeta.model == 'Ticket'
+          configureAttributes = [
+            { name: 'title', display: __('Title'), tag: 'input', type: 'text', searchable: true },
+            { name: 'number', display: __('Number'), tag: 'input', type: 'text', searchable: true },
+            { name: 'state_id', display: __('State'), tag: 'select', relation: 'TicketState', searchable: true },
+            { name: 'priority_id', display: __('Priority'), tag: 'select', relation: 'TicketPriority', searchable: true },
+            { name: 'owner_id', display: __('Owner'), tag: 'select', relation: 'User', searchable: true },
+            { name: 'customer_id', display: __('Customer'), tag: 'select', relation: 'User', searchable: true },
+            { name: 'group_id', display: __('Group'), tag: 'select', relation: 'Group', searchable: true },
+            { name: 'created_at', display: __('Created'), tag: 'datetime', searchable: true },
+            { name: 'updated_at', display: __('Updated'), tag: 'datetime', searchable: true }
+          ]
         for config in configureAttributes
           config.objectName    = groupMeta.model
           config.attributeName = config.name

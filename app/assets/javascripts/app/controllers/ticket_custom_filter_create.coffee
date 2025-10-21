@@ -13,7 +13,12 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
     }
     
     # Ensure ObjectManagerAttribute data is loaded for ticket_selector
-    App.ObjectManagerAttribute.fetchFull()
+    # Try to load attributes, but don't fail if it doesn't work for agents
+    try
+      App.ObjectManagerAttribute.fetchFull()
+    catch error
+      console.log('ObjectManagerAttribute fetch failed, using fallback:', error)
+      # For agents, we'll rely on the hardcoded attributes in the selector
     
     configure_attributes = [
       { name: 'name',       display: __('Name'),                tag: 'input',    type: 'text', limit: 100, 'null': false },
