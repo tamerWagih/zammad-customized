@@ -115,16 +115,20 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
 
   loadCustomFilterAttributes: =>
     # Load attributes from dedicated custom filter attributes endpoint
+    # Make this synchronous to ensure attributes are loaded before rendering
     App.Ajax.request(
       id:    'custom_filter_attributes'
       type:  'GET'
       url:   "#{App.Config.get('api_path')}/custom_filter_attributes"
       processData: true
+      async: false  # Make synchronous to ensure attributes load before modal renders
       success: (data, status, xhr) =>
         # Store custom filter attributes for use in selector
         App.CustomFilterAttributes = data
+        console.log('Custom filter attributes loaded:', data.length, 'attributes')
       error: (xhr, status, error) =>
         console.error('Failed to load custom filter attributes:', error)
-        # Continue anyway, selector will use fallback
+        # Set empty array as fallback
+        App.CustomFilterAttributes = []
     )
 

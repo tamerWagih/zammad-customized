@@ -124,10 +124,11 @@ class App.UiElement.ApplicationSelector
             operator: [__('is in working time'), __('is not in working time')]
 
       else
-        # Check if we're in custom filter mode
-        if attribute.customFilterMode && App.CustomFilterAttributes
+        # Check if we're in custom filter mode by attribute flag
+        if attribute.customFilterMode
           # Use custom filter attributes from dedicated endpoint
-          configureAttributes = App.CustomFilterAttributes
+          # If not loaded yet, use empty array (will be populated when loaded)
+          configureAttributes = App.CustomFilterAttributes || []
         else
           # Use standard object manager attributes
           attributesByObject = App.ObjectManagerAttribute.selectorAttributesByObject()
