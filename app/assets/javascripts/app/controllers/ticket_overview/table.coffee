@@ -59,7 +59,7 @@ class App.TicketOverviewTable extends App.Controller
       ticketListShow.push App.Ticket.fullLocal(ticket.id)
     
     # For custom filters, use the overview object directly
-    if overview.is_custom
+    if overview && overview.is_custom
       @overview = overview
     else
       @overview = App.Overview.find(overview.id)
@@ -100,7 +100,7 @@ class App.TicketOverviewTable extends App.Controller
 
     # set page title
     # For custom filters, create a virtual overview object since they don't exist in the model store
-    if overview.is_custom
+    if overview && overview.is_custom
       @overview = overview
     else
       @overview = App.Overview.find(overview.id)

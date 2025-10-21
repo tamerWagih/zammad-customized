@@ -259,12 +259,12 @@ class Selector::Sql < Selector::Base
                    'mentions.user_id IS NOT NULL'
                  end
       else
-        query << if block_condition[:operator] == 'is'
-                   tables |= ["LEFT JOIN mentions ON tickets.id = mentions.mentionable_id AND mentions.mentionable_type = 'Ticket'"]
-                   'mentions.user_id IN (?)'
-                 else
-                   "tickets.id NOT IN (SELECT mentionable_id FROM mentions WHERE mentionable_type = 'Ticket' AND user_id IN (?))"
-                 end
+        if block_condition[:operator] == 'is'
+          tables |= ["LEFT JOIN mentions ON tickets.id = mentions.mentionable_id AND mentions.mentionable_type = 'Ticket'"]
+          query << 'mentions.user_id IN (?)'
+        else
+          query << "tickets.id NOT IN (SELECT mentionable_id FROM mentions WHERE mentionable_type = 'Ticket' AND user_id IN (?))"
+        end
         if block_condition[:pre_condition] == 'current_user.id'
           bind_params.push current_user_id
         else
