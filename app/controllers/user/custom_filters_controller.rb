@@ -27,6 +27,9 @@ class User::CustomFiltersController < ApplicationController
 
   # POST /api/v1/user_custom_filters
   def create
+    # Reload user to ensure fresh data
+    current_user.reload
+    
     # Extract and convert nested parameters to plain hashes BEFORE any database operations
     condition_hash = params[:condition].present? ? deep_to_hash(params[:condition]) : {}
     order_hash = params[:order].present? ? deep_to_hash(params[:order]) : { 'by' => 'created_at', 'direction' => 'DESC' }
@@ -36,8 +39,9 @@ class User::CustomFiltersController < ApplicationController
     prio_value = params[:prio].present? ? params[:prio].to_i : nil
     active_value = params[:active].nil? ? true : params[:active]
     
-    # Initialize custom_filters if not exists
-    current_user.preferences[:custom_filters] ||= []
+    # Ensure we're working with a plain hash for preferences
+    prefs = deep_to_hash(current_user.preferences) || {}
+    prefs['custom_filters'] ||= []
     
     # Generate unique ID for the filter
     filter_id = SecureRandom.uuid
@@ -51,7 +55,7 @@ class User::CustomFiltersController < ApplicationController
       'order' => order_hash,
       'view' => view_hash,
       'group_by' => group_by_value,
-      'prio' => prio_value || (current_user.preferences[:custom_filters].length + 1000),
+      'prio' => prio_value || (prefs['custom_filters'].length + 1000),
       'active' => active_value,
       'is_custom' => true,
       'user_id' => current_user.id,
@@ -59,20 +63,21 @@ class User::CustomFiltersController < ApplicationController
       'updated_at' => Time.zone.now.iso8601
     }
     
-    # Ensure we're working with a plain hash for preferences
-    prefs = deep_to_hash(current_user.preferences) || {}
-    prefs['custom_filters'] ||= []
     prefs['custom_filters'] << new_filter
     
+    # Clear and reassign to avoid any cached ActionController::Parameters
+    current_user.preferences = nil
     current_user.preferences = prefs
     
     if current_user.save
       # Reload to get clean data
       current_user.reload
       render json: new_filter, status: :created
+      return
     else
       Rails.logger.error "Failed to save custom filter: #{current_user.errors.full_messages}"
       render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
+      return
     end
   rescue => e
     Rails.logger.error "Error creating custom filter: #{e.message}"
@@ -82,6 +87,9 @@ class User::CustomFiltersController < ApplicationController
 
   # PUT /api/v1/user_custom_filters/:id
   def update
+    # Reload user to ensure fresh data
+    current_user.reload
+    
     # Extract and convert nested parameters to plain hashes BEFORE any database operations
     condition_hash = params[:condition].present? ? deep_to_hash(params[:condition]) : nil
     order_hash = params[:order].present? ? deep_to_hash(params[:order]) : nil
@@ -119,14 +127,19 @@ class User::CustomFiltersController < ApplicationController
     end
     
     prefs['custom_filters'][filter_index] = filter
+    
+    # Clear and reassign
+    current_user.preferences = nil
     current_user.preferences = prefs
     
     if current_user.save
       current_user.reload
       render json: filter
+      return
     else
       Rails.logger.error "Failed to update custom filter: #{current_user.errors.full_messages}"
       render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
+      return
     end
   rescue => e
     Rails.logger.error "Error updating custom filter: #{e.message}"
@@ -136,6 +149,9 @@ class User::CustomFiltersController < ApplicationController
 
   # DELETE /api/v1/user_custom_filters/:id
   def destroy
+    # Reload user to ensure fresh data
+    current_user.reload
+    
     # Ensure we're working with plain hashes
     prefs = deep_to_hash(current_user.preferences) || {}
     custom_filters = prefs['custom_filters'] || []
@@ -147,14 +163,19 @@ class User::CustomFiltersController < ApplicationController
     end
     
     prefs['custom_filters'].delete_at(filter_index)
+    
+    # Clear the association completely and reassign
+    current_user.preferences = nil
     current_user.preferences = prefs
     
     if current_user.save
       current_user.reload
       render json: { success: true }
+      return
     else
       Rails.logger.error "Failed to delete custom filter: #{current_user.errors.full_messages}"
       render json: { errors: current_user.errors.full_messages}, status: :unprocessable_entity
+      return
     end
   rescue => e
     Rails.logger.error "Error deleting custom filter: #{e.message}"

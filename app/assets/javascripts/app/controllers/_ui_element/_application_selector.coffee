@@ -455,6 +455,9 @@ class App.UiElement.ApplicationSelector
     selection = $("<select class=\"form-control\" name=\"#{name}\"></select>")
 
     attributeConfig = elements[groupAndAttribute]
+    
+    # Return early if attribute config doesn't exist
+    return selection if !attributeConfig
 
     # Compatibility layer for renamed operators (#4709).
     meta.operator = @migrateOperator(attributeConfig, meta.operator)
@@ -713,6 +716,7 @@ class App.UiElement.ApplicationSelector
     new RegExp('^input$', 'i')
 
   @migrateOperator: (attributeConfig, operator) ->
+    return operator if !attributeConfig
     if attributeConfig.tag and @tokenfieldTagRegex() and attributeConfig.tag.match(@tokenfieldTagRegex())
       switch operator
         when 'is' then return 'is any of'
