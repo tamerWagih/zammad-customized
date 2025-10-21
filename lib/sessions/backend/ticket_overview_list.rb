@@ -126,6 +126,26 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
       }
       indexes.push meta
     end
+    
+    # Add custom filters
+    custom_filters = @user.preferences[:custom_filters] || []
+    custom_filters.each do |filter|
+      next unless filter['active']
+      
+      # Count tickets for this custom filter
+      count = count_tickets_for_filter(filter)
+      
+      meta = {
+        id:        filter['id'],
+        name:      filter['name'],
+        prio:      filter['prio'],
+        link:      filter['link'],
+        count:     count,
+        is_custom: true,
+      }
+      indexes.push meta
+    end
+    
     if @client
       @client.log "push overview_index for user #{@user.id}"
       @client.send(
@@ -206,6 +226,20 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
     @last_ticket_change = last_ticket_change if reset
 
     true
+  end
+
+  def count_tickets_for_filter(filter)
+    condition = filter['condition'] || {}
+    
+    # Use Ticket selector to count tickets
+    query, bind_params = Ticket.selector2sql(condition, current_user: @user)
+    
+    return 0 if query.blank?
+    
+    Ticket.where(query, *bind_params).count
+  rescue => e
+    Rails.logger.error "Error counting tickets for custom filter: #{e.message}"
+    0
   end
 
 end

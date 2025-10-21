@@ -79,7 +79,8 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
       type: 'POST'
       url:  "#{@apiPath}/user_custom_filters"
       data: JSON.stringify(params)
-      processData: true
+      processData: false
+      contentType: 'application/json'
       success: (data, status, xhr) =>
         # Refresh the overview list
         App.OverviewIndexCollection.fetch()
