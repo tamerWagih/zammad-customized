@@ -27,7 +27,7 @@ class User::CustomFiltersController < ApplicationController
 
   # POST /api/v1/user_custom_filters
   def create
-    filter_params = params.permit(:name, :prio, :active, condition: {}, order: {}, view: {}, group_by: [])
+    filter_params = params.permit(:name, :prio, :active, :group_by, condition: {}, order: {}, view: {})
     
     # Handle nested parameters properly
     if params[:condition].present?
@@ -40,6 +40,11 @@ class User::CustomFiltersController < ApplicationController
     
     if params[:view].present?
       filter_params[:view] = params[:view].to_unsafe_h
+    end
+    
+    # Handle group_by as string
+    if params[:group_by].present?
+      filter_params[:group_by] = params[:group_by].to_s
     end
     
     # Initialize custom_filters if not exists
@@ -81,7 +86,7 @@ class User::CustomFiltersController < ApplicationController
 
   # PUT /api/v1/user_custom_filters/:id
   def update
-    filter_params = params.permit(:name, :prio, :active, condition: {}, order: {}, view: {}, group_by: [])
+    filter_params = params.permit(:name, :prio, :active, :group_by, condition: {}, order: {}, view: {})
     
     custom_filters = current_user.preferences[:custom_filters] || []
     filter_index = custom_filters.find_index { |f| f['id'] == params[:id] }
