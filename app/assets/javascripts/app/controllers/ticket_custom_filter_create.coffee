@@ -12,6 +12,9 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
       }
     }
     
+    # Ensure ObjectManagerAttribute data is loaded for ticket_selector
+    App.ObjectManagerAttribute.fetchFull()
+    
     configure_attributes = [
       { name: 'name',       display: __('Name'),                tag: 'input',    type: 'text', limit: 100, 'null': false },
       { name: 'condition',  display: __('Conditions for shown tickets'), tag: 'ticket_selector', null: false },
