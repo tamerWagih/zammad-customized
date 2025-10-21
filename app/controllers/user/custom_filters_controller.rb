@@ -59,9 +59,16 @@ class User::CustomFiltersController < ApplicationController
       'updated_at' => Time.zone.now.iso8601
     }
     
-    current_user.preferences[:custom_filters] << new_filter
+    # Ensure we're working with a plain hash for preferences
+    prefs = deep_to_hash(current_user.preferences) || {}
+    prefs['custom_filters'] ||= []
+    prefs['custom_filters'] << new_filter
+    
+    current_user.preferences = prefs
     
     if current_user.save
+      # Reload to get clean data
+      current_user.reload
       render json: new_filter, status: :created
     else
       Rails.logger.error "Failed to save custom filter: #{current_user.errors.full_messages}"
@@ -84,7 +91,9 @@ class User::CustomFiltersController < ApplicationController
     prio_value = params[:prio].present? ? params[:prio].to_i : nil
     active_value = params.key?(:active) ? params[:active] : nil
     
-    custom_filters = current_user.preferences[:custom_filters] || []
+    # Ensure we're working with plain hashes
+    prefs = deep_to_hash(current_user.preferences) || {}
+    custom_filters = prefs['custom_filters'] || []
     filter_index = custom_filters.find_index { |f| f['id'] == params[:id] }
     
     if filter_index.nil?
@@ -109,9 +118,11 @@ class User::CustomFiltersController < ApplicationController
       filter['link'] = generate_link(name_value, filter['id'])
     end
     
-    current_user.preferences[:custom_filters][filter_index] = filter
+    prefs['custom_filters'][filter_index] = filter
+    current_user.preferences = prefs
     
     if current_user.save
+      current_user.reload
       render json: filter
     else
       Rails.logger.error "Failed to update custom filter: #{current_user.errors.full_messages}"
@@ -125,7 +136,9 @@ class User::CustomFiltersController < ApplicationController
 
   # DELETE /api/v1/user_custom_filters/:id
   def destroy
-    custom_filters = current_user.preferences[:custom_filters] || []
+    # Ensure we're working with plain hashes
+    prefs = deep_to_hash(current_user.preferences) || {}
+    custom_filters = prefs['custom_filters'] || []
     filter_index = custom_filters.find_index { |f| f['id'] == params[:id] }
     
     if filter_index.nil?
@@ -133,13 +146,15 @@ class User::CustomFiltersController < ApplicationController
       return
     end
     
-    current_user.preferences[:custom_filters].delete_at(filter_index)
+    prefs['custom_filters'].delete_at(filter_index)
+    current_user.preferences = prefs
     
     if current_user.save
+      current_user.reload
       render json: { success: true }
     else
       Rails.logger.error "Failed to delete custom filter: #{current_user.errors.full_messages}"
-      render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
+      render json: { errors: current_user.errors.full_messages}, status: :unprocessable_entity
     end
   rescue => e
     Rails.logger.error "Error deleting custom filter: #{e.message}"

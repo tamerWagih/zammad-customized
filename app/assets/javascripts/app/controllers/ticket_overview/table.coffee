@@ -57,7 +57,12 @@ class App.TicketOverviewTable extends App.Controller
     ticketListShow = []
     for ticket in tickets
       ticketListShow.push App.Ticket.fullLocal(ticket.id)
-    @overview = App.Overview.find(overview.id)
+    
+    # For custom filters, use the overview object directly
+    if overview.is_custom
+      @overview = overview
+    else
+      @overview = App.Overview.find(overview.id)
 
     @removePopovers()
 
@@ -94,12 +99,17 @@ class App.TicketOverviewTable extends App.Controller
     return if @renderCustomerNotTicketExistIfNeeded(ticketListShow)
 
     # set page title
-    @overview = App.Overview.find(overview.id)
+    # For custom filters, create a virtual overview object since they don't exist in the model store
+    if overview.is_custom
+      @overview = overview
+    else
+      @overview = App.Overview.find(overview.id)
 
     # render init page
     checkbox = false
     edit     = false
-    if @permissionCheck('admin.overview')
+    # Only allow editing for admin on non-custom overviews
+    if @permissionCheck('admin.overview') && !@overview.is_custom
       edit = true
     if @permissionCheck('ticket.agent')
       checkbox = true

@@ -171,6 +171,7 @@ class App.UiElement.ApplicationSelector
 
     # Remove 'has changed' operator from attributes which don't support the operator.
     ['ticket.created_at', 'ticket.updated_at'].forEach (element_name) ->
+      return if !elements[element_name] || !elements[element_name]['operator']
       elements[element_name]['operator'] = elements[element_name]['operator'].filter (item) -> item != 'has changed'
 
     elements['ticket.mention_user_ids'] =
