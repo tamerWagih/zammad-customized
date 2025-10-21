@@ -9,18 +9,10 @@ class SelectorsController < ApplicationController
   # POST /api/v1/users/selector
   # POST /api/v1/organizations/selector
   def preview
-    # Handle case where no condition is provided (empty selector)
-    condition = params[:condition] || {}
-    
-    # Skip processing if condition is empty or has no valid conditions
-    if condition.blank? || !has_valid_conditions?(condition)
-      return render json: {
-        object_ids:   [],
-        object_count: 0,
-        assets:       {},
-      }
-    end
-    
+    condition = params[:condition]
+
+    raise Exceptions::UnprocessableEntity, __('Invalid condition') if condition.blank?
+
     object_count, objects = object_klass.selectors(condition, limit: 6, execution_time: true)
 
     assets     = {}
@@ -39,22 +31,6 @@ class SelectorsController < ApplicationController
   end
 
   private
-
-  def has_valid_conditions?(condition)
-    return false if condition.blank?
-    
-    condition.any? do |key, value|
-      next false if value.blank?
-      
-      # Check if condition has valid values
-      if value.is_a?(Hash) && value.key?('value')
-        # Valid if value is not empty array
-        !(value['value'].is_a?(Array) && value['value'].empty?)
-      else
-        true
-      end
-    end
-  end
 
   def object_klass
     @object_klass ||= case params[:object]

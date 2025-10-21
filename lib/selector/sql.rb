@@ -271,8 +271,8 @@ class Selector::Sql < Selector::Base
           bind_params.push block_condition[:value]
         end
       end
-    elsif attribute_table == 'ticket' && attribute_name == 'shared_with_me'
-      # Handle shared with me selector
+    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'shared_with_me'
+      # Handle shared with me selector (ONLY in custom filter context)
       if block_condition[:operator] == 'is'
         query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
         bind_params.push current_user.group_ids_access('read')
@@ -280,8 +280,8 @@ class Selector::Sql < Selector::Base
         query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
         bind_params.push current_user.group_ids_access('read')
       end
-    elsif attribute_table == 'ticket' && attribute_name == 'approval_status'
-      # Handle approval status selector
+    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'approval_status'
+      # Handle approval status selector (ONLY in custom filter context)
       if block_condition[:operator] == 'is'
         query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = ?)"
         bind_params.push block_condition[:value]
@@ -289,8 +289,8 @@ class Selector::Sql < Selector::Base
         query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = ?)"
         bind_params.push block_condition[:value]
       end
-    elsif attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
-      # Handle requested for approval selector
+    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
+      # Handle requested for approval selector (ONLY in custom filter context)
       if block_condition[:operator] == 'is'
         query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending')"
       else

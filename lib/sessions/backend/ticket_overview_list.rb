@@ -231,8 +231,12 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
   def count_tickets_for_filter(filter)
     condition = filter['condition'] || {}
     
-    # Use Ticket selector to count tickets
-    query, bind_params = Ticket.selector2sql(condition, current_user: @user)
+    # Use Ticket selector to count tickets with custom filter context
+    query, bind_params = Ticket.selector2sql(
+      condition, 
+      current_user: @user,
+      custom_filter_context: true  # Enable custom filter attributes
+    )
     
     return 0 if query.blank?
     

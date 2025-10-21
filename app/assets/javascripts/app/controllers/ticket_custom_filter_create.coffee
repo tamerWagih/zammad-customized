@@ -12,17 +12,12 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
       }
     }
     
-    # Ensure ObjectManagerAttribute data is loaded for ticket_selector
-    # Try to load attributes, but don't fail if it doesn't work for agents
-    try
-      App.ObjectManagerAttribute.fetchFull()
-    catch error
-      console.log('ObjectManagerAttribute fetch failed, using fallback:', error)
-      # For agents, we'll rely on the hardcoded attributes in the selector
+    # Load custom filter attributes from dedicated endpoint
+    @loadCustomFilterAttributes()
     
     configure_attributes = [
       { name: 'name',       display: __('Name'),                tag: 'input',    type: 'text', limit: 100, 'null': false },
-      { name: 'condition',  display: __('Conditions for shown tickets'), tag: 'ticket_selector', null: false },
+      { name: 'condition',  display: __('Conditions for shown tickets'), tag: 'ticket_selector', null: false, customFilterMode: true, 'data-custom-filter-mode': true },
       {
         name:    'view::s'
         display: __('Attributes')
@@ -113,5 +108,20 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
           type: 'error'
           msg:  __('Unable to create custom filter.')
         )
+    )
+
+  loadCustomFilterAttributes: =>
+    # Load attributes from dedicated custom filter attributes endpoint
+    App.Ajax.request(
+      id:    'custom_filter_attributes'
+      type:  'GET'
+      url:   "#{App.Config.get('api_path')}/custom_filter_attributes"
+      processData: true
+      success: (data, status, xhr) =>
+        # Store custom filter attributes for use in selector
+        App.CustomFilterAttributes = data
+      error: (xhr, status, error) =>
+        console.error('Failed to load custom filter attributes:', error)
+        # Continue anyway, selector will use fallback
     )
 

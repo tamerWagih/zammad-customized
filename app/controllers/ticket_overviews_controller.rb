@@ -99,8 +99,12 @@ class TicketOverviewsController < ApplicationController
   def count_tickets_for_filter(filter)
     condition = filter['condition'] || {}
     
-    # Use Ticket selector to count tickets
-    query, bind_params = Ticket.selector2sql(condition, current_user: current_user)
+    # Use Ticket selector to count tickets with custom filter context
+    query, bind_params = Ticket.selector2sql(
+      condition, 
+      current_user: current_user,
+      custom_filter_context: true  # Enable custom filter attributes
+    )
     
     return 0 if query.blank?
     
@@ -115,8 +119,12 @@ class TicketOverviewsController < ApplicationController
     order = filter['order'] || { 'by' => 'created_at', 'direction' => 'DESC' }
     view = filter['view'] || { 's' => ['number', 'title', 'customer', 'state', 'created_at'] }
     
-    # Get tickets based on condition
-    query, bind_params = Ticket.selector2sql(condition, current_user: current_user)
+    # Get tickets based on condition with custom filter context
+    query, bind_params = Ticket.selector2sql(
+      condition, 
+      current_user: current_user,
+      custom_filter_context: true  # Enable custom filter attributes
+    )
     
     tickets = []
     assets = {}

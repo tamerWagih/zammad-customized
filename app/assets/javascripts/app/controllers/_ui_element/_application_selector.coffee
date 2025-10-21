@@ -124,37 +124,14 @@ class App.UiElement.ApplicationSelector
             operator: [__('is in working time'), __('is not in working time')]
 
       else
-        attributesByObject = App.ObjectManagerAttribute.selectorAttributesByObject()
-        configureAttributes = attributesByObject[groupMeta.model] || []
-        
-        # Fallback for agents if ObjectManagerAttribute data is not available
-        if configureAttributes.length == 0 && groupMeta.model == 'Ticket'
-          configureAttributes = [
-            { name: 'title', display: __('Title'), tag: 'input', type: 'text', searchable: true },
-            { name: 'number', display: __('Number'), tag: 'input', type: 'text', searchable: true },
-            { name: 'state_id', display: __('State'), tag: 'select', relation: 'TicketState', searchable: true },
-            { name: 'priority_id', display: __('Priority'), tag: 'select', relation: 'TicketPriority', searchable: true },
-            { name: 'owner_id', display: __('Owner'), tag: 'select', relation: 'User', searchable: true },
-            { name: 'customer_id', display: __('Customer'), tag: 'select', relation: 'User', searchable: true },
-            { name: 'group_id', display: __('Group'), tag: 'select', relation: 'Group', searchable: true },
-            { name: 'created_at', display: __('Created'), tag: 'datetime', searchable: true },
-            { name: 'updated_at', display: __('Updated'), tag: 'datetime', searchable: true },
-            { name: 'shared_with_me', display: __('Shared with Me'), tag: 'select', type: 'boolean', searchable: true, operator: [__('is'), __('is not')], options: [
-              { value: true, name: __('Yes') },
-              { value: false, name: __('No') }
-            ] },
-            { name: 'approval_status', display: __('Approval Status'), tag: 'select', type: 'select', searchable: true, operator: [__('is'), __('is not')], options: [
-              { value: 'pending', name: __('Pending') },
-              { value: 'approved', name: __('Approved') },
-              { value: 'rejected', name: __('Rejected') }
-            ] },
-            { name: 'requested_for_approval', display: __('Requested for Approval'), tag: 'select', type: 'boolean', searchable: true, operator: [__('is'), __('is not')], options: [
-              { value: true, name: __('Yes') },
-              { value: false, name: __('No') }
-            ] },
-            { name: 'article', display: __('Article'), tag: 'select', relation: 'TicketArticle', searchable: true },
-            { name: 'organization_id', display: __('Organization'), tag: 'select', relation: 'Organization', searchable: true }
-          ]
+        # Check if we're in custom filter mode
+        if attribute.customFilterMode && App.CustomFilterAttributes
+          # Use custom filter attributes from dedicated endpoint
+          configureAttributes = App.CustomFilterAttributes
+        else
+          # Use standard object manager attributes
+          attributesByObject = App.ObjectManagerAttribute.selectorAttributesByObject()
+          configureAttributes = attributesByObject[groupMeta.model] || []
         
         for config in configureAttributes
           config.objectName    = groupMeta.model
@@ -385,10 +362,24 @@ class App.UiElement.ApplicationSelector
 
   @preview: (item) ->
     params = App.ControllerForm.params(item)
+    
+    # Check if we're in custom filter mode
+    isCustomFilterMode = item.closest('form').find('[data-custom-filter-mode]').length > 0
+    
+    # Use custom filter selector endpoint for custom filters
+    previewUrl = if isCustomFilterMode
+      "#{App.Config.get('api_path')}/custom_filter_selectors/preview"
+    else
+      "#{App.Config.get('api_path')}/tickets/selector"
+    
+    # Add object type for custom filter endpoint
+    if isCustomFilterMode
+      params.object = 'tickets'
+    
     App.Ajax.request(
       id:    'application_selector'
       type:  'POST'
-      url:   "#{App.Config.get('api_path')}/tickets/selector"
+      url:   previewUrl
       data:        JSON.stringify(params)
       processData: true,
       success: (data, status, xhr) =>
