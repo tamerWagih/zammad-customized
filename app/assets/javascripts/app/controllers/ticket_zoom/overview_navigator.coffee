@@ -13,7 +13,14 @@ class App.TicketZoomOverviewNavigator extends App.Controller
     lateUpdate = =>
       @delay(@render, 2600, 'overview-navigator')
 
+    # Check if this is a custom filter (UUID format) or standard overview (numeric ID)
     @overview = App.Overview.find(@overview_id)
+    
+    # If overview not found, it might be a custom filter - skip navigator
+    if !@overview
+      @html('')
+      return
+    
     @bindId = App.OverviewListCollection.bind(@overview.link, lateUpdate, false)
 
     @render()
@@ -22,7 +29,7 @@ class App.TicketZoomOverviewNavigator extends App.Controller
     App.OverviewListCollection.unbind(@bindId)
 
   render: =>
-    if !@overview_id
+    if !@overview_id || !@overview
       @html('')
       return
 
