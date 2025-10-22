@@ -58,34 +58,61 @@ class Transaction::CcNotification
   end
 
   def perform
+    Rails.logger.info "[CC_NOTIFICATION] ===== CC NOTIFICATION START ====="
+    Rails.logger.info "[CC_NOTIFICATION] Item: #{@item.inspect}"
+    Rails.logger.info "[CC_NOTIFICATION] Params: #{@params.inspect}"
+    
     # Only process Ticket::Cc objects
     if @item[:object] != 'Ticket::Cc'
+      Rails.logger.info "[CC_NOTIFICATION] Skipping - not a Ticket::Cc object: #{@item[:object]}"
       return
     end
     
     # return if we run import mode
     if Setting.get('import_mode')
+      Rails.logger.info "[CC_NOTIFICATION] Skipping - import mode is enabled"
       return
     end
     
     if cc_record.blank? || ticket.blank?
+      Rails.logger.warn "[CC_NOTIFICATION] Skipping - missing cc_record or ticket"
+      Rails.logger.warn "[CC_NOTIFICATION] cc_record: #{cc_record.inspect}"
+      Rails.logger.warn "[CC_NOTIFICATION] ticket: #{ticket.inspect}"
       return
     end
     
     if @params[:disable_notification]
+      Rails.logger.info "[CC_NOTIFICATION] Skipping - notifications disabled"
       return
     end
     
     if @params[:send_notification] == false
+      Rails.logger.info "[CC_NOTIFICATION] Skipping - send_notification is false"
       return
     end
     
+    Rails.logger.info "[CC_NOTIFICATION] Processing CC notification for ticket #{ticket.id}, CC record #{cc_record.id}"
+    Rails.logger.info "[CC_NOTIFICATION] Action: #{@item[:type]}, CC user: #{cc_record.user_id}"
+    
     prepare_recipients_and_reasons
 
+    Rails.logger.info "[CC_NOTIFICATION] Found #{recipients_and_channels.length} recipients"
+    
     # send notifications
-    recipients_and_channels.each do |recipient_settings|
-      send_to_single_recipient(recipient_settings)
+    sent_count = 0
+    recipients_and_channels.each_with_index do |recipient_settings, index|
+      Rails.logger.info "[CC_NOTIFICATION] Sending to recipient #{index + 1}/#{recipients_and_channels.length}: #{recipient_settings[:user].id} (#{recipient_settings[:user].email})"
+      begin
+        send_to_single_recipient(recipient_settings)
+        sent_count += 1
+        Rails.logger.info "[CC_NOTIFICATION] ✅ Notification sent successfully to #{recipient_settings[:user].email}"
+      rescue => e
+        Rails.logger.error "[CC_NOTIFICATION] ❌ Failed to send notification to #{recipient_settings[:user].email}: #{e.message}"
+      end
     end
+
+    Rails.logger.info "[CC_NOTIFICATION] ===== CC NOTIFICATION COMPLETE ====="
+    Rails.logger.info "[CC_NOTIFICATION] Summary: #{sent_count}/#{recipients_and_channels.length} notifications sent"
 
     true
   end

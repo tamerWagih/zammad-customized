@@ -825,45 +825,74 @@ returns a hex color code
 
   # Create CC records after ticket creation if cc_user_ids is provided
   def create_cc_records
-    Rails.logger.info "[CC] create_cc_records called for ticket #{id}"
-    Rails.logger.info "[CC] cc_user_ids attribute: #{cc_user_ids.inspect}"
+    Rails.logger.info "[CC] ===== CREATE_CC_RECORDS START ====="
+    Rails.logger.info "[CC] Ticket ID: #{id}"
+    Rails.logger.info "[CC] cc_user_ids attribute: #{cc_user_ids.inspect} (#{cc_user_ids.class})"
     Rails.logger.info "[CC] All ticket attributes: #{attributes.keys.join(', ')}"
     Rails.logger.info "[CC] Checking for cc_user_ids in attributes: #{attributes['cc_user_ids'].inspect}"
     
-    return if cc_user_ids.blank?
-    return unless cc_user_ids.is_a?(Array)
+    if cc_user_ids.blank?
+      Rails.logger.info "[CC] No CC users to process - exiting early"
+      return
+    end
+    
+    unless cc_user_ids.is_a?(Array)
+      Rails.logger.error "[CC] cc_user_ids is not an array: #{cc_user_ids.class}"
+      return
+    end
 
     current_user = UserInfo.current_user_id
-    Rails.logger.info "[CC] Current user: #{current_user}"
+    Rails.logger.info "[CC] Current user ID: #{current_user}"
+    Rails.logger.info "[CC] Processing #{cc_user_ids.length} CC users: #{cc_user_ids.inspect}"
     
-    cc_user_ids.each do |user_id|
+    created_count = 0
+    skipped_count = 0
+    
+    cc_user_ids.each_with_index do |user_id, index|
+      Rails.logger.info "[CC] Processing user #{index + 1}/#{cc_user_ids.length}: #{user_id}"
       next if user_id.blank?
       
-      # Skip if user doesn't exist or is the creator
+      # Skip if user doesn't exist
       user = User.find_by(id: user_id)
       unless user
-        Rails.logger.warn "[CC] User #{user_id} not found"
+        Rails.logger.warn "[CC] User #{user_id} not found - skipping"
+        skipped_count += 1
         next
       end
       
+      # Skip if user is the creator
       if user.id == current_user
-        Rails.logger.info "[CC] Skipping current user #{user.id}"
+        Rails.logger.info "[CC] Skipping current user #{user.id} (#{user.fullname})"
+        skipped_count += 1
         next
       end
 
       # Create CC record (will trigger notifications via HasTransactionDispatcher)
       Rails.logger.info "[CC] Creating CC record for user #{user.id} (#{user.fullname})"
-      cc = ccs.create!(
-        user_id: user.id,
-        created_by_id: current_user,
-        updated_by_id: current_user
-      )
-      Rails.logger.info "[CC] CC record created: #{cc.id}"
+      begin
+        cc = ccs.create!(
+          user_id: user.id,
+          created_by_id: current_user,
+          updated_by_id: current_user
+        )
+        Rails.logger.info "[CC] ✅ CC record created successfully: ID=#{cc.id}, user=#{user.id}, permissions=#{cc.permissions.inspect}"
+        created_count += 1
+      rescue => e
+        Rails.logger.error "[CC] ❌ Failed to create CC record for user #{user.id}: #{e.message}"
+        Rails.logger.error "[CC] Error details: #{e.class}: #{e.message}"
+        skipped_count += 1
+      end
     end
-    Rails.logger.info "[CC] Finished creating CC records for ticket #{id}"
+    
+    Rails.logger.info "[CC] ===== CREATE_CC_RECORDS COMPLETE ====="
+    Rails.logger.info "[CC] Summary: #{created_count} created, #{skipped_count} skipped"
+    Rails.logger.info "[CC] Ticket #{id} now has #{ccs.count} CC records"
   rescue StandardError => e
+    Rails.logger.error "[CC] ===== CREATE_CC_RECORDS ERROR ====="
     Rails.logger.error "[CC] Failed to create CC records for ticket #{id}: #{e.message}"
+    Rails.logger.error "[CC] Error class: #{e.class}"
     Rails.logger.error "[CC] Backtrace: #{e.backtrace.join("\n")}"
+    raise e # Re-raise to ensure the error is not silently swallowed
   end
 end
 

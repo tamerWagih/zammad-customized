@@ -12,57 +12,58 @@ class Tickets::CcUsersController < ApplicationController
   # @response_message 403               Forbidden / Invalid session
   def index
     Rails.logger.info "[CC_API] CC users endpoint called by user #{current_user.id}"
+    Rails.logger.info "[CC_API] Request params: #{params.inspect}"
 
-    # Get Agent and Customer roles
+    # Get pagination and search parameters
+    page = params[:page]&.to_i || 1
+    per_page = [params[:per_page]&.to_i || 50, 100].min # Max 100 per page
+    search_query = params[:search]&.strip
+    offset = (page - 1) * per_page
+
+    Rails.logger.info "[CC_API] Pagination: page=#{page}, per_page=#{per_page}, offset=#{offset}"
+    Rails.logger.info "[CC_API] Search query: #{search_query.inspect}"
+
+    # Get Agent and Customer roles efficiently
     agent_roles = Role.with_permissions('ticket.agent')
     customer_roles = Role.with_permissions('ticket.customer')
-
-    Rails.logger.info "[CC_API] Agent roles found: #{agent_roles.count}"
-    Rails.logger.info "[CC_API] Customer roles found: #{customer_roles.count}"
 
     role_ids = []
     role_ids += agent_roles.pluck(:id) if agent_roles.present?
     role_ids += customer_roles.pluck(:id) if customer_roles.present?
     role_ids.uniq!
 
-    Rails.logger.info "[CC_API] Role IDs: #{role_ids.inspect}"
-    Rails.logger.info "[CC_API] Current user: #{current_user.id} (#{current_user.permissions})"
+    Rails.logger.info "[CC_API] Target role IDs: #{role_ids.inspect}"
 
-    # Try a simpler approach - get all active users and filter by roles
-    all_users = User.where(active: true).limit(1000)
+    # Build efficient query with proper SQL joins
+    query = User.joins(:roles)
+                .where(roles: { id: role_ids })
+                .where(active: true)
+                .where.not(id: current_user&.id)
+                .distinct
 
-    Rails.logger.info "[CC_API] All active users: #{all_users.count}"
-
-    # Debug: Check what roles users actually have
-    sample_users = all_users.first(5)
-    sample_users.each do |user|
-      user_roles = user.roles.pluck(:id, :name)
-      Rails.logger.info "[CC_API] User #{user.id} roles: #{user_roles.inspect}"
+    # Add search functionality if query provided
+    if search_query.present?
+      # Search in firstname, lastname, login, and email
+      search_pattern = "%#{search_query.downcase}%"
+      query = query.where(
+        "LOWER(users.firstname) LIKE ? OR LOWER(users.lastname) LIKE ? OR LOWER(users.login) LIKE ? OR LOWER(users.email) LIKE ?",
+        search_pattern, search_pattern, search_pattern, search_pattern
+      )
+      Rails.logger.info "[CC_API] Applied search filter: #{search_query}"
     end
 
-    # Filter users that have agent or customer roles
-    users_with_roles = all_users.select do |user|
-      user_role_ids = user.roles.pluck(:id)
-      has_role = (user_role_ids & role_ids).any?
-      Rails.logger.info "[CC_API] User #{user.id} (#{user.fullname}) - role_ids: #{user_role_ids}, target_roles: #{role_ids}, has_role: #{has_role}"
-      has_role
-    end
+    # Get total count for pagination metadata
+    total_count = query.count
+    Rails.logger.info "[CC_API] Total matching users: #{total_count}"
 
-    Rails.logger.info "[CC_API] Users with target roles: #{users_with_roles.count}"
+    # Apply pagination and ordering
+    users = query.order(:firstname, :lastname, :login)
+                 .limit(per_page)
+                 .offset(offset)
 
-    # Use the filtered users as the result
-    search_result = { objects: users_with_roles }
+    Rails.logger.info "[CC_API] Returning #{users.count} users (page #{page}/#{(total_count.to_f / per_page).ceil})"
 
-    Rails.logger.info "[CC_API] Final result count: #{search_result[:objects]&.count || 0}"
-    
-    users = search_result[:objects] || []
-    
-    # Exclude current user and inactive users
-    users = users.select do |user|
-      user.id != current_user&.id && user.active
-    end
-    
-    # Format response (same format as before)
+    # Format response with pagination metadata
     users_list = users.map do |user|
       {
         id: user.id,
@@ -73,8 +74,25 @@ class Tickets::CcUsersController < ApplicationController
         active: user.active
       }
     end
-    
-    render json: users_list, status: :ok
+
+    # Build pagination metadata
+    total_pages = (total_count.to_f / per_page).ceil
+    pagination_meta = {
+      current_page: page,
+      per_page: per_page,
+      total_count: total_count,
+      total_pages: total_pages,
+      has_next_page: page < total_pages,
+      has_prev_page: page > 1
+    }
+
+    Rails.logger.info "[CC_API] Pagination meta: #{pagination_meta.inspect}"
+
+    # Return response with pagination metadata
+    render json: {
+      users: users_list,
+      pagination: pagination_meta
+    }, status: :ok
   end
 end
 

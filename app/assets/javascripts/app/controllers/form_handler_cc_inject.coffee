@@ -33,6 +33,6 @@ class App.FormHandlerCcInject
     # Insert after group_id
     groupWrapper.after(ccHtml)
 
+# Only register for ticket creation - not for editing
 App.Config.set('150-FormHandlerCcInject', App.FormHandlerCcInject, 'TicketCreateFormHandler')
-App.Config.set('150-FormHandlerCcInject', App.FormHandlerCcInject, 'TicketEditFormHandler')
 
