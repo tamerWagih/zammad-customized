@@ -4,6 +4,9 @@ class AddCcUsersToTicket < ActiveRecord::Migration[7.2]
   def up
     return if !Setting.exists?(name: 'system_init_done')
 
+    # Use UserInfo to set migration context (provides created_by/updated_by)
+    UserInfo.current_user_id = 1
+
     # Add cc_user_ids ObjectManager attribute to Ticket
     ObjectManager::Attribute.add(
       force:       true,
@@ -12,6 +15,7 @@ class AddCcUsersToTicket < ActiveRecord::Migration[7.2]
       display:     'CC Users',
       data_type:   'select',
       data_option: {
+        default:    '',  # ✅ Required: Default value for validation
         null:       true,
         multiple:   true,
         nulloption: true,
@@ -47,6 +51,8 @@ class AddCcUsersToTicket < ActiveRecord::Migration[7.2]
       to_migrate:  false,
       to_delete:   false,
       position:    225,
+      created_by_id: 1,  # ✅ Required: System user
+      updated_by_id: 1,  # ✅ Required: System user
     )
   end
 
