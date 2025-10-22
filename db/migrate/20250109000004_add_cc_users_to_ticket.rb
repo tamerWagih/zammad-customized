@@ -54,6 +54,9 @@ class AddCcUsersToTicket < ActiveRecord::Migration[7.2]
       created_by_id: 1,  # ✅ Required: System user
       updated_by_id: 1,  # ✅ Required: System user
     )
+    
+    # Execute pending ObjectManager migrations to add the column
+    ObjectManager::Attribute.migration_execute
   end
 
   def down
