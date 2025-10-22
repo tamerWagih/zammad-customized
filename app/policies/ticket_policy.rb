@@ -137,15 +137,23 @@ class TicketPolicy < ApplicationPolicy
     # Map access to CC permissions
     case access.to_s
     when 'read'
+      # Any CC permission grants read access
       cc.read_access? ? true : nil
+      
     when 'create', 'change'
+      # ✅ FIX: Agents with 'comment' CC permission can edit tickets
+      # They're agents - they should be able to do their job!
       if user.permissions?('ticket.agent')
-        cc.full_access? ? true : nil
+        cc.comment_access? || cc.full_access? ? true : nil
       else
+        # Customers with 'comment' CC can add articles
         cc.comment_access? ? true : nil
       end
+      
     when 'full'
+      # Full access requires explicit 'full' permission
       cc.full_access? ? true : nil
+      
     else
       nil
     end

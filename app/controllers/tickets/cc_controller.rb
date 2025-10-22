@@ -18,7 +18,7 @@ class Tickets::CcController < ApplicationController
     if cc.save
       notify_user(
         user_id: cc.user_id,
-        notification: 'CC notification'
+        notification: 'cc'  # ✅ Fixed: Use 'cc' notification type
       )
 
       render json: { cc: serialize_cc(cc) }, status: :created
@@ -37,7 +37,7 @@ class Tickets::CcController < ApplicationController
     if @cc.update(cc_params)
       notify_user(
         user_id: @cc.user_id,
-        notification: 'CC notification updated'
+        notification: 'cc'  # ✅ Fixed: Use 'cc' notification type
       )
 
       render json: { cc: serialize_cc(@cc) }
@@ -57,7 +57,7 @@ class Tickets::CcController < ApplicationController
 
     notify_user(
       user_id: serialized[:user_id],
-      notification: 'CC removed'
+      notification: 'cc'  # ✅ Fixed: Use 'cc' notification type
     )
 
     render json: { success: true, cc: serialized }
