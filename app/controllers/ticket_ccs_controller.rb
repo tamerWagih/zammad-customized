@@ -11,8 +11,8 @@ class TicketCcsController < ApplicationController
   # @response_message 200 [Array<User>] List of users available for CC
   # @response_message 403               Forbidden / Invalid session
   def index
-    # Use the same User.search method that /users/search uses
-    # This ensures we get the same results as the approval modal
+    # For CC functionality, we need ALL agents and customers regardless of permissions
+    # This bypasses User.search permission filtering that causes different results per user
 
     # Get Agent and Customer roles
     agent_roles = Role.with_permissions('ticket.agent')
@@ -23,22 +23,16 @@ class TicketCcsController < ApplicationController
     role_ids += customer_roles.pluck(:id) if customer_roles.present?
     role_ids.uniq!
 
-    # Use User.search with role_ids (same as approval modal)
-    search_result = User.search(
-      role_ids:     role_ids,
-      limit:        1000,
-      current_user: current_user,
-      full:         true,
-    ) || { objects: [] }
+    # Direct database query to bypass permission filtering
+    # This ensures ALL users with agent/customer roles are returned
+    users = User.joins(:roles)
+                .where(roles: { id: role_ids })
+                .where(active: true)
+                .where.not(id: current_user&.id)  # Exclude current user
+                .distinct
+                .limit(1000)
 
-    users = search_result[:objects] || []
-
-    # Exclude current user and inactive users
-    users = users.select do |user|
-      user.id != current_user&.id && user.active
-    end
-
-    # Format response (same format as before)
+    # Format response
     users_list = users.map do |user|
       {
         id: user.id,
