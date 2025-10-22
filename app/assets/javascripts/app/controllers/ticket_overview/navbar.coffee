@@ -14,6 +14,8 @@ class App.TicketOverviewNavbar extends App.Controller
     'click .js-dropdownItem': 'navigateTo'
     'hide.bs.dropdown': 'onDropdownHide'
     'show.bs.dropdown': 'onDropdownShow'
+    'click .js-create-filter': 'createFilter'
+    'click .js-delete-filter': 'deleteFilter'
 
   constructor: ->
     super
@@ -39,6 +41,52 @@ class App.TicketOverviewNavbar extends App.Controller
   activate: (event) =>
     @tab.removeClass('active')
     $(event.currentTarget).addClass('active')
+
+  createFilter: (e) =>
+    e.preventDefault()
+    e.stopPropagation()
+    
+    # Open modal directly - ticket_selector will load attributes automatically
+    new App.TicketCustomFilterCreate(
+      container: @el.closest('.content')
+    )
+
+  deleteFilter: (e) =>
+    e.preventDefault()
+    e.stopPropagation()
+    
+    filterId = $(e.currentTarget).attr('data-filter-id')
+    return if !filterId
+    
+    new App.ControllerConfirm(
+      message: __('Are you sure you want to delete this custom filter?')
+      callback: =>
+        @ajax(
+          id:   "user_custom_filters_delete_#{filterId}"
+          type: 'DELETE'
+          url:  "#{@apiPath}/user_custom_filters/#{filterId}"
+          processData: true
+          success: =>
+            # Refresh the overview list
+            App.OverviewIndexCollection.fetch()
+            
+            # Navigate to first overview if we deleted the active one
+            data = App.OverviewIndexCollection.get()
+            if data && data[0]
+              @navigate "#ticket/view/#{data[0].link}"
+            
+            @notify(
+              type: 'success'
+              msg:  __('Custom filter has been deleted successfully.')
+            )
+          error: =>
+            @notify(
+              type: 'error'
+              msg:  __('Unable to delete custom filter.')
+            )
+        )
+      container: @el.closest('.content')
+    )
 
   release: =>
     if @vertical
@@ -113,13 +161,16 @@ class App.TicketOverviewNavbar extends App.Controller
       App.WebSocket.send(event:'ticket_overview_select', data: { view: data[0].link })
 
     # redirect to first view
-    if @activeState && !@view && !@vertical
+    if @activeState && !@view && !@vertical && data[0]?.link
       view = data[0].link
       @navigate "#ticket/view/#{view}", { hideCurrentLocationFromHistory: true }
       return
 
     # add new views
     for item in data
+      # Skip items without link property (safety check)
+      continue if !item || !item.link
+      
       item.target = "#ticket/view/#{item.link}"
       if item.link is @view
         item.active = true
@@ -135,6 +186,7 @@ class App.TicketOverviewNavbar extends App.Controller
 
     @html App.view("agent_ticket_view/navbar#{ if @vertical then '_vertical' else '' }")
       items: data
+      isAgent: @permissionCheck('ticket.agent')
 
     if @vertical
       @autoFoldTabs()

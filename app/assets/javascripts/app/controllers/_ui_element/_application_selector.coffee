@@ -124,8 +124,16 @@ class App.UiElement.ApplicationSelector
             operator: [__('is in working time'), __('is not in working time')]
 
       else
-        attributesByObject = App.ObjectManagerAttribute.selectorAttributesByObject()
-        configureAttributes = attributesByObject[groupMeta.model] || []
+        # Check if we're in custom filter mode by attribute flag
+        if attribute.customFilterMode
+          # Use custom filter attributes from dedicated endpoint
+          # If not loaded yet, use empty array (will be populated when loaded)
+          configureAttributes = App.CustomFilterAttributes || []
+        else
+          # Use standard object manager attributes
+          attributesByObject = App.ObjectManagerAttribute.selectorAttributesByObject()
+          configureAttributes = attributesByObject[groupMeta.model] || []
+        
         for config in configureAttributes
           config.objectName    = groupMeta.model
           config.attributeName = config.name
@@ -171,6 +179,7 @@ class App.UiElement.ApplicationSelector
 
     # Remove 'has changed' operator from attributes which don't support the operator.
     ['ticket.created_at', 'ticket.updated_at'].forEach (element_name) ->
+      return if !elements[element_name] || !elements[element_name]['operator']
       elements[element_name]['operator'] = elements[element_name]['operator'].filter (item) -> item != 'has changed'
 
     elements['ticket.mention_user_ids'] =
@@ -354,10 +363,24 @@ class App.UiElement.ApplicationSelector
 
   @preview: (item) ->
     params = App.ControllerForm.params(item)
+    
+    # Check if we're in custom filter mode by looking for the modal class
+    isCustomFilterMode = item.closest('.custom-filter-modal').length > 0
+    
+    # Use custom filter selector endpoint for custom filters
+    previewUrl = if isCustomFilterMode
+      "#{App.Config.get('api_path')}/custom_filter_selectors/preview"
+    else
+      "#{App.Config.get('api_path')}/tickets/selector"
+    
+    # Add object type for custom filter endpoint
+    if isCustomFilterMode
+      params.object = 'tickets'
+    
     App.Ajax.request(
       id:    'application_selector'
       type:  'POST'
-      url:   "#{App.Config.get('api_path')}/tickets/selector"
+      url:   previewUrl
       data:        JSON.stringify(params)
       processData: true,
       success: (data, status, xhr) =>
@@ -454,6 +477,9 @@ class App.UiElement.ApplicationSelector
     selection = $("<select class=\"form-control\" name=\"#{name}\"></select>")
 
     attributeConfig = elements[groupAndAttribute]
+    
+    # Return early if attribute config doesn't exist
+    return selection if !attributeConfig
 
     # Compatibility layer for renamed operators (#4709).
     meta.operator = @migrateOperator(attributeConfig, meta.operator)
@@ -712,6 +738,7 @@ class App.UiElement.ApplicationSelector
     new RegExp('^input$', 'i')
 
   @migrateOperator: (attributeConfig, operator) ->
+    return operator if !attributeConfig
     if attributeConfig.tag and @tokenfieldTagRegex() and attributeConfig.tag.match(@tokenfieldTagRegex())
       switch operator
         when 'is' then return 'is any of'

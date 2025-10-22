@@ -2,11 +2,24 @@
   <% if @items: %>
     <% for item in @items: %>
       <li <% if item.active: %>class="active"<% end %>>
-        <a class="horizontal center" href="<%= item.target %>">
+        <a class="horizontal center" href="<%= item.target %>" data-is-custom="<%= item.is_custom %>">
           <span class="local u-textTruncate"><%- @T(item.name) %></span>
           <span class="badge badge--text"><%= item.count %></span>
+          <% if item.is_custom: %>
+            <span class="js-delete-filter" data-filter-id="<%= item.id %>" title="<%- @Ti('Delete Filter') %>">
+              <%- @Icon('trash') %>
+            </span>
+          <% end %>
         </a>
       </li>
     <% end %>
   <% end %>
 </ul>
+<% if @isAgent: %>
+<div class="sidebar-footer">
+  <a class="btn btn--text btn--create js-create-filter" href="#" title="<%- @Ti('Create Custom Filter') %>">
+    <%- @Icon('plus') %>
+    <span><%- @T('Add Filter') %></span>
+  </a>
+</div>
+<% end %>

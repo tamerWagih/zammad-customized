@@ -126,6 +126,26 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
       }
       indexes.push meta
     end
+    
+    # Add custom filters
+    custom_filters = @user.preferences[:custom_filters] || []
+    custom_filters.each do |filter|
+      next unless filter['active']
+      
+      # Count tickets for this custom filter
+      count = count_tickets_for_filter(filter)
+      
+      meta = {
+        id:        filter['id'],
+        name:      filter['name'],
+        prio:      filter['prio'] || 2000,  # Default to 2000 to appear after all standard filters
+        link:      filter['link'],
+        count:     count,
+        is_custom: true,
+      }
+      indexes.push meta
+    end
+    
     if @client
       @client.log "push overview_index for user #{@user.id}"
       @client.send(
@@ -206,6 +226,35 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
     @last_ticket_change = last_ticket_change if reset
 
     true
+  end
+
+  def count_tickets_for_filter(filter)
+    condition = filter['condition'] || {}
+    
+    # Use Ticket selector to count tickets with custom filter context
+    query, bind_params, tables = Ticket.selector2sql(
+      condition, 
+      current_user: @user,
+      custom_filter_context: true  # Enable custom filter attributes
+    )
+    
+    return 0 if query.blank?
+    
+    # CRITICAL: Apply user permission scope first (like Zammad's overview system)
+    base_scope = if condition.key?('ticket.mention_user_ids')
+                   TicketPolicy::ReadScope.new(@user).resolve
+                 else
+                   TicketPolicy::OverviewScope.new(@user).resolve
+                 end
+    
+    # Apply the custom filter condition on top of permission scope
+    scoped_tickets = base_scope.where(query, *bind_params)
+    scoped_tickets = scoped_tickets.joins(tables) if tables.present?
+    
+    scoped_tickets.count
+  rescue => e
+    Rails.logger.error "Error counting tickets for custom filter: #{e.message}"
+    0
   end
 
 end

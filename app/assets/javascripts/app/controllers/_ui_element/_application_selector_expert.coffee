@@ -549,6 +549,9 @@ class App.UiElement.ApplicationSelectorExpert extends App.UiElement.ApplicationS
     selection = $('<select class="form-control"></select>')
 
     attributeConfig = elements[groupAndAttribute]
+    
+    # Return early if attribute config doesn't exist
+    return selection if !attributeConfig
 
     # Compatibility layer for renamed operators (#4709).
     meta.operator = @migrateOperator(attributeConfig, meta.operator)

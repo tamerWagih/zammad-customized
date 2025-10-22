@@ -259,17 +259,42 @@ class Selector::Sql < Selector::Base
                    'mentions.user_id IS NOT NULL'
                  end
       else
-        query << if block_condition[:operator] == 'is'
-                   tables |= ["LEFT JOIN mentions ON tickets.id = mentions.mentionable_id AND mentions.mentionable_type = 'Ticket'"]
-                   'mentions.user_id IN (?)'
-                 else
-                   "tickets.id NOT IN (SELECT mentionable_id FROM mentions WHERE mentionable_type = 'Ticket' AND user_id IN (?))"
-                 end
+        if block_condition[:operator] == 'is'
+          tables |= ["LEFT JOIN mentions ON tickets.id = mentions.mentionable_id AND mentions.mentionable_type = 'Ticket'"]
+          query << 'mentions.user_id IN (?)'
+        else
+          query << "tickets.id NOT IN (SELECT mentionable_id FROM mentions WHERE mentionable_type = 'Ticket' AND user_id IN (?))"
+        end
         if block_condition[:pre_condition] == 'current_user.id'
           bind_params.push current_user_id
         else
           bind_params.push block_condition[:value]
         end
+      end
+    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'shared_with_me'
+      # Handle shared with me selector (ONLY in custom filter context)
+      if block_condition[:operator] == 'is'
+        query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
+        bind_params.push current_user.group_ids_access('read')
+      else
+        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
+        bind_params.push current_user.group_ids_access('read')
+      end
+    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'approval_status'
+      # Handle approval status selector (ONLY in custom filter context)
+      if block_condition[:operator] == 'is'
+        query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = ?)"
+        bind_params.push block_condition[:value]
+      else
+        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = ?)"
+        bind_params.push block_condition[:value]
+      end
+    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
+      # Handle requested for approval selector (ONLY in custom filter context)
+      if block_condition[:operator] == 'is'
+        query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending')"
+      else
+        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending')"
       end
     elsif attribute_table == 'user' && attribute_name == 'role_ids'
       query << if block_condition[:operator] == 'is'

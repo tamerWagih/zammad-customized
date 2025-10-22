@@ -9,7 +9,11 @@ class SelectorsController < ApplicationController
   # POST /api/v1/users/selector
   # POST /api/v1/organizations/selector
   def preview
-    object_count, objects = object_klass.selectors(params[:condition], limit: 6, execution_time: true)
+    condition = params[:condition]
+
+    raise Exceptions::UnprocessableEntity, __('Invalid condition') if condition.blank?
+
+    object_count, objects = object_klass.selectors(condition, limit: 6, execution_time: true)
 
     assets     = {}
     object_ids = []
