@@ -14,9 +14,10 @@ class CreateTicketCcs < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    add_index :ticket_ccs, [:ticket_id, :user_id], unique: true, name: 'index_ticket_ccs_on_ticket_id_and_user_id'
-    add_index :ticket_ccs, :user_id
-    add_index :ticket_ccs, :created_at
+    # Add indexes with IF NOT EXISTS protection
+    add_index :ticket_ccs, [:ticket_id, :user_id], unique: true, name: 'index_ticket_ccs_on_ticket_id_and_user_id' unless index_exists?(:ticket_ccs, [:ticket_id, :user_id], name: 'index_ticket_ccs_on_ticket_id_and_user_id')
+    add_index :ticket_ccs, :user_id unless index_exists?(:ticket_ccs, :user_id)
+    add_index :ticket_ccs, :created_at unless index_exists?(:ticket_ccs, :created_at)
   end
 
   def down
