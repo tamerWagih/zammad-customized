@@ -24,26 +24,22 @@ class Tickets::CcUsersController < ApplicationController
 
     # Get ALL users with agent OR customer PERMISSIONS (not role names!)
     # This catches users with these permissions through ANY role (Agent, Approver, Admin No-Agent, etc.)
-    query = User.where(active: true)
+    
+    # Get permission IDs for ticket.agent and ticket.customer
+    agent_permission = Permission.find_by(name: 'ticket.agent')
+    customer_permission = Permission.find_by(name: 'ticket.customer')
+    permission_ids = [agent_permission&.id, customer_permission&.id].compact
+    
+    Rails.logger.info "[CC_API] Permission IDs to check: #{permission_ids}"
+    
+    # Get users with these permissions through their roles
+    query = User.joins(roles: :permissions)
+                .where(permissions: { id: permission_ids })
+                .where(active: true)
                 .where.not(id: current_user.id)
+                .distinct
     
-    # Filter to only users with agent OR customer permissions
-    users_with_permission = []
-    query.find_each do |user|
-      has_agent = user.permissions?('ticket.agent')
-      has_customer = user.permissions?('ticket.customer')
-      
-      if has_agent || has_customer
-        users_with_permission << user.id
-        Rails.logger.info "[CC_API] Including user #{user.id} (#{user.login}): agent=#{has_agent}, customer=#{has_customer}"
-      else
-        Rails.logger.info "[CC_API] Excluding user #{user.id} (#{user.login}): no agent/customer permission"
-      end
-    end
-    
-    query = User.where(id: users_with_permission)
-    
-    Rails.logger.info "[CC_API] Found #{query.count} users to show"
+    Rails.logger.info "[CC_API] Found #{query.count} users with agent/customer permissions"
 
     # Search
     if search_query.present?
