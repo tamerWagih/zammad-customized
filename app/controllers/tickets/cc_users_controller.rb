@@ -22,39 +22,17 @@ class Tickets::CcUsersController < ApplicationController
     search_query = params[:search]&.strip
     offset = (page - 1) * per_page
 
-    # Get agent and customer roles
-    agent_roles = Role.with_permissions('ticket.agent')
-    customer_roles = Role.with_permissions('ticket.customer')
-    target_role_ids = (agent_roles.pluck(:id) + customer_roles.pluck(:id)).uniq
+    # Get ALL users with agent OR customer permissions
+    # Don't exclude admins - if they have agent/customer permissions, include them
+    agent_customer_users = User.joins(:permissions)
+                               .where(permissions: { name: ['ticket.agent', 'ticket.customer'] })
+                               .where(active: true)
+                               .where.not(id: current_user.id)
+                               .distinct
 
-    Rails.logger.info "[CC_API] Agent roles: #{agent_roles.pluck(:name)}"
-    Rails.logger.info "[CC_API] Customer roles: #{customer_roles.pluck(:name)}"
-    Rails.logger.info "[CC_API] Target role IDs: #{target_role_ids}"
-
-    # Get admin roles to exclude
-    admin_roles = Role.with_permissions(['admin', 'admin.user', 'admin.ticket'])
-    admin_role_ids = admin_roles.pluck(:id)
+    Rails.logger.info "[CC_API] Found #{agent_customer_users.count} agent/customer users (excluding current user)"
     
-    Rails.logger.info "[CC_API] Admin roles: #{admin_roles.pluck(:name)}"
-    Rails.logger.info "[CC_API] Admin role IDs: #{admin_role_ids}"
-
-    # Build query
-    query = User.joins(:roles)
-                .where(roles: { id: target_role_ids })
-                .where(active: true)
-                .where.not(id: current_user.id)
-                .distinct
-
-    # Exclude admins
-    admin_user_ids = []
-    if admin_role_ids.any?
-      admin_user_ids = User.joins(:roles)
-                          .where(roles: { id: admin_role_ids })
-                          .distinct
-                          .pluck(:id)
-      Rails.logger.info "[CC_API] Found #{admin_user_ids.length} admin users to exclude: #{admin_user_ids}"
-      query = query.where.not(id: admin_user_ids) if admin_user_ids.any?
-    end
+    query = agent_customer_users
 
     # Search
     if search_query.present?
@@ -75,11 +53,10 @@ class Tickets::CcUsersController < ApplicationController
 
     # Format response
     users_list = users.map do |user|
-      # Check if user has admin permissions (for debugging)
-      has_admin = user.roles.exists?(id: admin_role_ids)
-      is_current = user.id == current_user.id
+      is_agent = user.permissions?('ticket.agent')
+      is_customer = user.permissions?('ticket.customer')
       
-      Rails.logger.info "[CC_API] User #{user.id} (#{user.login}): admin=#{has_admin}, current=#{is_current}, roles=#{user.roles.pluck(:name)}"
+      Rails.logger.info "[CC_API] User #{user.id} (#{user.login}): agent=#{is_agent}, customer=#{is_customer}, roles=#{user.roles.pluck(:name)}"
       
       {
         id:        user.id,
@@ -88,7 +65,7 @@ class Tickets::CcUsersController < ApplicationController
         lastname:  user.lastname,
         email:     user.email,
         active:    user.active,
-        user_type: user.permissions?('ticket.agent') ? 'agent' : 'customer'
+        user_type: is_agent ? 'agent' : 'customer'
       }
     end
 

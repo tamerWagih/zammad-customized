@@ -252,26 +252,40 @@ class App.UiElement.cc_user_select
         element.data('cc-lazy-load-needed', true)
     )
 
-  # Update dropdown options and re-render
+  # Update dropdown options without closing dropdown
   @updateDropdownOptions: (element, attribute, params, options) ->
-    attribute.options = options
-    attribute.placeholder = __('Search for users to CC...')
-
-    # Try to update the SearchableSelect instance
+    # Find searchable select instance
     searchableSelectInstance = element.data('controller')
-
+    
     if searchableSelectInstance
-      if searchableSelectInstance.renderElement
-        console.log "[CC_USERS] Re-rendering SearchableSelect with new options"
-        searchableSelectInstance.renderElement()
-      else if searchableSelectInstance.render
-        console.log "[CC_USERS] Re-rendering SearchableSelect"
-        searchableSelectInstance.render()
+      console.log "[CC_USERS] Updating SearchableSelect options"
+      
+      # Update options in the instance
+      searchableSelectInstance.options = options
+      
+      # Update the select element options
+      selectElement = element.find('select')
+      if selectElement.length > 0
+        # Remember current selection
+        currentValues = selectElement.val() || []
+        
+        # Clear and rebuild options
+        selectElement.empty()
+        for id, name of options
+          option = $('<option></option>').attr('value', id).text(name)
+          selectElement.append(option)
+        
+        # Restore selection
+        selectElement.val(currentValues) if currentValues.length > 0
+      
+      # Update dropdown list if it's open
+      if searchableSelectInstance.buildOptionList
+        searchableSelectInstance.buildOptionList()
+      
+      console.log "[CC_USERS] Options updated, dropdown stays open"
     else
-      # Fallback: re-render the entire element
-      console.log "[CC_USERS] Re-rendering entire element"
-      newElement = App.UiElement.searchable_select.render(attribute, params)
-      element.replaceWith(newElement)
+      console.log "[CC_USERS] No searchable select instance, updating attribute"
+      attribute.options = options
 
   # Get the selected group ID from the form or attribute
   @getSelectedGroupId: (attribute) ->
