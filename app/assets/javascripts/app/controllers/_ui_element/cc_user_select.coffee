@@ -208,7 +208,7 @@ class App.UiElement.cc_user_select
 
         searchCache[cacheKey] = options
         searchCache[cacheKey].timestamp = Date.now()
-        searchCache[cacheKey].user_types = users.map((u) -> u.user_type).uniq() if users
+        searchCache[cacheKey].user_types = _.uniq(users.map((u) -> u.user_type)) if users
         element.data('cc-search-cache', searchCache)
         element.data('cc-last-search-time', Date.now())
 
