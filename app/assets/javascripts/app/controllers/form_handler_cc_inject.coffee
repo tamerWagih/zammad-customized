@@ -3,9 +3,11 @@ class App.FormHandlerCcInject
   @run: (params, attribute, attributes, classname, form, ui) ->
     console.log '[CC_INJECT] Form handler called - classname:', classname
     console.log '[CC_INJECT] Form exists:', form?.length
-    console.log '[CC_INJECT] Attributes:', Object.keys(attributes) if attributes
+    console.log '[CC_INJECT] Params ticket_id:', params?.ticket_id
     
-    return if classname isnt 'create'
+    # For ticket creation, params.ticket_id is undefined
+    # For ticket edit, params.ticket_id has a value
+    return if params?.ticket_id  # Skip if editing existing ticket
 
     console.log '[CC_INJECT] Running for ticket creation...'
 
