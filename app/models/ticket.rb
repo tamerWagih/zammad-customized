@@ -825,17 +825,29 @@ returns a hex color code
 
   # Create CC records after ticket creation if cc_user_ids is provided
   def create_cc_records
+    Rails.logger.info "[CC] ===== CREATE_CC_RECORDS START ====="
+    Rails.logger.info "[CC] cc_user_ids: #{cc_user_ids.inspect}"
+    
     return if cc_user_ids.blank?
     return unless cc_user_ids.is_a?(Array)
 
     current_user_id = UserInfo.current_user_id
+    Rails.logger.info "[CC] Processing #{cc_user_ids.length} CC users for ticket #{id}"
 
-    cc_user_ids.each do |user_id|
+    cc_user_ids.each_with_index do |user_id, index|
+      Rails.logger.info "[CC] Processing user #{index + 1}/#{cc_user_ids.length}: #{user_id}"
       next if user_id.blank?
 
       user = User.find_by(id: user_id)
-      next unless user
-      next if user.id == current_user_id  # Skip current user
+      unless user
+        Rails.logger.warn "[CC] User #{user_id} not found - skipping"
+        next
+      end
+      
+      if user.id == current_user_id
+        Rails.logger.info "[CC] Skipping current user #{user.id}"
+        next
+      end
 
       # Create CC record (triggers HasTransactionDispatcher automatically)
       cc = ccs.create!(
@@ -844,20 +856,29 @@ returns a hex color code
         updated_by_id:  current_user_id
       )
       
-      # Create online notification
-      OnlineNotification.add(
-        type:          'cc',
-        object:        'Ticket',
-        o_id:          id,
-        seen:          false,
-        user_id:       user.id,
-        created_by_id: current_user_id,
-      )
+      Rails.logger.info "[CC] Created CC ##{cc.id} for user #{user.id} (#{user.fullname})"
       
-      Rails.logger.info "[CC] Created CC ##{cc.id} for user #{user.id} (#{user.fullname}) on ticket #{id}"
+      # Create online notification
+      begin
+        OnlineNotification.add(
+          type:          'cc',
+          object:        'Ticket',
+          o_id:          id,
+          seen:          false,
+          user_id:       user.id,
+          created_by_id: current_user_id,
+        )
+        Rails.logger.info "[CC] Created online notification for user #{user.id}"
+      rescue => notif_error
+        Rails.logger.error "[CC] Failed to create online notification: #{notif_error.message}"
+      end
+      
     rescue => e
       Rails.logger.error "[CC] Failed to create CC for user #{user_id}: #{e.message}"
+      Rails.logger.error "[CC] Backtrace: #{e.backtrace.first(3).join('\n')}"
     end
+    
+    Rails.logger.info "[CC] ===== CREATE_CC_RECORDS COMPLETE ====="
   end
 end
 

@@ -6,6 +6,9 @@ class Tickets::CcUsersController < ApplicationController
   # GET /api/v1/tickets/cc_users
   # Returns agents and customers (excludes admins)
   def index
+    Rails.logger.info "[CC_API] ===== CC USERS REQUEST ====="
+    Rails.logger.info "[CC_API] Current user: #{current_user&.id} (#{current_user&.login})"
+    
     return render json: { error: 'Unauthorized' }, status: :forbidden unless current_user
 
     # Check permissions
@@ -24,9 +27,16 @@ class Tickets::CcUsersController < ApplicationController
     customer_roles = Role.with_permissions('ticket.customer')
     target_role_ids = (agent_roles.pluck(:id) + customer_roles.pluck(:id)).uniq
 
+    Rails.logger.info "[CC_API] Agent roles: #{agent_roles.pluck(:name)}"
+    Rails.logger.info "[CC_API] Customer roles: #{customer_roles.pluck(:name)}"
+    Rails.logger.info "[CC_API] Target role IDs: #{target_role_ids}"
+
     # Get admin roles to exclude
     admin_roles = Role.with_permissions(['admin', 'admin.user', 'admin.ticket'])
     admin_role_ids = admin_roles.pluck(:id)
+    
+    Rails.logger.info "[CC_API] Admin roles: #{admin_roles.pluck(:name)}"
+    Rails.logger.info "[CC_API] Admin role IDs: #{admin_role_ids}"
 
     # Build query
     query = User.joins(:roles)
@@ -36,11 +46,13 @@ class Tickets::CcUsersController < ApplicationController
                 .distinct
 
     # Exclude admins
+    admin_user_ids = []
     if admin_role_ids.any?
       admin_user_ids = User.joins(:roles)
                           .where(roles: { id: admin_role_ids })
                           .distinct
                           .pluck(:id)
+      Rails.logger.info "[CC_API] Found #{admin_user_ids.length} admin users to exclude: #{admin_user_ids}"
       query = query.where.not(id: admin_user_ids) if admin_user_ids.any?
     end
 
@@ -58,8 +70,17 @@ class Tickets::CcUsersController < ApplicationController
     total_count = query.count
     users = query.limit(per_page).offset(offset)
 
+    Rails.logger.info "[CC_API] Total matching users: #{total_count}"
+    Rails.logger.info "[CC_API] Returning #{users.length} users (page #{page})"
+
     # Format response
     users_list = users.map do |user|
+      # Check if user has admin permissions (for debugging)
+      has_admin = user.roles.exists?(id: admin_role_ids)
+      is_current = user.id == current_user.id
+      
+      Rails.logger.info "[CC_API] User #{user.id} (#{user.login}): admin=#{has_admin}, current=#{is_current}, roles=#{user.roles.pluck(:name)}"
+      
       {
         id:        user.id,
         login:     user.login,
@@ -71,6 +92,8 @@ class Tickets::CcUsersController < ApplicationController
       }
     end
 
+    Rails.logger.info "[CC_API] ===== RESPONSE SENT ====="
+    
     total_pages = (total_count.to_f / per_page).ceil
     render json: {
       users: users_list,
