@@ -30,6 +30,12 @@ class TicketPolicy < ApplicationPolicy
           sql.push('tickets.id IN (?)')
           bind.push(shared_ids)
         end
+
+        cc_ids = cc_ticket_ids
+        if cc_ids.present?
+          sql.push('tickets.id IN (?)')
+          bind.push(cc_ids)
+        end
       end
 
       if user.permissions?('ticket.customer')
@@ -41,6 +47,13 @@ class TicketPolicy < ApplicationPolicy
             sql.push('tickets.organization_id = ?')
             bind.push(organization.id)
           end
+        end
+
+        # Customers can also see tickets they are CC'd on
+        cc_ids = cc_ticket_ids
+        if cc_ids.present?
+          sql.push('tickets.id IN (?)')
+          bind.push(cc_ids)
         end
       end
 
@@ -70,6 +83,15 @@ class TicketPolicy < ApplicationPolicy
       Ticket::Share.active_current.where(group_id: group_ids).pluck(:ticket_id).uniq
     rescue StandardError => e
       Rails.logger.warn("Failed to resolve shared ticket ids for user #{user.id}: #{e.message}")
+      []
+    end
+
+    def cc_ticket_ids
+      return [] unless user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+
+      Ticket::Cc.where(user_id: user.id).pluck(:ticket_id).uniq
+    rescue StandardError => e
+      Rails.logger.warn("Failed to resolve CC ticket ids for user #{user.id}: #{e.message}")
       []
     end
   end

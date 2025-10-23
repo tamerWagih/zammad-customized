@@ -34,9 +34,14 @@ class Ticket < ApplicationModel
   include ::Ticket::PerformChanges
 
   store :preferences
+  
+  # Virtual attribute for CC user IDs during ticket creation
+  attr_accessor :cc_user_ids
+  
   after_initialize :check_defaults, if: :new_record?
   before_create  :check_generate, :check_defaults, :check_title, :set_default_state, :set_default_priority
   before_update  :check_defaults, :check_title, :reset_pending_time, :check_owner_active
+  after_create   :create_cc_records
 
   # This must be loaded late as it depends on the internal before_create and before_update handlers of ticket.rb.
   include Ticket::SetsLastOwnerUpdateTime
@@ -101,6 +106,7 @@ class Ticket < ApplicationModel
   has_many      :mentions,               as: :mentionable, dependent: :destroy
   has_many      :approvals,              class_name: 'Ticket::Approval', dependent: :destroy
   has_many      :shares,                 class_name: 'Ticket::Share', dependent: :destroy
+  has_many      :ccs,                    class_name: 'Ticket::Cc', dependent: :destroy
   has_one       :shared_draft,           class_name: 'Ticket::SharedDraftZoom', inverse_of: :ticket, dependent: :destroy
   belongs_to    :state,                  class_name: 'Ticket::State', optional: true
   belongs_to    :priority,               class_name: 'Ticket::Priority', optional: true
@@ -815,6 +821,78 @@ returns a hex color code
     rescue StandardError => e
       Rails.logger.warn "Failed to revoke expired shares for ticket #{id}: #{e.message}"
     end
+  end
+
+  # Create CC records after ticket creation if cc_user_ids is provided
+  def create_cc_records
+    Rails.logger.info "[CC] ===== CREATE_CC_RECORDS START ====="
+    Rails.logger.info "[CC] Ticket ID: #{id}"
+    Rails.logger.info "[CC] cc_user_ids attribute: #{cc_user_ids.inspect} (#{cc_user_ids.class})"
+    Rails.logger.info "[CC] All ticket attributes: #{attributes.keys.join(', ')}"
+    Rails.logger.info "[CC] Checking for cc_user_ids in attributes: #{attributes['cc_user_ids'].inspect}"
+    
+    if cc_user_ids.blank?
+      Rails.logger.info "[CC] No CC users to process - exiting early"
+      return
+    end
+    
+    unless cc_user_ids.is_a?(Array)
+      Rails.logger.error "[CC] cc_user_ids is not an array: #{cc_user_ids.class}"
+      return
+    end
+
+    current_user = UserInfo.current_user_id
+    Rails.logger.info "[CC] Current user ID: #{current_user}"
+    Rails.logger.info "[CC] Processing #{cc_user_ids.length} CC users: #{cc_user_ids.inspect}"
+    
+    created_count = 0
+    skipped_count = 0
+    
+    cc_user_ids.each_with_index do |user_id, index|
+      Rails.logger.info "[CC] Processing user #{index + 1}/#{cc_user_ids.length}: #{user_id}"
+      next if user_id.blank?
+      
+      # Skip if user doesn't exist
+      user = User.find_by(id: user_id)
+      unless user
+        Rails.logger.warn "[CC] User #{user_id} not found - skipping"
+        skipped_count += 1
+        next
+      end
+      
+      # Skip if user is the creator
+      if user.id == current_user
+        Rails.logger.info "[CC] Skipping current user #{user.id} (#{user.fullname})"
+        skipped_count += 1
+        next
+      end
+
+      # Create CC record (will trigger notifications via HasTransactionDispatcher)
+      Rails.logger.info "[CC] Creating CC record for user #{user.id} (#{user.fullname})"
+      begin
+        cc = ccs.create!(
+          user_id: user.id,
+          created_by_id: current_user,
+          updated_by_id: current_user
+        )
+        Rails.logger.info "[CC] ✅ CC record created successfully: ID=#{cc.id}, user=#{user.id}, permissions=#{cc.permissions.inspect}"
+        created_count += 1
+      rescue => e
+        Rails.logger.error "[CC] ❌ Failed to create CC record for user #{user.id}: #{e.message}"
+        Rails.logger.error "[CC] Error details: #{e.class}: #{e.message}"
+        skipped_count += 1
+      end
+    end
+    
+    Rails.logger.info "[CC] ===== CREATE_CC_RECORDS COMPLETE ====="
+    Rails.logger.info "[CC] Summary: #{created_count} created, #{skipped_count} skipped"
+    Rails.logger.info "[CC] Ticket #{id} now has #{ccs.count} CC records"
+  rescue StandardError => e
+    Rails.logger.error "[CC] ===== CREATE_CC_RECORDS ERROR ====="
+    Rails.logger.error "[CC] Failed to create CC records for ticket #{id}: #{e.message}"
+    Rails.logger.error "[CC] Error class: #{e.class}"
+    Rails.logger.error "[CC] Backtrace: #{e.backtrace.join("\n")}"
+    raise e # Re-raise to ensure the error is not silently swallowed
   end
 end
 
