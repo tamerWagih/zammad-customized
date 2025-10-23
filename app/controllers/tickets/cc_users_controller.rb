@@ -22,41 +22,27 @@ class Tickets::CcUsersController < ApplicationController
     search_query = params[:search]&.strip
     offset = (page - 1) * per_page
 
-    # Get users with agent/customer roles, excluding pure admins
-    # Strategy: Get users with Agent or Customer role (not Admin role)
-    agent_role = Role.find_by(name: 'Agent')
-    customer_role = Role.find_by(name: 'Customer')
-    admin_role = Role.find_by(name: 'Admin')
-    
-    target_role_ids = [agent_role&.id, customer_role&.id].compact
-    
-    Rails.logger.info "[CC_API] Agent role ID: #{agent_role&.id}"
-    Rails.logger.info "[CC_API] Customer role ID: #{customer_role&.id}"
-    Rails.logger.info "[CC_API] Admin role ID: #{admin_role&.id}"
-    
-    # Get users with Agent OR Customer role
-    query = User.joins(:roles)
-                .where(roles: { id: target_role_ids })
-                .where(active: true)
+    # Get ALL users with agent OR customer PERMISSIONS (not role names!)
+    # This catches users with these permissions through ANY role (Agent, Approver, Admin No-Agent, etc.)
+    query = User.where(active: true)
                 .where.not(id: current_user.id)
-                .distinct
     
-    # Exclude users who ONLY have admin roles (not Agent or Customer)
-    if admin_role
-      # Get users with Admin role
-      admin_user_ids = User.joins(:roles)
-                          .where(roles: { name: 'Admin' })
-                          .where.not(
-                            id: User.joins(:roles)
-                                   .where(roles: { id: target_role_ids })
-                                   .select(:id)
-                          )
-                          .pluck(:id)
+    # Filter to only users with agent OR customer permissions
+    users_with_permission = []
+    query.find_each do |user|
+      has_agent = user.permissions?('ticket.agent')
+      has_customer = user.permissions?('ticket.customer')
       
-      Rails.logger.info "[CC_API] Excluding #{admin_user_ids.length} pure admin users: #{admin_user_ids}"
-      query = query.where.not(id: admin_user_ids) if admin_user_ids.any?
+      if has_agent || has_customer
+        users_with_permission << user.id
+        Rails.logger.info "[CC_API] Including user #{user.id} (#{user.login}): agent=#{has_agent}, customer=#{has_customer}"
+      else
+        Rails.logger.info "[CC_API] Excluding user #{user.id} (#{user.login}): no agent/customer permission"
+      end
     end
-
+    
+    query = User.where(id: users_with_permission)
+    
     Rails.logger.info "[CC_API] Found #{query.count} users to show"
 
     # Search
