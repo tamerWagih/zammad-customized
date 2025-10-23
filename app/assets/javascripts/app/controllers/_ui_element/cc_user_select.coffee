@@ -33,6 +33,12 @@ class App.UiElement.cc_user_select
     element.data('cc-search-cache', {})  # Cache for search results
     element.data('cc-last-search-time', 0)  # Prevent excessive API calls
 
+    # Add logging for value changes
+    element.find('select').on 'change', ->
+      selectedValues = $(this).val()
+      console.log "[CC_USERS] Selection changed, current values:", selectedValues
+      console.log "[CC_USERS] Selected count:", if selectedValues then selectedValues.length else 0
+
     # Bind lazy loading to dropdown events
     @bindLazyLoading(element, attribute, params)
 
