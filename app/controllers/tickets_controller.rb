@@ -201,9 +201,26 @@ class TicketsController < ApplicationController
         clean_params[:customer_id] = local_customer.id
       end
 
+      # Extract cc_user_ids before param_cleanup strips it out
+      cc_user_ids_raw = clean_params.delete(:cc_user_ids)
+
+      # Normalize cc_user_ids to array
+      cc_user_ids = if cc_user_ids_raw.is_a?(Array)
+                      cc_user_ids_raw.map(&:to_i).reject(&:zero?)
+                    elsif cc_user_ids_raw.is_a?(String)
+                      cc_user_ids_raw.split(',').map(&:strip).map(&:to_i).reject(&:zero?)
+                    elsif cc_user_ids_raw.is_a?(Integer)
+                      [cc_user_ids_raw]
+                    else
+                      []
+                    end
+
       clean_params = Ticket.param_cleanup(clean_params, true)
       clean_params[:screen] = 'create_middle'
       ticket = Ticket.new(clean_params)
+
+      # Assign cc_user_ids to ticket (will be processed in after_create callback)
+      ticket.cc_user_ids = cc_user_ids if cc_user_ids.present?
       authorize!(ticket, :create?)
 
       # create ticket

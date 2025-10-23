@@ -43,12 +43,13 @@ class Ticket::AssetsAll
   end
 
   def response(assets, attributes_to_change)
-    
+
     approvals_data = approvals
     shares_data = shares
+    ccs_data = ccs
     share_perms = share_permissions
-    
-    
+
+
     response_data = {
       ticket_id:          ticket.id,
       ticket_article_ids: articles.pluck(:id),
@@ -60,9 +61,10 @@ class Ticket::AssetsAll
       form_meta:          attributes_to_change[:form_meta],
       approvals:          approvals_data,
       shares:             shares_data,
+      ccs:                ccs_data,
       share_permissions:  share_perms,
     }
-    
+
     response_data
   end
   
@@ -166,5 +168,26 @@ class Ticket::AssetsAll
                   Rails.logger.info "[SHARE_API] Ticket ##{ticket.id}: No shares returned (respond_to: #{ticket.respond_to?(:shares)}, is_agent: #{user.permissions?('ticket.agent')})"
                   []
                 end
+  end
+
+  def ccs
+    @ccs ||= if ticket.respond_to?(:ccs)
+               # Return all CCs for this ticket (same format as CcController)
+               result = ticket.ccs.includes(:user, :created_by).map do |cc|
+                 {
+                   id:          cc.id.to_s,
+                   ticket_id:   cc.ticket_id.to_s,
+                   user_id:     cc.user_id.to_s,
+                   user_name:   cc.user&.fullname,
+                   permissions: Array(cc.permissions),
+                   message:     cc.message,
+                   created_at:  cc.created_at,
+                   updated_at:  cc.updated_at,
+                 }
+               end
+               result
+             else
+               []
+             end
   end
 end
