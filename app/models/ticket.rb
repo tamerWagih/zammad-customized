@@ -101,6 +101,7 @@ class Ticket < ApplicationModel
   has_many      :mentions,               as: :mentionable, dependent: :destroy
   has_many      :approvals,              class_name: 'Ticket::Approval', dependent: :destroy
   has_many      :shares,                 class_name: 'Ticket::Share', dependent: :destroy
+  has_many      :ccs,                    class_name: 'Ticket::Cc', dependent: :destroy
   has_one       :shared_draft,           class_name: 'Ticket::SharedDraftZoom', inverse_of: :ticket, dependent: :destroy
   belongs_to    :state,                  class_name: 'Ticket::State', optional: true
   belongs_to    :priority,               class_name: 'Ticket::Priority', optional: true
@@ -631,6 +632,32 @@ returns a hex color code
 
   def mention_user_ids
     mentions.pluck(:user_id)
+  end
+
+  def cc_user_ids
+    ccs.pluck(:user_id)
+  end
+
+  def cc_user_ids=(user_ids)
+    # Remove existing CCs
+    ccs.destroy_all
+    
+    # Add new CCs
+    return if user_ids.blank?
+    
+    user_ids = Array(user_ids).compact.uniq
+    user_ids.each do |user_id|
+      next if user_id.blank?
+      
+      user = User.find_by(id: user_id)
+      next unless user&.permissions?('ticket.agent') || user&.permissions?('ticket.customer')
+      
+      ccs.create!(
+        user: user,
+        created_by: User.current,
+        permissions: user.permissions?('ticket.agent') ? ['full'] : ['read', 'comment']
+      )
+    end
   end
 
   private

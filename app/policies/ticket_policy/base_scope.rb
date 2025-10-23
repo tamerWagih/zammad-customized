@@ -44,6 +44,13 @@ class TicketPolicy < ApplicationPolicy
         end
       end
 
+      # Include tickets where user is CC'd
+      cc_ticket_ids = Ticket::Cc.where(user_id: user.id).pluck(:ticket_id)
+      if cc_ticket_ids.present?
+        sql.push('tickets.id IN (?)')
+        bind.push(cc_ticket_ids)
+      end
+
       # The report permission can access all tickets.
       if sql.empty? && !user.permissions?('report')
         sql.push '0 = 1' # Forbid unlimited access for all other permissions.

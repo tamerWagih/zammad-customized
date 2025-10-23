@@ -158,26 +158,38 @@ return online notifications of an user.
       []
     end
 
-    allowed_type_ids = (share_type_ids + approval_type_ids).uniq
+    cc_type_ids = begin
+      names = [
+        'You were CC\'d on a ticket',
+      ]
+      TypeLookup.where(name: names).pluck(:id)
+    rescue StandardError => e
+      Rails.logger.warn("Failed to resolve CC notification types: #{e.message}")
+      []
+    end
+
+    allowed_type_ids = (share_type_ids + approval_type_ids + cc_type_ids).uniq
 
     ticket_join = <<~SQL.squish
       LEFT JOIN tickets ON online_notifications.object_lookup_id = #{ActiveRecord::Base.connection.quote(object_id)} AND tickets.id = online_notifications.o_id
       LEFT JOIN ticket_shares ON ticket_shares.ticket_id = online_notifications.o_id
         AND ticket_shares.status = 'active'
         AND (ticket_shares.expires_at IS NULL OR ticket_shares.expires_at > CURRENT_TIMESTAMP)
+      LEFT JOIN ticket_ccs ON ticket_ccs.ticket_id = online_notifications.o_id
+        AND ticket_ccs.user_id = #{ActiveRecord::Base.connection.quote(user.id)}
     SQL
 
     if group_ids.present?
       relation
         .joins(ticket_join)
-        .where('online_notifications.object_lookup_id != :object_id OR (online_notifications.object_lookup_id = :object_id AND (tickets.group_id IN (:group_ids) OR ticket_shares.group_id IN (:group_ids) OR online_notifications.type_lookup_id IN (:allowed_type_ids)))',
+        .where('online_notifications.object_lookup_id != :object_id OR (online_notifications.object_lookup_id = :object_id AND (tickets.group_id IN (:group_ids) OR ticket_shares.group_id IN (:group_ids) OR ticket_ccs.id IS NOT NULL OR online_notifications.type_lookup_id IN (:allowed_type_ids)))',
                object_id: object_id,
                group_ids: group_ids,
                allowed_type_ids: allowed_type_ids.presence || [-1])
     else
       relation
         .joins(ticket_join)
-        .where('online_notifications.object_lookup_id != :object_id OR (online_notifications.object_lookup_id = :object_id AND online_notifications.type_lookup_id IN (:allowed_type_ids))',
+        .where('online_notifications.object_lookup_id != :object_id OR (online_notifications.object_lookup_id = :object_id AND (ticket_ccs.id IS NOT NULL OR online_notifications.type_lookup_id IN (:allowed_type_ids)))',
                object_id: object_id,
                allowed_type_ids: allowed_type_ids.presence || [-1])
     end

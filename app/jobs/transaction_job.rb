@@ -33,7 +33,7 @@ class TransactionJob < ApplicationJob
 
       
       # Add detailed logging for notification backends
-      if backend == 'Transaction::Notification' || backend == 'Transaction::ApprovalNotification' || backend == 'Transaction::ShareNotification'
+      if backend == 'Transaction::Notification' || backend == 'Transaction::ApprovalNotification' || backend == 'Transaction::ShareNotification' || backend == 'Transaction::CcNotification'
       end
       
       TransactionDispatcher.execute_single_backend(backend.constantize, item, params)

@@ -24,6 +24,15 @@ class TransactionDispatcher
 
     # get buffer
     list = EventBuffer.list('transaction')
+    
+    # Debug logging for CC events in buffer
+    cc_events = list.select { |e| e[:object] == 'Ticket::Cc' }
+    if cc_events.any?
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 🔍 Found #{cc_events.count} Ticket::Cc event(s) in buffer"
+      cc_events.each do |e|
+        Rails.logger.info "[TRANSACTION_DISPATCHER]    Type: #{e[:type]}, ID: #{e[:id]}"
+      end
+    end
 
     # reset buffer
     EventBuffer.reset('transaction')
@@ -40,9 +49,22 @@ class TransactionDispatcher
     # get uniq objects
     list_objects = get_uniq_changes(list)
     
+    # Debug logging for Ticket::Cc items
+    list_objects.each do |object_type, objects|
+      if object_type == 'Ticket::Cc'
+        Rails.logger.info "[TRANSACTION_DISPATCHER] 🔍 Processing #{objects.count} Ticket::Cc object(s)"
+      end
+    end
+    
     list_objects.each_value do |objects|
       
       objects.each_value do |item|
+        
+        # Debug logging for Ticket::Cc items being queued
+        if item[:object] == 'Ticket::Cc'
+          Rails.logger.info "[TRANSACTION_DISPATCHER] 📤 Queuing Ticket::Cc event for async processing"
+          Rails.logger.info "[TRANSACTION_DISPATCHER]    Type: #{item[:type]}, ID: #{item[:object_id]}"
+        end
 
         # execute sync backends (like triggers) immediately
         if sync_backends.any?
@@ -210,6 +232,16 @@ class TransactionDispatcher
       user_id:    record.created_by_id,
       created_at: Time.zone.now,
     }
+    
+    # Debug logging for CC records
+    if record.class.name == 'Ticket::Cc'
+      Rails.logger.info "[TRANSACTION_DISPATCHER] 📝 Adding Ticket::Cc event to buffer"
+      Rails.logger.info "[TRANSACTION_DISPATCHER]    ID: #{record.id}"
+      Rails.logger.info "[TRANSACTION_DISPATCHER]    Ticket: ##{record.ticket_id}"
+      Rails.logger.info "[TRANSACTION_DISPATCHER]    User: #{record.user_id}"
+      Rails.logger.info "[TRANSACTION_DISPATCHER]    Event object: #{e[:object]}"
+    end
+    
     EventBuffer.add('transaction', e)
     true
   end

@@ -1,0 +1,30 @@
+You were CC'd on a ticket (#{ticket.title})
+
+<div>Hi #{recipient.firstname},</div>
+<br>
+<% if @objects[:recipient].id == @objects[:cc].user_id %>
+  <% created_by_name = @objects[:cc].created_by.respond_to?(:fullname) ? @objects[:cc].created_by.fullname : (@objects[:cc].created_by_name || 'Someone') %>
+  <div>You have been <b>CC'd</b> on ticket "<b>#{ticket.title}</b>" by "<b>#{created_by_name}</b>".</div>
+<% else %>
+  <% cc_user_name = @objects[:cc].user.respond_to?(:fullname) ? @objects[:cc].user.fullname : (@objects[:cc].user_name || 'Unknown User') %>
+  <div>You have <b>CC'd</b> user "<b>#{cc_user_name}</b>" on ticket "<b>#{ticket.title}</b>".</div>
+<% end %>
+<br>
+<div>
+Ticket: ##{ticket.number}<br>
+<% if @objects[:cc].message.present? %>
+Message: #{@objects[:cc].message}<br>
+<% end %>
+<% if @objects[:recipient].id == @objects[:cc].user_id %>
+  <% if @objects[:cc].full_access? %>
+Access Level: Full Access<br>
+  <% else %>
+Access Level: Read and Comment<br>
+  <% end %>
+<% end %>
+</div>
+<br>
+<div>
+  <a href="#{config.http_type}://#{config.fqdn}/#ticket/zoom/#{ticket.id}" target="zammad_app">View this in #{config.product_name}</a>
+</div>
+

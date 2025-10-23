@@ -1,0 +1,44 @@
+<% if @users.length > 0: %>
+  <div class="user-results">
+    <ul class="user-options-list">
+      <% for user in @users: %>
+        <li class="user-option js-user-option" data-user-id="<%= user.id %>">
+          <div class="user-info">
+            <span class="user-name">
+              <% name = "#{user.firstname || ''} #{user.lastname || ''}".trim() || user.login || user.email || "User ##{user.id}" %>
+              <%- name %>
+            </span>
+            <% if user.email && name != user.email: %>
+              <span class="user-email">(<%- user.email %>)</span>
+            <% end %>
+          </div>
+          <div class="user-roles">
+            <% if user.permissions && user.permissions.includes('ticket.agent'): %>
+              <span class="label label-primary">Agent</span>
+            <% else if user.permissions && user.permissions.includes('ticket.customer'): %>
+              <span class="label label-default">Customer</span>
+            <% end %>
+          </div>
+          <div class="user-action">
+            <i class="icon icon-plus"></i>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+    
+    <!-- Load more button if there are more results -->
+    <% if @hasMore: %>
+      <div class="load-more-container">
+        <button type="button" class="btn btn--small btn--secondary js-load-more">
+          <%- @T('Load More Users') %>
+        </button>
+      </div>
+    <% end %>
+  </div>
+<% else: %>
+  <div class="no-results">
+    <div class="alert alert-info">
+      <%- @T('No users found matching your criteria.') %>
+    </div>
+  </div>
+<% end %>

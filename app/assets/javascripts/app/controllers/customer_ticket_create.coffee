@@ -178,6 +178,19 @@ class CustomerTicketCreate extends App.ControllerAppContent
           localTicket = App.Ticket.findNative(@id)
           localTicket.article = undefined
 
+          # Create CCs if any were selected
+          if params.cc_user_ids && params.cc_user_ids.length > 0
+            for user_id in params.cc_user_ids
+              ui.ajax(
+                type: 'POST'
+                url: "#{ui.apiPath}/tickets/#{@id}/ccs"
+                data: JSON.stringify({
+                  user_id: user_id
+                  message: params.cc_message || ''
+                })
+                processData: false
+              )
+
           # add sidebar params
           if ui.sidebarWidget
             ui.sidebarWidget.commit(ticket_id: @id)
