@@ -201,7 +201,7 @@ class App.UiElement.cc_user_select
           # Keep only recent entries (last 30)
           cacheKeys = Object.keys(searchCache)
           cacheKeys.sort (a, b) =>
-            searchCache[a].timestamp || 0 - searchCache[b].timestamp || 0
+            (searchCache[a].timestamp || 0) - (searchCache[b].timestamp || 0)
           # Keep only the 30 most recent
           keysToRemove = cacheKeys.slice(0, cacheKeys.length - 30)
           keysToRemove.forEach (key) -> delete searchCache[key]
@@ -240,8 +240,8 @@ class App.UiElement.cc_user_select
           App.Notice.error(__('You need agent or customer permissions to CC users on tickets. Please contact your administrator.'))
         else
           # Other errors (network, server, etc.)
-        attribute.placeholder = __('Error loading users - please refresh')
-        attribute.options = {}
+          attribute.placeholder = __('Error loading users - please refresh')
+          attribute.options = {}
           App.Notice.error(__('Failed to load CC users. Please refresh the page and try again.'))
 
         # Reset lazy loading flag so it can retry
