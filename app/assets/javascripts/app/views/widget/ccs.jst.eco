@@ -1,0 +1,139 @@
+<div class="ticket-ccs-widget">
+  <div class="js-loading hide">
+    <span class="spinner"></span>
+    <%- @T('Loading...') %>
+  </div>
+
+  <% if @ccs && @ccs.length > 0: %>
+    <div class="ccs-list">
+      <% for cc in @ccs: %>
+        <div class="cc-item" data-id="<%= cc.id %>">
+          <div class="cc-content">
+            <div class="cc-user">
+              <span class="user-avatar">
+                <%= App.Utils.htmlEscape(cc.user_name || 'Unknown User').substr(0, 1) %>
+              </span>
+              <div class="cc-details">
+                <strong><%= cc.user_name || 'Unknown User' %></strong>
+                <% if cc.permissions: %>
+                  <span class="badge badge-secondary">
+                    <% if cc.permissions.includes('full'): %>
+                      <%- @T('Full Access') %>
+                    <% else if cc.permissions.includes('comment'): %>
+                      <%- @T('Read & Comment') %>
+                    <% else: %>
+                      <%- @T('Read Only') %>
+                    <% end %>
+                  </span>
+                <% end %>
+              </div>
+            </div>
+            <% if cc.message: %>
+              <div class="cc-message text-muted">
+                <small><%= cc.message %></small>
+              </div>
+            <% end %>
+            <div class="cc-meta text-muted">
+              <small>
+                <%- @T('Added') %> <%= cc.created_at_formatted || cc.created_at %>
+              </small>
+            </div>
+          </div>
+          <% if cc.can_manage && !cc.is_current_user: %>
+            <div class="cc-actions">
+              <button class="btn btn--danger btn--small js-delete-cc" data-id="<%= cc.id %>">
+                <%- @T('Remove') %>
+              </button>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% else: %>
+    <div class="empty-state">
+      <p class="text-muted">
+        <%- @T('No CC users on this ticket.') %>
+      </p>
+      <% if @ticket_id: %>
+        <small class="text-muted"><%- @T('Use the "Add CC" button to share this ticket with other users.') %></small>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<style>
+.ticket-ccs-widget {
+  padding: 10px;
+}
+
+.ccs-list {
+  margin-top: 10px;
+}
+
+.cc-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e1e4e8;
+}
+
+.cc-content {
+  flex: 1;
+}
+
+.cc-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #007bff;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.cc-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cc-message {
+  margin-top: 5px;
+  padding: 5px 10px;
+  background: white;
+  border-radius: 3px;
+}
+
+.cc-meta {
+  margin-top: 5px;
+}
+
+.cc-actions {
+  margin-left: 10px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 30px 10px;
+}
+
+.js-loading {
+  text-align: center;
+  padding: 20px;
+}
+</style>
+
