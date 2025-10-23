@@ -35,20 +35,46 @@ class Transaction::CcNotification
   end
 
   def perform
+    Rails.logger.info "[CC_NOTIFICATION] ===== PERFORM CALLED ====="
+    Rails.logger.info "[CC_NOTIFICATION] Item: #{@item.inspect}"
+    
     # Only process Ticket::Cc objects
-    return if @item[:object] != 'Ticket::Cc'
-    return if Setting.get('import_mode')
-    return if cc_record.blank? || ticket.blank?
-    return if @params[:disable_notification]
-    return if @params[:send_notification] == false
+    if @item[:object] != 'Ticket::Cc'
+      Rails.logger.info "[CC_NOTIFICATION] Skipping - not Ticket::Cc object"
+      return
+    end
+    
+    if Setting.get('import_mode')
+      Rails.logger.info "[CC_NOTIFICATION] Skipping - import mode"
+      return
+    end
+    
+    if cc_record.blank? || ticket.blank?
+      Rails.logger.warn "[CC_NOTIFICATION] Skipping - missing cc_record or ticket"
+      return
+    end
+    
+    if @params[:disable_notification]
+      Rails.logger.info "[CC_NOTIFICATION] Skipping - notifications disabled"
+      return
+    end
+    
+    if @params[:send_notification] == false
+      Rails.logger.info "[CC_NOTIFICATION] Skipping - send_notification false"
+      return
+    end
 
+    Rails.logger.info "[CC_NOTIFICATION] Processing CC notification for ticket #{ticket.id}"
     prepare_recipients_and_reasons
+    
+    Rails.logger.info "[CC_NOTIFICATION] Found #{recipients_and_channels.length} recipients"
 
     # Send notifications
     recipients_and_channels.each do |recipient_settings|
       send_to_single_recipient(recipient_settings)
     end
-
+    
+    Rails.logger.info "[CC_NOTIFICATION] ===== PERFORM COMPLETE ====="
     true
   end
 
