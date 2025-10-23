@@ -204,14 +204,23 @@ class TicketsController < ApplicationController
       # Extract cc_user_ids before param_cleanup strips it out
       cc_user_ids_raw = clean_params.delete(:cc_user_ids)
 
+      Rails.logger.info "[CC_FORM] cc_user_ids_raw: #{cc_user_ids_raw.inspect}"
+      Rails.logger.info "[CC_FORM] cc_user_ids_raw class: #{cc_user_ids_raw.class}"
+
       # Normalize cc_user_ids to array
       cc_user_ids = if cc_user_ids_raw.is_a?(Array)
-                      cc_user_ids_raw.map(&:to_i).reject(&:zero?)
+                      result = cc_user_ids_raw.map(&:to_i).reject(&:zero?)
+                      Rails.logger.info "[CC_FORM] Normalized from Array: #{result}"
+                      result
                     elsif cc_user_ids_raw.is_a?(String)
-                      cc_user_ids_raw.split(',').map(&:strip).map(&:to_i).reject(&:zero?)
+                      result = cc_user_ids_raw.split(',').map(&:strip).map(&:to_i).reject(&:zero?)
+                      Rails.logger.info "[CC_FORM] Normalized from String: #{result}"
+                      result
                     elsif cc_user_ids_raw.is_a?(Integer)
+                      Rails.logger.info "[CC_FORM] Normalized from Integer: [#{cc_user_ids_raw}]"
                       [cc_user_ids_raw]
                     else
+                      Rails.logger.info "[CC_FORM] cc_user_ids_raw is nil/empty"
                       []
                     end
 

@@ -22,17 +22,42 @@ class Tickets::CcUsersController < ApplicationController
     search_query = params[:search]&.strip
     offset = (page - 1) * per_page
 
-    # Get ALL users with agent OR customer permissions
-    # Don't exclude admins - if they have agent/customer permissions, include them
-    agent_customer_users = User.joins(:permissions)
-                               .where(permissions: { name: ['ticket.agent', 'ticket.customer'] })
-                               .where(active: true)
-                               .where.not(id: current_user.id)
-                               .distinct
-
-    Rails.logger.info "[CC_API] Found #{agent_customer_users.count} agent/customer users (excluding current user)"
+    # Get users with agent/customer roles, excluding pure admins
+    # Strategy: Get users with Agent or Customer role (not Admin role)
+    agent_role = Role.find_by(name: 'Agent')
+    customer_role = Role.find_by(name: 'Customer')
+    admin_role = Role.find_by(name: 'Admin')
     
-    query = agent_customer_users
+    target_role_ids = [agent_role&.id, customer_role&.id].compact
+    
+    Rails.logger.info "[CC_API] Agent role ID: #{agent_role&.id}"
+    Rails.logger.info "[CC_API] Customer role ID: #{customer_role&.id}"
+    Rails.logger.info "[CC_API] Admin role ID: #{admin_role&.id}"
+    
+    # Get users with Agent OR Customer role
+    query = User.joins(:roles)
+                .where(roles: { id: target_role_ids })
+                .where(active: true)
+                .where.not(id: current_user.id)
+                .distinct
+    
+    # Exclude users who ONLY have admin roles (not Agent or Customer)
+    if admin_role
+      # Get users with Admin role
+      admin_user_ids = User.joins(:roles)
+                          .where(roles: { name: 'Admin' })
+                          .where.not(
+                            id: User.joins(:roles)
+                                   .where(roles: { id: target_role_ids })
+                                   .select(:id)
+                          )
+                          .pluck(:id)
+      
+      Rails.logger.info "[CC_API] Excluding #{admin_user_ids.length} pure admin users: #{admin_user_ids}"
+      query = query.where.not(id: admin_user_ids) if admin_user_ids.any?
+    end
+
+    Rails.logger.info "[CC_API] Found #{query.count} users to show"
 
     # Search
     if search_query.present?
