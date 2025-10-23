@@ -79,12 +79,12 @@ class App.UiElement.cc_user_select
       searchableSelectInstance.onFocus = (event) =>
         console.log "[CC_USERS] Dropdown focused, checking if lazy load needed"
         @loadUsersIfNeeded(element, attribute, params)
-        originalOnFocus.call(searchableSelectInstance, event)
+        originalOnFocus?.call(searchableSelectInstance, event)
 
       searchableSelectInstance.onClick = (event) =>
         console.log "[CC_USERS] Dropdown clicked, checking if lazy load needed"
         @loadUsersIfNeeded(element, attribute, params)
-        originalOnClick.call(searchableSelectInstance, event)
+        originalOnClick?.call(searchableSelectInstance, event)
 
       # Override onInput for search-as-you-type with caching and debouncing
       searchableSelectInstance.onInput = (event) =>
@@ -114,7 +114,7 @@ class App.UiElement.cc_user_select
         , 300
 
         element.data('cc-search-timeout', searchTimeout)
-        originalOnInput.call(searchableSelectInstance, event)
+        originalOnInput?.call(searchableSelectInstance, event)
 
       # Add scroll handler for "load more" functionality
       dropdownElement = element.find('.dropdown-menu')
@@ -167,12 +167,12 @@ class App.UiElement.cc_user_select
         
         options = {}
         if users && users.length > 0
-        for user in users
-          display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
-          display_name = user.login if display_name == ''
-          display_name = user.email if !display_name
-          display_name = "User ##{user.id}" if !display_name
-          
+          for user in users
+            display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
+            display_name = user.login if display_name == ''
+            display_name = user.email if !display_name
+            display_name = "User ##{user.id}" if !display_name
+
             # Add user type indicator for clarity (agents and customers only)
             # Handle the case where backend double-checks admin exclusion
             user_type_label = switch user.user_type
@@ -180,13 +180,13 @@ class App.UiElement.cc_user_select
               when 'customer' then __('[Customer]')
               when 'admin_excluded' then __('[Admin - Excluded]')
               else __('[User]')
-          
-          if user.email && display_name != user.email
-            display_name += " (#{user.email})"
+
+            if user.email && display_name != user.email
+              display_name += " (#{user.email})"
             display_name += " #{user_type_label}"
-          
-          options[user.id] = display_name
-        
+
+            options[user.id] = display_name
+
         # Update element data for pagination
         element.data('cc-current-page', pagination.current_page || 1)
         element.data('cc-has-more-pages', pagination.has_next_page || false)
