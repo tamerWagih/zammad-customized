@@ -186,10 +186,9 @@ class App.TicketZoom extends App.Controller
     # remember time_accountings
     @time_accountings = data.time_accountings
 
-    # remember approvals, shares, and CCs (same pattern as tags and links)
+    # remember approvals and shares (same pattern as tags and links)
     @approvals = data.approvals || []
     @shares = data.shares || []
-    @ccs = data.ccs || []
     
 
     if draft = App.TicketSharedDraftZoom.findByAttribute 'ticket_id', @ticket_id
@@ -740,7 +739,6 @@ class App.TicketZoom extends App.Controller
         links:            @links
         approvals:        @approvals
         shares:           @shares
-        ccs:              @ccs
         parent:           @
       )
 
@@ -762,7 +760,6 @@ class App.TicketZoom extends App.Controller
         links:            @links
         approvals:        @approvals
         shares:           @shares
-        ccs:              @ccs
       )
 
     if !@initDone
