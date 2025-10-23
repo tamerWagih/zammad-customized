@@ -76,10 +76,26 @@ class Tickets::CcController < ApplicationController
   end
 
   def check_permissions
+    # User must be able to view the ticket AND be an agent or customer
     authorize!(@ticket, :show?)
+
+    # Additional check: Only agents and customers can manage CC records
+    cc_permissions = ['ticket.agent', 'ticket.customer']
+    unless current_user.permissions.any? { |p| cc_permissions.include?(p.name) }
+      raise Exceptions::UnprocessableEntity, 'Only agents and customers can manage CC records'
+    end
   end
 
   def cc_params
+    # Only allow agents and customers to be CC'd
+    params.require(:user_id)
+    user = User.find_by(id: params[:user_id])
+
+    # Validate that the user being CC'd is an agent or customer
+    unless user&.permissions?('ticket.agent') || user&.permissions?('ticket.customer')
+      raise Exceptions::UnprocessableEntity, 'Only agents and customers can be CC\'d on tickets'
+    end
+
     params.permit(:user_id, :permissions, :message)
   end
 
