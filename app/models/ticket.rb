@@ -838,11 +838,23 @@ returns a hex color code
       next if user.id == current_user_id  # Skip current user
 
       # Create CC record (triggers HasTransactionDispatcher automatically)
-      ccs.create!(
+      cc = ccs.create!(
         user_id:        user.id,
         created_by_id:  current_user_id,
         updated_by_id:  current_user_id
       )
+      
+      # Create online notification
+      OnlineNotification.add(
+        type:          'cc',
+        object:        'Ticket',
+        o_id:          id,
+        seen:          false,
+        user_id:       user.id,
+        created_by_id: current_user_id,
+      )
+      
+      Rails.logger.info "[CC] Created CC ##{cc.id} for user #{user.id} (#{user.fullname}) on ticket #{id}"
     rescue => e
       Rails.logger.error "[CC] Failed to create CC for user #{user_id}: #{e.message}"
     end
