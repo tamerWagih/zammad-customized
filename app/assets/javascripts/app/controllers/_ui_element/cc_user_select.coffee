@@ -11,8 +11,9 @@ class App.UiElement.cc_user_select
     attribute.multiple = true
     attribute.nulloption = true
     attribute.placeholder = __('Click to search for users to CC...')
-    # Remove relation to prevent conflict with API loading
-    delete attribute.relation
+    # Keep relation for displaying selected user names
+    # But we override options with our API data
+    attribute.relation = 'User'
     # Start with empty options - load only when needed
     attribute.options = {}
     
@@ -188,6 +189,7 @@ class App.UiElement.cc_user_select
             options[user.id.toString()] = display_name
         
         console.log "[CC_USERS] Built #{Object.keys(options).length} options"
+        console.log "[CC_USERS] First 3 options:", Object.keys(options).slice(0, 3).map (k) -> "#{k}: #{options[k]}"
 
         # Update element data for pagination
         element.data('cc-current-page', pagination.current_page || 1)
