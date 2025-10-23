@@ -168,24 +168,26 @@ class App.UiElement.cc_user_select
         options = {}
         if users && users.length > 0
           for user in users
+            # Build display name
             display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
             display_name = user.login if display_name == ''
             display_name = user.email if !display_name
             display_name = "User ##{user.id}" if !display_name
 
-            # Add user type indicator for clarity (agents and customers only)
-            # Handle the case where backend double-checks admin exclusion
+            # Add user type indicator
             user_type_label = switch user.user_type
-              when 'agent' then __('[Agent]')
-              when 'customer' then __('[Customer]')
-              when 'admin_excluded' then __('[Admin - Excluded]')
-              else __('[User]')
+              when 'agent' then '[Agent]'
+              when 'customer' then '[Customer]'
+              else '[User]'
 
             if user.email && display_name != user.email
               display_name += " (#{user.email})"
             display_name += " #{user_type_label}"
 
-            options[user.id] = display_name
+            # CRITICAL: Store with STRING key for searchable_select
+            options[user.id.toString()] = display_name
+        
+        console.log "[CC_USERS] Built #{Object.keys(options).length} options"
 
         # Update element data for pagination
         element.data('cc-current-page', pagination.current_page || 1)
