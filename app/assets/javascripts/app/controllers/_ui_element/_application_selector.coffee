@@ -401,6 +401,7 @@ class App.UiElement.ApplicationSelector
     console.log "[SELECTOR_PREVIEW] Modal check:", item.closest('.custom-filter-modal').length
     console.log "[SELECTOR_PREVIEW] Is custom filter mode:", isCustomFilterMode
     console.log "[SELECTOR_PREVIEW] Params:", params
+    console.log "[SELECTOR_PREVIEW] Params.condition:", JSON.stringify(params.condition)
     
     # ALWAYS use custom filter endpoint for safety (agents should use this)
     # Only admins can use /tickets/selector
@@ -418,7 +419,7 @@ class App.UiElement.ApplicationSelector
       data:        JSON.stringify(params)
       processData: true,
       success: (data, status, xhr) =>
-        console.log "[SELECTOR_PREVIEW] Success:", data
+        console.log "[SELECTOR_PREVIEW] Success - count:", data.object_count, "ids:", data.object_ids
         App.Collection.loadAssets(data.assets)
         item.find('.js-previewCounterContainer').removeClass('hide')
         item.find('.js-previewLoader').addClass('hide')
