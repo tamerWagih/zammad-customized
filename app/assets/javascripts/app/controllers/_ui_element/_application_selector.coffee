@@ -407,10 +407,19 @@ class App.UiElement.ApplicationSelector
       data:        JSON.stringify(params)
       processData: true,
       success: (data, status, xhr) =>
+        console.log "[SELECTOR_PREVIEW] Success:", data
         App.Collection.loadAssets(data.assets)
         item.find('.js-previewCounterContainer').removeClass('hide')
         item.find('.js-previewLoader').addClass('hide')
         @ticketTable(data.object_ids, data.object_count, item)
+      error: (xhr, status, error) =>
+        console.error "[SELECTOR_PREVIEW] Error:", xhr.status, xhr.responseText
+        item.find('.js-previewLoader').addClass('hide')
+        try
+          errorData = JSON.parse(xhr.responseText)
+          console.error "[SELECTOR_PREVIEW] Error detail:", errorData.error_detail
+        catch e
+          console.error "[SELECTOR_PREVIEW] Could not parse error response"
     )
 
   @ticketTable: (ticket_ids, ticket_count, item) ->
