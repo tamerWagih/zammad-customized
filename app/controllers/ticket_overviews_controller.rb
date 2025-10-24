@@ -119,64 +119,74 @@ class TicketOverviewsController < ApplicationController
     order = filter['order'] || { 'by' => 'created_at', 'direction' => 'DESC' }
     view = filter['view'] || { 's' => ['number', 'title', 'customer', 'state', 'created_at'] }
     
-    # Get tickets based on condition with custom filter context
-    query, bind_params, tables = Ticket.selector2sql(
-      condition, 
-      current_user: current_user,
-      custom_filter_context: true  # Enable custom filter attributes
-    )
+    # Build the overview object first (so it's always available even on error)
+    overview_data = {
+      id:    filter['id'],
+      name:  filter['name'],
+      link:  filter['link'],
+      view:  {
+        s: view['s'] || ['number', 'title', 'customer', 'state', 'created_at']
+      },
+      order: {
+        by:        order['by'] || 'created_at',
+        direction: order['direction'] || 'DESC',
+      },
+      group_by: filter['group_by'] || '',
+      group_direction: 'DESC',
+      is_custom: true,
+    }
     
     tickets = []
     assets = {}
     
-    if query.present?
-      # Apply ordering
-      order_by = order['by'] || 'created_at'
-      order_direction = order['direction'] || 'DESC'
+    begin
+      # Get tickets based on condition with custom filter context
+      query, bind_params, tables = Ticket.selector2sql(
+        condition, 
+        current_user: current_user,
+        custom_filter_context: true  # Enable custom filter attributes
+      )
       
-      # CRITICAL: Apply user permission scope first (like Zammad's overview system)
-      # Use OverviewScope for standard conditions, ReadScope for mentions
-      base_scope = if condition.key?('ticket.mention_user_ids')
-                     TicketPolicy::ReadScope.new(current_user).resolve
-                   else
-                     TicketPolicy::OverviewScope.new(current_user).resolve
-                   end
-      
-      # Apply the custom filter condition on top of permission scope
-      scoped_tickets = base_scope.where(query, *bind_params)
-      scoped_tickets = scoped_tickets.joins(tables) if tables.present?
-      
-      ticket_list = scoped_tickets.order("#{order_by} #{order_direction}").limit(2000)
-      
-      ticket_list.each do |ticket|
-        ticket_meta = {
-          id:         ticket.id,
-          title:      ticket.title,
-          number:     ticket.number,
-          created_at: ticket.created_at,
-        }
+      if query.present?
+        # Apply ordering
+        order_by = order['by'] || 'created_at'
+        order_direction = order['direction'] || 'DESC'
         
-        tickets.push ticket_meta
-        assets = ticket.assets(assets)
+        # CRITICAL: Apply user permission scope first (like Zammad's overview system)
+        # Use OverviewScope for standard conditions, ReadScope for mentions
+        base_scope = if condition.key?('ticket.mention_user_ids')
+                       TicketPolicy::ReadScope.new(current_user).resolve
+                     else
+                       TicketPolicy::OverviewScope.new(current_user).resolve
+                     end
+        
+        # Apply the custom filter condition on top of permission scope
+        scoped_tickets = base_scope.where(query, *bind_params)
+        scoped_tickets = scoped_tickets.joins(tables) if tables.present?
+        
+        ticket_list = scoped_tickets.order("#{order_by} #{order_direction}").limit(2000)
+        
+        ticket_list.each do |ticket|
+          ticket_meta = {
+            id:         ticket.id,
+            title:      ticket.title,
+            number:     ticket.number,
+            created_at: ticket.created_at,
+          }
+          
+          tickets.push ticket_meta
+          assets = ticket.assets(assets)
+        end
       end
+    rescue => e
+      Rails.logger.error "[CUSTOM_FILTER] Error querying tickets: #{e.class}: #{e.message}"
+      Rails.logger.error "[CUSTOM_FILTER] Condition: #{condition.inspect}"
+      Rails.logger.error e.backtrace.first(10).join("\n")
+      # Continue with empty tickets list
     end
     
     result = {
-      overview: {
-        id:    filter['id'],
-        name:  filter['name'],
-        link:  filter['link'],
-        view:  {
-          s: view['s'] || ['number', 'title', 'customer', 'state', 'created_at']
-        },
-        order: {
-          by:        order['by'] || 'created_at',
-          direction: order['direction'] || 'DESC',
-        },
-        group_by: filter['group_by'] || '',
-        group_direction: 'DESC',
-        is_custom: true,
-      },
+      overview: overview_data,
       tickets: tickets,
       tickets_count: tickets.length,
       count:   tickets.length,
@@ -186,9 +196,6 @@ class TicketOverviewsController < ApplicationController
       assets: assets,
       index:  result,
     }
-  rescue => e
-    Rails.logger.error "Error rendering custom filter tickets: #{e.message}"
-    render json: { assets: {}, index: { tickets: [], count: 0 } }
   end
 
 end
