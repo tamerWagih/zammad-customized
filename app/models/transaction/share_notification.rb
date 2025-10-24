@@ -59,18 +59,10 @@ class Transaction::ShareNotification
 
   def perform
     # Only process Ticket::Share objects
-    if @item[:object] != 'Ticket::Share'
-      Rails.logger.debug "[SHARE_NOTIFICATION] Skipping - not a Ticket::Share object: #{@item[:object]}"
-      return
-    end
-    
-    Rails.logger.info "[SHARE_NOTIFICATION] Processing share notification for #{@item[:type]} event"
-    
+    return if @item[:object] != 'Ticket::Share'
     
     # return if we run import mode
-    if Setting.get('import_mode')
-      return
-    end
+    return if Setting.get('import_mode')
     
     if share.blank? || ticket.blank?
       return
@@ -256,7 +248,7 @@ class Transaction::ShareNotification
       else
       end
     rescue => e
-      Rails.logger.error "[SHARE_NOTIFICATION]    Failed to extract body: #{e.message}"
+      # Failed to extract body
     end
   rescue Channel::DeliveryError => e
     status_code = begin
@@ -272,14 +264,10 @@ class Transaction::ShareNotification
       return
     end
 
-    Rails.logger.error "[SHARE_NOTIFICATION] ❌ Email delivery failed (critical error)"
-    Rails.logger.error "[SHARE_NOTIFICATION]    Error: #{e.message}"
+    Rails.logger.error "Share notification email delivery failed: #{e.message}"
     raise e
   rescue StandardError => e
-    Rails.logger.error "[SHARE_NOTIFICATION] ❌ Unexpected error sending email to #{user.email}"
-    Rails.logger.error "[SHARE_NOTIFICATION]    Error class: #{e.class.name}"
-    Rails.logger.error "[SHARE_NOTIFICATION]    Error message: #{e.message}"
-    Rails.logger.error "[SHARE_NOTIFICATION]    Backtrace: #{e.backtrace.first(5).join("\n")}"
+    Rails.logger.error "Share notification error: #{e.message}"
     raise e
   end
 

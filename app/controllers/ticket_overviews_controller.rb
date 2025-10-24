@@ -179,9 +179,7 @@ class TicketOverviewsController < ApplicationController
         end
       end
     rescue => e
-      Rails.logger.error "[CUSTOM_FILTER] Error querying tickets: #{e.class}: #{e.message}"
-      Rails.logger.error "[CUSTOM_FILTER] Condition: #{condition.inspect}"
-      Rails.logger.error e.backtrace.first(10).join("\n")
+      Rails.logger.error "Custom filter query error: #{e.message}"
       # Continue with empty tickets list
     end
     

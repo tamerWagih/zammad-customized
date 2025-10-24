@@ -162,10 +162,8 @@ class Ticket::AssetsAll
                       updated_at:      share.updated_at,
                     }
                   end
-                  Rails.logger.info "[SHARE_API] Ticket ##{ticket.id}: Returning #{result.size} shares for user ##{user.id} (#{user.email})"
                   result
                 else
-                  Rails.logger.info "[SHARE_API] Ticket ##{ticket.id}: No shares returned (respond_to: #{ticket.respond_to?(:shares)}, is_agent: #{user.permissions?('ticket.agent')})"
                   []
                 end
   end

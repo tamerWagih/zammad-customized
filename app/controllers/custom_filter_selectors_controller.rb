@@ -7,23 +7,16 @@ class CustomFilterSelectorsController < ApplicationController
 
   # POST /api/v1/custom_filter_selectors/preview
   def preview
-    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] ===== START ====="
-    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] User: #{current_user&.id} (#{current_user&.login})"
-    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] Object: #{params[:object]}"
-    
     # Only allow ticket selectors for custom filters
     if params[:object] != 'tickets'
-      Rails.logger.error "[CUSTOM_FILTER_PREVIEW] Invalid object type: #{params[:object]}"
       raise Exceptions::UnprocessableEntity, __('Only ticket selectors are supported')
     end
 
     # Convert ActionController::Parameters to hash
     condition = params[:condition].to_h rescue {}
-    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] Condition: #{condition.inspect}"
     
     # Handle empty or invalid conditions gracefully
     if condition.blank? || !has_valid_conditions?(condition)
-      Rails.logger.warn "[CUSTOM_FILTER_PREVIEW] Empty or invalid conditions"
       return render json: {
         object_ids:   [],
         object_count: 0,
@@ -33,8 +26,6 @@ class CustomFilterSelectorsController < ApplicationController
     
     # Use Ticket.selectors (like admin does) with custom filter context
     # This method handles everything: sql generation, scopes, transactions
-    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] Calling Ticket.selectors with custom_filter_context"
-    
     ticket_count, ticket_results = Ticket.selectors(
       condition,
       limit: 6,
@@ -43,8 +34,6 @@ class CustomFilterSelectorsController < ApplicationController
       access: 'full'  # Use full access like overviews
     )
     
-    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] Got #{ticket_count} total, #{ticket_results&.length || 0} results"
-    
     tickets = []
     assets = {}
     
@@ -52,9 +41,6 @@ class CustomFilterSelectorsController < ApplicationController
       tickets.push ticket.id
       assets = ticket.assets(assets)
     end
-
-    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] Found #{ticket_count} tickets (showing #{tickets.length})"
-    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] ===== SUCCESS ====="
     
     render json: {
       object_ids:   tickets,
@@ -62,10 +48,8 @@ class CustomFilterSelectorsController < ApplicationController
       assets:       assets,
     }
   rescue => e
-    Rails.logger.error "[CUSTOM_FILTER_PREVIEW] ===== ERROR ====="
-    Rails.logger.error "[CUSTOM_FILTER_PREVIEW] #{e.class}: #{e.message}"
-    Rails.logger.error "[CUSTOM_FILTER_PREVIEW] Backtrace:"
-    Rails.logger.error e.backtrace.join("\n")
+    Rails.logger.error "Custom filter preview error: #{e.class}: #{e.message}"
+    Rails.logger.error e.backtrace.first(5).join("\n")
     
     render json: {
       error: __('Error previewing selector'),

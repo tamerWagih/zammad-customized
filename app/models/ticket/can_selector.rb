@@ -42,14 +42,7 @@ get count of tickets and tickets which match on selector
           scope.limit(limit)
         ]
       rescue ActiveRecord::StatementInvalid => e
-        # CRITICAL: Log SQL error details for debugging
-        Rails.logger.error "[TICKET_SELECTORS] SQL Error: #{e.class}: #{e.message}"
-        Rails.logger.error "[TICKET_SELECTORS] Selectors: #{selectors.inspect}"
-        Rails.logger.error "[TICKET_SELECTORS] Options: #{options.inspect}"
-        Rails.logger.error e.backtrace.first(5).join("\n")
-        
-        # Re-raise the error so it bubbles up to the controller
-        # This allows custom_filter_selectors_controller to catch and return proper error
+        Rails.logger.error "Ticket selector SQL error: #{e.message}"
         raise e
       end
     end
