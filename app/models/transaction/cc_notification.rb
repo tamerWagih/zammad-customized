@@ -36,12 +36,11 @@ class Transaction::CcNotification
 
   def perform
     Rails.logger.info "[CC_NOTIFICATION] ===== PERFORM CALLED ====="
-    Rails.logger.info "[CC_NOTIFICATION] Item object: #{@item[:object]}, object_id: #{@item[:object_id]}, type: #{@item[:type]}"
-    Rails.logger.info "[CC_NOTIFICATION] CC record: #{cc_record.inspect}"
+    Rails.logger.info "[CC_NOTIFICATION] Item: #{@item.inspect}"
     
     # Only process Ticket::Cc objects
     if @item[:object] != 'Ticket::Cc'
-      Rails.logger.info "[CC_NOTIFICATION] Skipping - not Ticket::Cc object (is #{@item[:object]})"
+      Rails.logger.info "[CC_NOTIFICATION] Skipping - not Ticket::Cc object"
       return
     end
     
@@ -51,7 +50,7 @@ class Transaction::CcNotification
     end
     
     if cc_record.blank? || ticket.blank?
-      Rails.logger.warn "[CC_NOTIFICATION] Skipping - missing cc_record (#{cc_record.present?}) or ticket (#{ticket.present?})"
+      Rails.logger.warn "[CC_NOTIFICATION] Skipping - missing cc_record or ticket"
       return
     end
     
@@ -65,18 +64,17 @@ class Transaction::CcNotification
       return
     end
 
-    Rails.logger.info "[CC_NOTIFICATION] Processing CC notification for ticket ##{ticket.id}, CC record ##{cc_record.id}, user ##{cc_record.user_id}"
+    Rails.logger.info "[CC_NOTIFICATION] Processing CC notification for ticket #{ticket.id}"
     prepare_recipients_and_reasons
     
-    Rails.logger.info "[CC_NOTIFICATION] Found #{recipients_and_channels.length} recipient(s)"
+    Rails.logger.info "[CC_NOTIFICATION] Found #{recipients_and_channels.length} recipients"
 
     # Send notifications
-    recipients_and_channels.each_with_index do |recipient_settings, index|
-      Rails.logger.info "[CC_NOTIFICATION] Sending email #{index + 1}/#{recipients_and_channels.length} to #{recipient_settings[:user].login}"
+    recipients_and_channels.each do |recipient_settings|
       send_to_single_recipient(recipient_settings)
     end
     
-    Rails.logger.info "[CC_NOTIFICATION] ===== PERFORM COMPLETE (sent #{recipients_and_channels.length} email(s)) ====="
+    Rails.logger.info "[CC_NOTIFICATION] ===== PERFORM COMPLETE ====="
     true
   end
 
@@ -88,15 +86,17 @@ class Transaction::CcNotification
   def get_recipients
     recipients = []
 
-    # Only send to the CC'd user (not the creator)
-    # The creator doesn't need a confirmation email every time they CC someone
+    # ALWAYS send to BOTH CC user and creator
     if cc_record.user_id.present?
       cc_user = ::User.find_by(id: cc_record.user_id)
       recipients << cc_user if cc_user
     end
 
-    Rails.logger.info "[CC_NOTIFICATION] Recipients: #{recipients.map(&:login)}"
-    
+    if cc_record.created_by_id.present?
+      creator_user = ::User.find_by(id: cc_record.created_by_id)
+      recipients << creator_user if creator_user
+    end
+
     recipients.compact.uniq
   end
 
