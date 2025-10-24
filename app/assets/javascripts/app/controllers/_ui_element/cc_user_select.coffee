@@ -301,9 +301,13 @@ class App.UiElement.cc_user_select
       selectElement.empty()
       
       # Add new options
+      optionsAdded = 0
       for id, name of options
         option = $('<option></option>').attr('value', id).text(name)
         selectElement.append(option)
+        optionsAdded++
+      
+      console.log "[CC_USERS] Added #{optionsAdded} options to select element"
       
       # Restore selection if values still exist in new options
       if currentValues.length > 0
@@ -312,15 +316,35 @@ class App.UiElement.cc_user_select
           selectElement.val(validValues)
           console.log "[CC_USERS] Restored selection:", validValues
       
+      # CRITICAL: Trigger change event to notify searchable_select
+      # This forces the searchable_select component to rebuild its visual dropdown
+      selectElement.trigger('change')
+      console.log "[CC_USERS] Triggered change event on select"
+      
       # Try to find and update searchable select instance if it exists
       searchableSelectInstance = element.data('controller')
       if searchableSelectInstance
-        console.log "[CC_USERS] Found SearchableSelect instance, updating it"
+        console.log "[CC_USERS] Found SearchableSelect instance, forcing rebuild"
         searchableSelectInstance.options = options
         
-        # Trigger update on the instance
+        # Force rebuild of the dropdown UI
+        if searchableSelectInstance.rebuildTree
+          searchableSelectInstance.rebuildTree()
+          console.log "[CC_USERS] Called rebuildTree()"
+        
         if searchableSelectInstance.updateOptions
           searchableSelectInstance.updateOptions()
+          console.log "[CC_USERS] Called updateOptions()"
+        
+        # Force the dropdown to open and show the new options
+        if searchableSelectInstance.showDropdown
+          # Wait a moment for the rebuild to complete
+          setTimeout ->
+            searchableSelectInstance.showDropdown()
+            console.log "[CC_USERS] Opened dropdown to show new options"
+          , 50
+      else
+        console.log "[CC_USERS] No SearchableSelect instance found"
       
       console.log "[CC_USERS] Options updated successfully"
     else
