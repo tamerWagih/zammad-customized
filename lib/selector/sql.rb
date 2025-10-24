@@ -274,18 +274,20 @@ class Selector::Sql < Selector::Base
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'shared_with_me'
       # Handle shared with me selector (ONLY in custom filter context)
       # CRITICAL: Check BOTH group shares AND individual user shares
-      # Don't use "return nil" - causes errors. Skip the condition instead.
       if current_user
-        # Check if value is true (Yes) or operator determines inclusion/exclusion
         should_include = (block_condition[:value] == true || block_condition[:value] == 'true')
+        
+        # Get user's groups safely
+        user_groups = current_user.group_ids_access('read') rescue []
+        user_groups = [0] if user_groups.blank?  # Prevent SQL error with empty array
         
         if should_include
           query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
-          bind_params.push current_user.group_ids_access('read')
+          bind_params.push user_groups
           bind_params.push current_user.id
         else
           query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
-          bind_params.push current_user.group_ids_access('read')
+          bind_params.push user_groups
           bind_params.push current_user.id
         end
       end
