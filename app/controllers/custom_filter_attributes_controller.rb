@@ -7,15 +7,33 @@ class CustomFilterAttributesController < ApplicationController
 
   # GET /api/v1/custom_filter_attributes
   def index
-    # Return safe attributes based on user role
-    attributes = build_safe_attributes_for_user
+    # Return safe attributes based on user role, grouped by model
+    attributes = build_safe_attributes_for_user_grouped
 
     render json: attributes
   end
 
   private
 
-  def build_safe_attributes_for_user
+  def build_safe_attributes_for_user_grouped
+    # Return attributes grouped by model (Ticket, User, Organization, TicketArticle)
+    # This matches the structure expected by selectorAttributesByObject()
+    
+    if !current_user.permissions?('ticket.agent') && !current_user.permissions?('admin.overview')
+      return {
+        'Ticket' => build_customer_attributes
+      }
+    end
+    
+    {
+      'Ticket' => build_ticket_attributes,
+      'User' => build_user_attributes,
+      'Organization' => build_organization_attributes,
+      'TicketArticle' => build_article_attributes
+    }
+  end
+
+  def build_ticket_attributes
     # Provide ALL ticket attributes for agents and admins (same functionality)
     # The only difference is ticket visibility - agents see only tickets they have permission to access
     # This is enforced by Ticket.selector2sql(current_user: ...) in the backend
@@ -103,6 +121,59 @@ class CustomFilterAttributesController < ApplicationController
     ]
 
     base_attributes + custom_attributes
+  end
+
+  def build_user_attributes
+    # Customer/User attributes for filtering
+    [
+      { name: 'login', display: 'Login', tag: 'input', type: 'text', searchable: true },
+      { name: 'firstname', display: 'First name', tag: 'input', type: 'text', searchable: true },
+      { name: 'lastname', display: 'Last name', tag: 'input', type: 'text', searchable: true },
+      { name: 'email', display: 'Email', tag: 'input', type: 'email', searchable: true },
+      { name: 'organization_id', display: 'Organization', tag: 'select', relation: 'Organization', searchable: true },
+      { name: 'phone', display: 'Phone', tag: 'input', type: 'tel', searchable: true },
+      { name: 'mobile', display: 'Mobile', tag: 'input', type: 'tel', searchable: true },
+      { name: 'fax', display: 'Fax', tag: 'input', type: 'tel', searchable: true },
+      { name: 'web', display: 'Web', tag: 'input', type: 'url', searchable: true },
+      { name: 'street', display: 'Street', tag: 'input', type: 'text', searchable: true },
+      { name: 'zip', display: 'Zip', tag: 'input', type: 'text', searchable: true },
+      { name: 'city', display: 'City', tag: 'input', type: 'text', searchable: true },
+      { name: 'country', display: 'Country', tag: 'input', type: 'text', searchable: true },
+      { name: 'department', display: 'Department', tag: 'input', type: 'text', searchable: true },
+      { name: 'note', display: 'Note', tag: 'textarea', searchable: true },
+      { name: 'role_ids', display: 'Role', tag: 'select', relation: 'Role', searchable: true },
+      { name: 'active', display: 'Active', tag: 'boolean', searchable: true },
+      { name: 'created_at', display: 'Created at', tag: 'datetime', searchable: true },
+      { name: 'updated_at', display: 'Updated at', tag: 'datetime', searchable: true },
+    ]
+  end
+
+  def build_organization_attributes
+    # Organization attributes for filtering
+    [
+      { name: 'name', display: 'Name', tag: 'input', type: 'text', searchable: true },
+      { name: 'shared', display: 'Shared organization', tag: 'boolean', searchable: true },
+      { name: 'vip', display: 'VIP', tag: 'boolean', searchable: true },
+      { name: 'note', display: 'Note', tag: 'textarea', searchable: true },
+      { name: 'active', display: 'Active', tag: 'boolean', searchable: true },
+      { name: 'created_at', display: 'Created at', tag: 'datetime', searchable: true },
+      { name: 'updated_at', display: 'Updated at', tag: 'datetime', searchable: true },
+    ]
+  end
+
+  def build_article_attributes
+    # Article attributes for filtering
+    [
+      { name: 'from', display: 'From', tag: 'input', type: 'text', searchable: true },
+      { name: 'to', display: 'To', tag: 'input', type: 'text', searchable: true },
+      { name: 'cc', display: 'CC', tag: 'input', type: 'text', searchable: true },
+      { name: 'subject', display: 'Subject', tag: 'input', type: 'text', searchable: true },
+      { name: 'body', display: 'Text', tag: 'textarea', searchable: true },
+      { name: 'type_id', display: 'Type', tag: 'select', relation: 'TicketArticleType', searchable: true },
+      { name: 'sender_id', display: 'Sender', tag: 'select', relation: 'TicketArticleSender', searchable: true },
+      { name: 'internal', display: 'Visibility', tag: 'radio', searchable: true },
+      { name: 'created_at', display: 'Created at', tag: 'datetime', searchable: true },
+    ]
   end
 
   def build_customer_attributes

@@ -127,14 +127,18 @@ class App.UiElement.ApplicationSelector
         # Check if we're in custom filter mode by attribute flag
         if attribute.customFilterMode
           # Use custom filter attributes from dedicated endpoint
+          # CustomFilterAttributes is now grouped by model (like selectorAttributesByObject)
           # If not loaded yet, use empty array (will be populated when loaded)
-          configureAttributes = App.CustomFilterAttributes || []
+          attributesByObject = App.CustomFilterAttributes || {}
+          configureAttributes = attributesByObject[groupMeta.model] || []
         else
           # Use standard object manager attributes
           attributesByObject = App.ObjectManagerAttribute.selectorAttributesByObject()
           configureAttributes = attributesByObject[groupMeta.model] || []
         
         for config in configureAttributes
+          # Make a deep copy to avoid modifying the original config
+          config = $.extend(true, {}, config)
           config.objectName    = groupMeta.model
           config.attributeName = config.name
 
@@ -190,6 +194,25 @@ class App.UiElement.ApplicationSelector
       null: false
       translate: true
       operator: [__('is'), __('is not')]
+
+    # Add special attributes for Customer (User) group
+    if groups.customer
+      elements['customer.role_ids'] =
+        name: 'role_ids'
+        display: __('Role')
+        tag: 'select'
+        relation: 'Role'
+        null: false
+        operator: [__('is'), __('is not')]
+        multiple: true
+
+    # Add special attributes for Organization group
+    if groups.organization
+      elements['organization.members_existing'] =
+        name: 'members_existing'
+        display: __('Existing members')
+        tag: 'boolean'
+        operator: [__('is'), __('is not')]
 
     [defaults, groups, elements]
 

@@ -123,12 +123,13 @@ class App.TicketCustomFilterCreate extends App.ControllerModal
       processData: true
       async: false  # Make synchronous to ensure attributes load before modal renders
       success: (data, status, xhr) =>
-        # Store custom filter attributes for use in selector
+        # Store custom filter attributes for use in selector (grouped by model)
         App.CustomFilterAttributes = data
-        console.log('Custom filter attributes loaded:', data.length, 'attributes')
+        modelCount = Object.keys(data).length
+        console.log("Custom filter attributes loaded: #{modelCount} models")
       error: (xhr, status, error) =>
         console.error('Failed to load custom filter attributes:', error)
-        # Set empty array as fallback
-        App.CustomFilterAttributes = []
+        # Set empty object as fallback
+        App.CustomFilterAttributes = {}
     )
 
