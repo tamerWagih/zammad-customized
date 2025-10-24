@@ -19,8 +19,8 @@ class Tickets::CcUsersController < ApplicationController
     # Get pagination and search
     search_query = params[:search]&.strip
     
-    # Allow up to 1000 users for dropdown (reasonable limit)
-    per_page = [params[:per_page]&.to_i || 200, 1000].min
+    # Allow up to 5000 users for dropdown
+    per_page = [params[:per_page]&.to_i || 200, 5000].min
     page = params[:page]&.to_i || 1
     offset = (page - 1) * per_page
 

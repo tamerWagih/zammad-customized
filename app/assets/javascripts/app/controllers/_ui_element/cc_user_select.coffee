@@ -1,22 +1,51 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_select
-  @render: (attribute, params = {}, form) ->
-    # Use Zammad's autocompletion_ajax for backend search
-    # This provides multi-select with server-side search!
+  @render: (attribute, params = {}) ->
+    # Simple, reliable searchable multi-select
+    # Loads up to 5000 users upfront, searchable_select handles search client-side
     
-    console.log "[CC_USERS] Rendering CC user select with autocompletion_ajax"
+    console.log "[CC_USERS] Rendering CC user select"
+    currentUserId = App.Session.get('id')
     
-    # Configure for multi-select user search
-    attribute.tag = 'autocompletion_ajax'
+    # Load users from backend
+    userOptions = []
+    $.ajax(
+      type: 'GET'
+      url: "#{App.Config.get('api_path')}/tickets/cc_users?per_page=5000"
+      async: false
+      success: (data) ->
+        users = if data.users then data.users else data
+        console.log "[CC_USERS] Loaded #{users.length} users"
+        
+        for user in users
+          continue if user.id == currentUserId
+          
+          # Build display: Name (email) - NO role!
+          displayName = "#{user.firstname || ''} #{user.lastname || ''}".trim()
+          displayName = user.login if displayName == ''
+          
+          if user.email
+            displayName += " (#{user.email})"
+          
+          userOptions.push({
+            value: user.id
+            name: displayName
+          })
+      
+      error: ->
+        console.error "[CC_USERS] Failed to load users"
+    )
+    
+    # Configure searchable multi-select
+    attribute.tag = 'searchable_select'
     attribute.multiple = true
-    attribute.relation = 'User'
+    attribute.nulloption = true
+    attribute.relation = ''
     attribute.placeholder = __('Type to search users...')
-    attribute.minLength = 2
-    attribute.ajax = true
+    attribute.options = userOptions
     
-    # Use standard user autocompletion (searches all users)
-    # Backend will filter to agents/customers automatically
-    element = App.UiElement.autocompletion_ajax.render(attribute, params, form)
+    # Render with Zammad's standard searchable_select
+    element = App.UiElement.searchable_select.render(attribute, params)
     
-    console.log "[CC_USERS] Rendered with autocompletion_ajax"
+    console.log "[CC_USERS] Rendered with #{userOptions.length} options"
     element
