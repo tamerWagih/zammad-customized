@@ -22,44 +22,49 @@ class Tickets::CcUsersController < ApplicationController
     search_query = params[:search]&.strip
     offset = (page - 1) * per_page
 
-    # Get ALL users with agent OR customer PERMISSIONS (not role names!)
-    # This catches users with these permissions through ANY role (Agent, Approver, Admin No-Agent, etc.)
+    # Get ALL users with agent OR customer PERMISSIONS
+    # CRITICAL: Use a more reliable query that doesn't miss users
+    # 
+    # Strategy: Get ALL active users, then filter by permissions in Ruby
+    # This ensures we don't miss any users due to complex JOIN issues
     
-    # Get permission IDs for ticket.agent and ticket.customer
-    agent_permission = Permission.find_by(name: 'ticket.agent')
-    customer_permission = Permission.find_by(name: 'ticket.customer')
-    permission_ids = [agent_permission&.id, customer_permission&.id].compact
+    # First, get all active users except current user
+    base_users = User.where(active: true)
+                     .where.not(id: current_user.id)
     
-    Rails.logger.info "[CC_API] Permission IDs to check: #{permission_ids}"
+    Rails.logger.info "[CC_API] Total active users (excluding current): #{base_users.count}"
     
-    # Get users with these permissions through their roles
-    query = User.joins(roles: :permissions)
-                .where(permissions: { id: permission_ids })
-                .where(active: true)
-                .where.not(id: current_user.id)
-                .distinct
+    # Filter to only agents and customers using Ruby (more reliable than SQL joins)
+    all_users = base_users.select do |user|
+      user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+    end
     
-    Rails.logger.info "[CC_API] Found #{query.count} users with agent/customer permissions"
+    Rails.logger.info "[CC_API] Found #{all_users.count} users with agent/customer permissions"
     Rails.logger.info "[CC_API] EXCLUDING current user: #{current_user.id} (#{current_user.login})"
     
-    # Debug: Log all user IDs before search
-    all_user_ids = query.pluck(:id)
-    Rails.logger.info "[CC_API] All user IDs (before search): #{all_user_ids.inspect}"
+    # Debug: Log all user IDs
+    all_user_ids = all_users.map(&:id)
+    Rails.logger.info "[CC_API] All user IDs: #{all_user_ids.inspect}"
     Rails.logger.info "[CC_API] Current user #{current_user.id} in list? #{all_user_ids.include?(current_user.id)}"
 
-    # Search
+    # Search (in Ruby since we already loaded users)
     if search_query.present?
-      search_pattern = "%#{search_query.downcase}%"
-      query = query.where(
-        'LOWER(users.firstname) ILIKE ? OR LOWER(users.lastname) ILIKE ? OR LOWER(users.login) ILIKE ? OR LOWER(users.email) ILIKE ?',
-        search_pattern, search_pattern, search_pattern, search_pattern
-      )
+      search_pattern = search_query.downcase
+      all_users = all_users.select do |user|
+        user.firstname&.downcase&.include?(search_pattern) ||
+        user.lastname&.downcase&.include?(search_pattern) ||
+        user.login&.downcase&.include?(search_pattern) ||
+        user.email&.downcase&.include?(search_pattern)
+      end
+      Rails.logger.info "[CC_API] After search filter: #{all_users.count} users"
     end
 
-    # Order and paginate
-    query = query.order(:firstname, :lastname, :login)
-    total_count = query.count
-    users = query.limit(per_page).offset(offset)
+    # Sort users
+    all_users = all_users.sort_by { |u| [u.firstname || '', u.lastname || '', u.login || ''] }
+    
+    # Paginate
+    total_count = all_users.count
+    users = all_users.slice(offset, per_page) || []
 
     Rails.logger.info "[CC_API] Total matching users: #{total_count}"
     Rails.logger.info "[CC_API] Returning #{users.length} users (page #{page})"
