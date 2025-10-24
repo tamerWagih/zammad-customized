@@ -99,16 +99,16 @@ class TicketOverviewsController < ApplicationController
   def count_tickets_for_filter(filter)
     condition = filter['condition'] || {}
     
-    # Use Ticket selector to count tickets with custom filter context
-    query, bind_params = Ticket.selector2sql(
-      condition, 
+    # Use Ticket.selectors (like preview) to count with proper scopes
+    ticket_count, _tickets = Ticket.selectors(
+      condition,
+      limit: 1,  # We only need count, not tickets
       current_user: current_user,
-      custom_filter_context: true  # Enable custom filter attributes
+      custom_filter_context: true,
+      access: 'full'
     )
     
-    return 0 if query.blank?
-    
-    Ticket.where(query, *bind_params).count
+    ticket_count || 0
   rescue => e
     Rails.logger.error "Error counting tickets for custom filter: #{e.message}"
     0

@@ -291,38 +291,32 @@ class Selector::Sql < Selector::Base
       end
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'approval_status'
       # Handle approval status selector (ONLY in custom filter context)
-      # CRITICAL: Only show approvals where current user is the APPROVER
+      # Shows ALL tickets with specific approval status (any approver, not just me)
       if current_user
         if block_condition[:operator] == 'is'
-          # "is pending" - Show tickets where I'm approver AND status = pending
-          query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = ? AND approver_id = ?)"
+          # "is pending" - Show all tickets with pending approval status
+          query << "tickets.id IN (SELECT DISTINCT ticket_id FROM ticket_approvals WHERE status = ?)"
           bind_params.push block_condition[:value]
-          bind_params.push current_user.id
         else
-          # "is not pending" - Show tickets where I'm approver AND status != pending
-          # CRITICAL: Must check approver_id first, then status != X
-          query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE approver_id = ? AND status != ?)"
-          bind_params.push current_user.id
+          # "is not pending" - Show all tickets that don't have pending approval status
+          query << "tickets.id NOT IN (SELECT DISTINCT ticket_id FROM ticket_approvals WHERE status = ?)"
           bind_params.push block_condition[:value]
         end
       end
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
       # Handle requested for approval selector (ONLY in custom filter context)
-      # CRITICAL: Only show pending approvals where current user is the APPROVER
-      # Check VALUE (true/false) not just operator
+      # Shows tickets where approval is REQUESTED FROM current user (I'm the approver)
       if current_user
-        # value = true => show tickets where I HAVE pending approvals
-        # value = false => show tickets where I'm approver but NOT pending (approved/rejected)
         should_include = (block_condition[:value] == true || block_condition[:value] == 'true')
         
         if should_include
-          # Yes - show tickets where I have pending approvals
+          # Yes - show tickets where approval is requested FROM ME (I'm approver, status pending)
           query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
           bind_params.push current_user.id
         else
-          # No - show tickets where I'm approver but status is NOT pending
-          # This only shows MY approval tickets that are approved/rejected (not pending)
-          query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE approver_id = ? AND status != 'pending')"
+          # No - show tickets where I'm NOT the approver OR my approval is already done
+          # This means: all tickets EXCEPT those where I have pending approval
+          query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
           bind_params.push current_user.id
         end
       end
