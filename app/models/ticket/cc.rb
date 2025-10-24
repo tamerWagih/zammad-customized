@@ -83,8 +83,10 @@ class Ticket::Cc < ApplicationModel
     # Agents get full access, customers get read + comment
     if user&.permissions?('ticket.agent')
       self.permissions = ['full']
+      Rails.logger.info "[CC_PERMISSIONS] User #{user.id} (#{user.login}) is agent, setting permissions to ['full']"
     else
       self.permissions = ['read', 'comment']
+      Rails.logger.info "[CC_PERMISSIONS] User #{user.id} (#{user.login}) is customer, setting permissions to ['read', 'comment']"
     end
   end
 

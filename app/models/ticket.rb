@@ -856,11 +856,14 @@ returns a hex color code
         updated_by_id:  current_user_id
       )
       
-      Rails.logger.info "[CC] Created CC ##{cc.id} for user #{user.id} (#{user.fullname})"
+      Rails.logger.info "[CC] Created CC ##{cc.id} for user #{user.id} (#{user.fullname}) with permissions: #{cc.permissions.inspect}"
       
       # Create online notification
       begin
-        OnlineNotification.add(
+        Rails.logger.info "[CC_NOTIF] About to create online notification for user #{user.id} (#{user.login})"
+        Rails.logger.info "[CC_NOTIF] Params: type='Ticket/Cc created', object='Ticket', o_id=#{id}, user_id=#{user.id}, created_by_id=#{current_user_id}"
+        
+        notification_result = OnlineNotification.add(
           type:          'Ticket/Cc created',
           object:        'Ticket',
           o_id:          id,
@@ -868,9 +871,16 @@ returns a hex color code
           user_id:       user.id,
           created_by_id: current_user_id,
         )
-        Rails.logger.info "[CC] Created online notification (type: 'Ticket/Cc created') for user #{user.id}"
+        
+        if notification_result
+          Rails.logger.info "[CC_NOTIF] ✅ Successfully created online notification ##{notification_result.id} for user #{user.id} (#{user.login})"
+          Rails.logger.info "[CC_NOTIF] Notification details: type='#{notification_result.type_lookup_id}', seen=#{notification_result.seen}"
+        else
+          Rails.logger.warn "[CC_NOTIF] ⚠️ OnlineNotification.add returned nil/false for user #{user.id}"
+        end
       rescue => notif_error
-        Rails.logger.error "[CC] Failed to create online notification: #{notif_error.message}"
+        Rails.logger.error "[CC_NOTIF] ❌ Failed to create online notification: #{notif_error.message}"
+        Rails.logger.error "[CC_NOTIF] Backtrace: #{notif_error.backtrace.first(5).join("\n")}"
       end
       
     rescue => e

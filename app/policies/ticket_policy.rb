@@ -110,10 +110,15 @@ class TicketPolicy < ApplicationPolicy
 
     # Check if user is CC'd on this ticket
     cc_record = record.ccs.find_by(user_id: user.id)
-    return nil unless cc_record
+    if cc_record.nil?
+      Rails.logger.info "[CC_ACCESS] User #{user.id} (#{user.login}) checking #{access} on ticket #{record.id}: NO CC record found"
+      return nil
+    end
+
+    Rails.logger.info "[CC_ACCESS] User #{user.id} (#{user.login}) checking #{access} on ticket #{record.id}: CC record ##{cc_record.id} with permissions #{cc_record.permissions}"
 
     # Check permissions based on CC record
-    case access.to_s
+    result = case access.to_s
     when 'read'
       cc_record.read_access?
     when 'change', 'create'
@@ -124,6 +129,9 @@ class TicketPolicy < ApplicationPolicy
     else
       nil
     end
+
+    Rails.logger.info "[CC_ACCESS] User #{user.id} (#{user.login}) #{access} on ticket #{record.id}: #{result ? 'ALLOWED' : 'DENIED'}"
+    result
   end
 
   # Allow access via Ticket::Approval for approvers.
