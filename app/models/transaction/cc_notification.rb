@@ -100,17 +100,29 @@ class Transaction::CcNotification
   def recipients_reason_by_notifications_settings(possible_recipients)
     already_checked_recipient_ids = {}
     possible_recipients.each do |user|
-      # Use 'cc' as notification type
-      result = NotificationFactory::Mailer.notification_settings(user, ticket, 'cc')
-
-      next if !result
+      # IMPORTANT: CC notifications should ALWAYS be sent regardless of user notification preferences
+      # Being CC'd is an explicit action by another user, so notifications are expected
+      # Override user preferences and always send email
+      
       next if already_checked_recipient_ids[user.id]
+      next if user.email.blank?
+      next if !user.active?
 
       already_checked_recipient_ids[user.id] = true
+      
+      # Force email channel for CC notifications
+      result = {
+        user: user,
+        channels: {
+          'email' => true,
+          'online' => true  # Also send online notification
+        }
+      }
+      
       @recipients_and_channels.push result
-      next if recipients_reason[user.id]
-
-      @recipients_reason[user.id] = get_reason_for_user(user)
+      @recipients_reason[user.id] ||= get_reason_for_user(user)
+      
+      Rails.logger.info "[CC_NOTIFICATION] Will notify #{user.login} (#{user.email}) - channels: email, online"
     end
   end
 
@@ -124,25 +136,49 @@ class Transaction::CcNotification
     return if blocked_in_days.positive?
 
     used_channels = []
-    return add_recipient_list_to_history(ticket, user, used_channels, @item[:type]) if !channels['email']
-    return add_recipient_list_to_history(ticket, user, used_channels, @item[:type]) if user.email.blank?
+    
+    # Send online notification if requested
+    if channels['online']
+      send_online_notification(user)
+      used_channels.push 'online'
+      Rails.logger.info "[CC_NOTIFICATION] Sent online notification to #{user.login}"
+    end
+    
+    # Send email notification if requested
+    if channels['email'] && user.email.present?
+      template_objects = build_objects(user)
 
-    used_channels.push 'email'
+      NotificationFactory::Mailer.notification(
+        template:    'ticket_cc_notification',
+        user:        user,
+        objects:     template_objects,
+        message_id:  "<cc.#{DateTime.current.to_fs(:number)}.#{ticket.id}.#{user.id}.#{SecureRandom.uuid}@#{Setting.get('fqdn')}>",
+        references:  ticket.get_references,
+        main_object: ticket,
+      )
+      used_channels.push 'email'
+      Rails.logger.info "[CC_NOTIFICATION] Sent email notification to #{user.login} (#{user.email})"
+    end
+    
     add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
+  rescue => e
+    Rails.logger.error "[CC_NOTIFICATION] Error sending notification: #{e.message}"
+    raise e
+  end
 
-    template_objects = build_objects(user)
-
-    NotificationFactory::Mailer.notification(
-      template:    'ticket_cc_notification',
-      user:        user,
-      objects:     template_objects,
-      message_id:  "<cc.#{DateTime.current.to_fs(:number)}.#{ticket.id}.#{user.id}.#{SecureRandom.uuid}@#{Setting.get('fqdn')}>",
-      references:  ticket.get_references,
-      main_object: ticket,
+  def send_online_notification(user)
+    # Send online notification via WebSocket
+    # This creates a notification that appears in the user's notification panel
+    OnlineNotification.add(
+      type:          'cc',
+      object:        'Ticket',
+      o_id:          ticket.id,
+      seen:          false,
+      user_id:       user.id,
+      created_by_id: current_user.id,
     )
   rescue => e
-    Rails.logger.error "[CC_NOTIFICATION] Error sending email: #{e.message}"
-    raise e
+    Rails.logger.error "[CC_NOTIFICATION] Error creating online notification: #{e.message}"
   end
 
   def add_recipient_list_to_history(ticket, user, channels, type)

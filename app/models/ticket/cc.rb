@@ -80,13 +80,20 @@ class Ticket::Cc < ApplicationModel
   def set_default_permissions
     return if permissions.present?
 
-    # Agents get full access, customers get read + comment
+    # CRITICAL: Agents get full access, customers get read + comment
+    # This ensures CC'd users can actually interact with tickets
     if user&.permissions?('ticket.agent')
       self.permissions = ['full']
-      Rails.logger.info "[CC_PERMISSIONS] User #{user.id} (#{user.login}) is agent, setting permissions to ['full']"
-    else
+      Rails.logger.info "[CC_PERMISSIONS] User #{user.id} (#{user.login}) is AGENT, setting permissions to ['full']"
+      Rails.logger.info "[CC_PERMISSIONS] User roles: #{user.roles.pluck(:name).join(', ')}"
+    elsif user&.permissions?('ticket.customer')
       self.permissions = ['read', 'comment']
-      Rails.logger.info "[CC_PERMISSIONS] User #{user.id} (#{user.login}) is customer, setting permissions to ['read', 'comment']"
+      Rails.logger.info "[CC_PERMISSIONS] User #{user.id} (#{user.login}) is CUSTOMER, setting permissions to ['read', 'comment']"
+      Rails.logger.info "[CC_PERMISSIONS] User roles: #{user.roles.pluck(:name).join(', ')}"
+    else
+      # Fallback: Give read + comment if neither agent nor customer (shouldn't happen due to validation)
+      self.permissions = ['read', 'comment']
+      Rails.logger.warn "[CC_PERMISSIONS] User #{user.id} (#{user.login}) has no agent/customer permission! Defaulting to ['read', 'comment']"
     end
   end
 

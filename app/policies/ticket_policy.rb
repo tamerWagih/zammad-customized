@@ -115,22 +115,33 @@ class TicketPolicy < ApplicationPolicy
       return nil
     end
 
-    Rails.logger.info "[CC_ACCESS] User #{user.id} (#{user.login}) checking #{access} on ticket #{record.id}: CC record ##{cc_record.id} with permissions #{cc_record.permissions}"
+    Rails.logger.info "[CC_ACCESS] User #{user.id} (#{user.login}) checking #{access} on ticket #{record.id}: CC record ##{cc_record.id} with permissions #{cc_record.permissions.inspect}"
+    Rails.logger.info "[CC_ACCESS] User is_agent: #{user.permissions?('ticket.agent')}, is_customer: #{user.permissions?('ticket.customer')}"
 
     # Check permissions based on CC record
     result = case access.to_s
     when 'read'
-      cc_record.read_access?
+      has_access = cc_record.read_access?
+      Rails.logger.info "[CC_ACCESS] read_access check: #{has_access} (full: #{cc_record.full_access?}, read in permissions: #{cc_record.permissions.include?('read')})"
+      has_access
     when 'change', 'create'
-      # Allow if user has full access OR comment access
-      cc_record.full_access? || cc_record.comment_access?
+      # CRITICAL: Allow if user has full access OR comment access
+      # This allows both agents (full) and customers (comment) to update tickets
+      has_full = cc_record.full_access?
+      has_comment = cc_record.comment_access?
+      has_access = has_full || has_comment
+      Rails.logger.info "[CC_ACCESS] change/create access check: #{has_access} (full: #{has_full}, comment: #{has_comment})"
+      has_access
     when 'full'
-      cc_record.full_access?
+      has_access = cc_record.full_access?
+      Rails.logger.info "[CC_ACCESS] full access check: #{has_access} (full in permissions: #{cc_record.permissions.include?('full')})"
+      has_access
     else
+      Rails.logger.info "[CC_ACCESS] Unknown access type: #{access}"
       nil
     end
 
-    Rails.logger.info "[CC_ACCESS] User #{user.id} (#{user.login}) #{access} on ticket #{record.id}: #{result ? 'ALLOWED' : 'DENIED'}"
+    Rails.logger.info "[CC_ACCESS] Final result for #{access}: #{result ? 'ALLOWED ✓' : 'DENIED ✗'}"
     result
   end
 

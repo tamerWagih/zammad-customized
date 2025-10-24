@@ -50,9 +50,19 @@ class App.UiElement.cc_user_select
     # Bind lazy loading to dropdown events
     @bindLazyLoading(element, attribute, params)
 
-    console.log "[CC_USERS] CC dropdown initialized with lazy loading"
+    # IMMEDIATE LOAD: On ticket create screens, load users immediately
+    # Check if we're on ticket create (no ticket ID in params)
+    isTicketCreate = !params.ticket_id && !params.id
+    if isTicketCreate
+      console.log "[CC_USERS] Ticket create detected - loading users immediately"
+      # Load users immediately (don't wait for click)
+      setTimeout =>
+        @loadUsers(element, attribute, params, '', 1)
+      , 100  # Small delay to ensure element is fully rendered
+    else
+      console.log "[CC_USERS] CC dropdown initialized with lazy loading"
 
-    # Return the element (empty state, will load on demand)
+    # Return the element
     element
 
   # Get the selected group ID from the form or attribute (for potential future use)
