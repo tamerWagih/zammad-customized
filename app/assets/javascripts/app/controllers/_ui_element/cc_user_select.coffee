@@ -33,13 +33,13 @@ class App.UiElement.cc_user_select
         
         # Build options array
         options = []
-          for user in users
+        for user in users
           continue if user.id == currentUserId
-            
-            # Build display name
-            display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
-            display_name = user.login if display_name == ''
-            display_name = user.email if !display_name
+          
+          # Build display name
+          display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
+          display_name = user.login if display_name == ''
+          display_name = user.email if !display_name
           
           # Add user type and email
           user_type = if user.user_type == 'agent' then 'Agent' else 'Customer'
@@ -81,7 +81,7 @@ class App.UiElement.cc_user_select
     console.log "[CC_USERS] Selected from params:", selectedFromParams
     
     # Clear and rebuild options
-        selectElement.empty()
+    selectElement.empty()
     
     for option in options
       optionElement = $('<option></option>')
