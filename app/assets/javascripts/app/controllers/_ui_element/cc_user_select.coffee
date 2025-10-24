@@ -6,6 +6,7 @@ class App.UiElement.cc_user_select
     
     console.log "[CC_USERS] Rendering CC user select"
     currentUserId = App.Session.get('id')
+    console.log "[CC_USERS] Current user ID:", currentUserId, "(type: #{typeof currentUserId})"
     
     # Load initial 100 users for immediate dropdown (fast!)
     userOptions = []
@@ -17,11 +18,13 @@ class App.UiElement.cc_user_select
       async: false
       success: (data) ->
         users = if data.users then data.users else data
-        console.log "[CC_USERS] Preloaded #{users.length} users"
+        console.log "[CC_USERS] Preloaded #{users.length} users from backend"
         
         for user in users
           # CRITICAL: Compare as strings to avoid type mismatch issues
-          continue if String(user.id) == String(currentUserId)
+          if String(user.id) == String(currentUserId)
+            console.log "[CC_USERS] FILTERING OUT current user:", user.id, user.login
+            continue
           
           displayName = "#{user.firstname || ''} #{user.lastname || ''}".trim()
           displayName = user.login if displayName == ''
@@ -80,6 +83,13 @@ class App.UiElement.cc_user_select
           email: option.name.match(/\((.*?)\)/)?[1] || ''
         }], clear: false)
     
+    # Final verification - check if current user is in the list
+    currentUserInList = userOptions.some (opt) -> String(opt.value) == String(currentUserId)
+    console.log "[CC_USERS] Final user list: #{userOptions.length} users"
+    console.log "[CC_USERS] Current user (#{currentUserId}) in final list?", currentUserInList
+    if currentUserInList
+      console.error "[CC_USERS] ❌ BUG: Current user should NOT be in list!"
+    
     # Render with Zammad's standard searchable_select
     element = App.UiElement.searchable_select.render(attribute, params)
     
@@ -113,7 +123,9 @@ class App.UiElement.cc_user_select
               # Add new users to options
               for user in users
                 # CRITICAL: Compare as strings to avoid type mismatch issues
-                continue if String(user.id) == String(currentUserId)
+                if String(user.id) == String(currentUserId)
+                  console.log "[CC_USERS] FILTERING OUT current user from search:", user.id, user.login
+                  continue
                 continue if loadedUserIds.includes(user.id)
                 
                 displayName = "#{user.firstname || ''} #{user.lastname || ''}".trim()

@@ -80,49 +80,62 @@ class CustomFilterAttributesController < ApplicationController
     ]
 
     # Add custom filter specific attributes (shared with me, approval status, etc.)
-    # SIMPLIFIED: Each filter is a simple yes/no presence check (like tags)
-    # No complex boolean operators - just include the filter or don't!
+    # SIMPLIFIED: Each filter has a single "Yes" option (presence check)
+    # Select the filter to include it, or don't select it to exclude it
+    # No "is/is not" operators, no "Yes/No" values - just simple presence!
     custom_attributes = [
       # Share Filters
       { 
         name: 'shared_with_me', 
         display: 'Shared with Me', 
-        tag: 'has_tag',  # Acts like a tag - just present or not
+        tag: 'select',
         searchable: true,
+        operator: ['is'],  # Only "is" operator
+        options: [{ value: true, name: 'Yes' }]  # Only "Yes" option
       },
       { 
         name: 'not_shared_with_me', 
         display: 'Not Shared with Me', 
-        tag: 'has_tag',
+        tag: 'select',
         searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }]
       },
       
       # Approval Tag Filters (checking for approved/rejected tags)
       { 
         name: 'is_approved', 
         display: 'Is Approved', 
-        tag: 'has_tag',
+        tag: 'select',
         searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }]
       },
       { 
         name: 'is_rejected', 
         display: 'Is Rejected', 
-        tag: 'has_tag',
+        tag: 'select',
         searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }]
       },
       
       # Approval Request Filters
       { 
         name: 'requested_for_approval', 
         display: 'Requested for Approval (from me)', 
-        tag: 'has_tag',
+        tag: 'select',
         searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }]
       },
       { 
         name: 'not_requested_for_approval', 
         display: 'Not Requested for Approval (from me)', 
-        tag: 'has_tag',
+        tag: 'select',
         searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }]
       },
       
       # Approval Status (keep as select since it has 3 values)
