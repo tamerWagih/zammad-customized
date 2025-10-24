@@ -26,6 +26,8 @@ class CustomFilterSelectorsController < ApplicationController
     
     # Use Ticket.selectors (like admin does) with custom filter context
     # This method handles everything: sql generation, scopes, transactions
+    Rails.logger.info "Preview: condition=#{condition.inspect}, current_user=#{current_user.id}"
+    
     ticket_count, ticket_results = Ticket.selectors(
       condition,
       limit: 6,
@@ -33,6 +35,8 @@ class CustomFilterSelectorsController < ApplicationController
       custom_filter_context: true,  # Enable custom filter attributes
       access: 'full'  # Use full access like overviews
     )
+    
+    Rails.logger.info "Preview: found #{ticket_count} tickets, results=#{ticket_results&.length}"
     
     tickets = []
     assets = {}
@@ -49,7 +53,7 @@ class CustomFilterSelectorsController < ApplicationController
     }
   rescue => e
     Rails.logger.error "Custom filter preview error: #{e.class}: #{e.message}"
-    Rails.logger.error e.backtrace.first(5).join("\n")
+    Rails.logger.error e.backtrace.first(10).join("\n")
     
     render json: {
       error: __('Error previewing selector'),
