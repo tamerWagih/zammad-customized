@@ -6,9 +6,6 @@ class Tickets::CcUsersController < ApplicationController
   # GET /api/v1/tickets/cc_users
   # Returns agents and customers (excludes admins)
   def index
-    Rails.logger.info "[CC_API] ===== CC USERS REQUEST ====="
-    Rails.logger.info "[CC_API] Current user: #{current_user&.id} (#{current_user&.login})"
-    
     return render json: { error: 'Unauthorized' }, status: :forbidden unless current_user
 
     # Check permissions
@@ -32,20 +29,10 @@ class Tickets::CcUsersController < ApplicationController
     base_users = User.where(active: true)
                      .where.not(id: current_user.id)
     
-    Rails.logger.info "[CC_API] Total active users (excluding ticket creator): #{base_users.count}"
-    
     # Filter to only agents and customers using Ruby (more reliable than SQL joins)
     all_users = base_users.select do |user|
       user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
     end
-    
-    Rails.logger.info "[CC_API] Found #{all_users.count} users with agent/customer permissions"
-    Rails.logger.info "[CC_API] EXCLUDED ticket creator: #{current_user.id} (#{current_user.login})"
-    
-    # Debug: Log all user IDs
-    all_user_ids = all_users.map(&:id)
-    Rails.logger.info "[CC_API] All user IDs: #{all_user_ids.inspect}"
-    Rails.logger.info "[CC_API] Creator #{current_user.id} in list? #{all_user_ids.include?(current_user.id)}"
 
     # Search (in Ruby since we already loaded users)
     if search_query.present?
@@ -56,7 +43,6 @@ class Tickets::CcUsersController < ApplicationController
         user.login&.downcase&.include?(search_pattern) ||
         user.email&.downcase&.include?(search_pattern)
       end
-      Rails.logger.info "[CC_API] After search filter: #{all_users.count} users"
     end
 
     # Sort users
@@ -66,15 +52,10 @@ class Tickets::CcUsersController < ApplicationController
     total_count = all_users.count
     users = all_users.slice(offset, per_page) || []
 
-    Rails.logger.info "[CC_API] Total matching users: #{total_count}"
-    Rails.logger.info "[CC_API] Returning #{users.length} users (page #{page})"
-
     # Format response
     users_list = users.map do |user|
       is_agent = user.permissions?('ticket.agent')
       is_customer = user.permissions?('ticket.customer')
-      
-      Rails.logger.info "[CC_API] User #{user.id} (#{user.login}): agent=#{is_agent}, customer=#{is_customer}, roles=#{user.roles.pluck(:name)}"
       
       {
         id:        user.id,
@@ -86,8 +67,6 @@ class Tickets::CcUsersController < ApplicationController
         user_type: is_agent ? 'agent' : 'customer'
       }
     end
-
-    Rails.logger.info "[CC_API] ===== RESPONSE SENT ====="
     
     total_pages = (total_count.to_f / per_page).ceil
     render json: {

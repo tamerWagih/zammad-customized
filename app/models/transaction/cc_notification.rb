@@ -35,46 +35,20 @@ class Transaction::CcNotification
   end
 
   def perform
-    Rails.logger.info "[CC_NOTIFICATION] ===== PERFORM CALLED ====="
-    Rails.logger.info "[CC_NOTIFICATION] Item: #{@item.inspect}"
-    
     # Only process Ticket::Cc objects
-    if @item[:object] != 'Ticket::Cc'
-      Rails.logger.info "[CC_NOTIFICATION] Skipping - not Ticket::Cc object"
-      return
-    end
-    
-    if Setting.get('import_mode')
-      Rails.logger.info "[CC_NOTIFICATION] Skipping - import mode"
-      return
-    end
-    
-    if cc_record.blank? || ticket.blank?
-      Rails.logger.warn "[CC_NOTIFICATION] Skipping - missing cc_record or ticket"
-      return
-    end
-    
-    if @params[:disable_notification]
-      Rails.logger.info "[CC_NOTIFICATION] Skipping - notifications disabled"
-      return
-    end
-    
-    if @params[:send_notification] == false
-      Rails.logger.info "[CC_NOTIFICATION] Skipping - send_notification false"
-      return
-    end
+    return if @item[:object] != 'Ticket::Cc'
+    return if Setting.get('import_mode')
+    return if cc_record.blank? || ticket.blank?
+    return if @params[:disable_notification]
+    return if @params[:send_notification] == false
 
-    Rails.logger.info "[CC_NOTIFICATION] Processing CC notification for ticket #{ticket.id}"
     prepare_recipients_and_reasons
-    
-    Rails.logger.info "[CC_NOTIFICATION] Found #{recipients_and_channels.length} recipients"
 
     # Send notifications
     recipients_and_channels.each do |recipient_settings|
       send_to_single_recipient(recipient_settings)
     end
     
-    Rails.logger.info "[CC_NOTIFICATION] ===== PERFORM COMPLETE ====="
     true
   end
 
@@ -91,7 +65,6 @@ class Transaction::CcNotification
     if cc_record.user_id.present?
       cc_user = ::User.find_by(id: cc_record.user_id)
       recipients << cc_user if cc_user
-      Rails.logger.info "[CC_NOTIFICATION] Recipient: #{cc_user.login} (CC'd user)"
     end
 
     recipients.compact.uniq
@@ -121,8 +94,6 @@ class Transaction::CcNotification
       
       @recipients_and_channels.push result
       @recipients_reason[user.id] ||= get_reason_for_user(user)
-      
-      Rails.logger.info "[CC_NOTIFICATION] Will notify #{user.login} (#{user.email}) - channels: email, online"
     end
   end
 
@@ -141,7 +112,6 @@ class Transaction::CcNotification
     if channels['online']
       send_online_notification(user)
       used_channels.push 'online'
-      Rails.logger.info "[CC_NOTIFICATION] Sent online notification to #{user.login}"
     end
     
     # Send email notification if requested
@@ -157,12 +127,10 @@ class Transaction::CcNotification
         main_object: ticket,
       )
       used_channels.push 'email'
-      Rails.logger.info "[CC_NOTIFICATION] Sent email notification to #{user.login} (#{user.email})"
     end
     
     add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
   rescue => e
-    Rails.logger.error "[CC_NOTIFICATION] Error sending notification: #{e.message}"
     raise e
   end
 
@@ -181,8 +149,6 @@ class Transaction::CcNotification
       'Ticket/Cc created'  # Default
     end
     
-    Rails.logger.info "[CC_NOTIFICATION] Creating online notification type: #{notification_type}"
-    
     OnlineNotification.add(
       type:          notification_type,
       object:        'Ticket',
@@ -191,10 +157,8 @@ class Transaction::CcNotification
       user_id:       user.id,
       created_by_id: current_user.id,
     )
-    
-    Rails.logger.info "[CC_NOTIFICATION] Online notification created successfully"
   rescue => e
-    Rails.logger.error "[CC_NOTIFICATION] Error creating online notification: #{e.message}"
+    # Silently fail for online notifications
   end
 
   def add_recipient_list_to_history(ticket, user, channels, type)

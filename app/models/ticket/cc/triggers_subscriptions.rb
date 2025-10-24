@@ -45,7 +45,6 @@ module Ticket::Cc::TriggersSubscriptions
       }
     }
 
-    Rails.logger.info "[CC_WEBSOCKET] Broadcasting TicketCc:#{action} for CC ##{id} (ticket ##{ticket_id})"
     Sessions.broadcast("TicketCc:#{action}", event_data)
   end
 end

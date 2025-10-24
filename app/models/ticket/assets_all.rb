@@ -173,7 +173,7 @@ class Ticket::AssetsAll
   def ccs
     @ccs ||= if ticket.respond_to?(:ccs)
                # Return all CC records for this ticket (agents and customers can see)
-               result = ticket.ccs.includes(:user).map do |cc|
+               ticket.ccs.includes(:user).map do |cc|
                  {
                    id:          cc.id.to_s,
                    ticket_id:   cc.ticket_id.to_s,
@@ -185,10 +185,7 @@ class Ticket::AssetsAll
                    updated_at:  cc.updated_at,
                  }
                end
-               Rails.logger.info "[CC_API] Ticket ##{ticket.id}: Returning #{result.size} CCs for user ##{user.id}"
-               result
              else
-               Rails.logger.info "[CC_API] Ticket ##{ticket.id}: No CCs returned (respond_to: #{ticket.respond_to?(:ccs)})"
                []
              end
   end
