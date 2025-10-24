@@ -9,6 +9,8 @@ class App.UiElement.cc_user_select
     
     # Load users from backend
     userOptions = []
+    loadedUserIds = []
+    
     $.ajax(
       type: 'GET'
       url: "#{App.Config.get('api_path')}/tickets/cc_users?per_page=5000"
@@ -31,10 +33,35 @@ class App.UiElement.cc_user_select
             value: user.id
             name: displayName
           })
+          loadedUserIds.push(user.id)
       
       error: ->
         console.error "[CC_USERS] Failed to load users"
     )
+    
+    # CRITICAL: If editing, load selected users that might not be in first 5000
+    if params.cc_user_ids?.length > 0
+      for userId in params.cc_user_ids
+        continue if loadedUserIds.includes(userId)
+        
+        # Load this specific user to show their name (not ID)
+        $.ajax(
+          type: 'GET'
+          url: "#{App.Config.get('api_path')}/users/#{userId}"
+          async: false
+          success: (user) ->
+            displayName = "#{user.firstname || ''} #{user.lastname || ''}".trim()
+            displayName = user.login if displayName == ''
+            
+            if user.email
+              displayName += " (#{user.email})"
+            
+            userOptions.push({
+              value: user.id
+              name: displayName
+            })
+            console.log "[CC_USERS] Loaded selected user #{user.id}: #{displayName}"
+        )
     
     # Configure searchable multi-select
     attribute.tag = 'searchable_select'
