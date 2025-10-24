@@ -1,98 +1,47 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
-    # Simple clean approach: Load users from API FIRST, then render searchable_select
-    # This is the proper way - searchable_select expects options when rendered
+    # Follow Zammad's standard pattern: Use relation with filter function
+    # This is how Zammad handles filtered dropdowns (like timezone, locale)
     
     attribute.tag = 'searchable_select'
     attribute.multiple = true
     attribute.nulloption = true
-    attribute.placeholder = __('Loading users...')
-    attribute.relation = ''
+    attribute.relation = 'User'  # Use User relation so searchable_select can load from cache
+    attribute.placeholder = __('Select users to CC...')
     
-    console.log "[CC_USERS] Starting CC dropdown render"
+    # CRITICAL: Use filter function to exclude current user and non-agent/customer users
+    # This follows Zammad's standard pattern (see _application_ui_element.coffee line 117)
+    currentUserId = App.Session.get('id')
     
-    # Load users synchronously so we can populate options before rendering
-    options = @loadUsersSync()
-    
-    if options && Object.keys(options).length > 0
-      # Users loaded successfully - render with options
-      attribute.options = options
-      attribute.placeholder = __('Select users to CC...')
-      console.log "[CC_USERS] Rendering with #{Object.keys(options).length} users"
-    else
-      # Failed to load or no users - render empty with helpful message
-      attribute.options = {}
-      attribute.placeholder = __('No users available for CC')
-      console.log "[CC_USERS] No users loaded, rendering empty dropdown"
-    
-    # Render the searchable select with options already populated
-    element = App.UiElement.searchable_select.render(attribute, params)
-    
-    # Add validation to prevent selecting current user
-    currentUserId = App.Session.get('id')?.toString()
-    element.find('select').on 'change', ->
-      selectedValues = $(this).val() || []
+    attribute.filter = (items) ->
+      console.log "[CC_USERS] Filtering #{items.length} users from User model cache"
+      console.log "[CC_USERS] Current user to exclude: #{currentUserId}"
       
-      # Filter out current user if somehow selected
-      if currentUserId && selectedValues.includes(currentUserId)
-        console.error "[CC_USERS] ❌ Current user #{currentUserId} was selected! Removing..."
-        filteredValues = selectedValues.filter (id) -> id != currentUserId
-        $(this).val(filteredValues).trigger('change')
+      filtered = []
+      for user in items
+        # Exclude current user
+        if user.id == currentUserId
+          console.log "[CC_USERS] Excluding current user #{user.id} (#{user.login})"
+          continue
+        
+        # Only include agents and customers (exclude admins without agent permission)
+        isAgent = user.permissions?('ticket.agent')
+        isCustomer = user.permissions?('ticket.customer')
+        
+        unless isAgent || isCustomer
+          console.log "[CC_USERS] Excluding #{user.id} (#{user.login}) - no agent/customer permission"
+          continue
+        
+        # Include this user
+        filtered.push user
+      
+      console.log "[CC_USERS] Filtered to #{filtered.length} users (agents and customers only)"
+      filtered
+    
+    # Render searchable_select (it will call getRelationOptionList with our filter)
+    console.log "[CC_USERS] Rendering CC dropdown with User relation + filter"
+    element = App.UiElement.searchable_select.render(attribute, params)
     
     console.log "[CC_USERS] CC dropdown rendered successfully"
     element
-
-  # Load users synchronously from API
-  @loadUsersSync: ->
-    console.log "[CC_USERS] Loading users synchronously from API"
-    
-    options = {}
-    currentUserId = App.Session.get('id')
-    
-    # Make synchronous AJAX request to load users
-    App.Ajax.request(
-      type: 'GET'
-      url: "#{App.Config.get('api_path')}/tickets/cc_users"
-      async: false  # CRITICAL: Synchronous so we can return options immediately
-      success: (data) ->
-        users = if data.users then data.users else data
-        console.log "[CC_USERS] Loaded #{users?.length || 0} users from API"
-        
-        if users && users.length > 0
-          for user in users
-            # Skip current user
-            if user.id == currentUserId
-              console.log "[CC_USERS] Skipping current user #{currentUserId}"
-              continue
-            
-            # Build display name
-            display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
-            display_name = user.login if display_name == ''
-            display_name = user.email if !display_name
-            display_name = "User ##{user.id}" if !display_name
-            
-            # Add user type indicator
-            user_type_label = switch user.user_type
-              when 'agent' then '[Agent]'
-              when 'customer' then '[Customer]'
-              else '[User]'
-            
-            if user.email && display_name != user.email
-              display_name += " (#{user.email})"
-            display_name += " #{user_type_label}"
-            
-            # Store with STRING key (important for searchable_select)
-            options[user.id.toString()] = display_name
-          
-          console.log "[CC_USERS] Built #{Object.keys(options).length} options"
-          console.log "[CC_USERS] User IDs: #{Object.keys(options).slice(0, 5).join(', ')}..."
-        else
-          console.log "[CC_USERS] No users returned from API"
-      
-      error: (xhr) ->
-        console.error "[CC_USERS] Failed to load users:", xhr.status, xhr.responseText
-        options = {}
-    )
-    
-    return options
