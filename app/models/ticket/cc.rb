@@ -80,12 +80,17 @@ class Ticket::Cc < ApplicationModel
   def set_default_permissions
     Rails.logger.info "[CC_PERMISSIONS] ===== set_default_permissions called ====="
     Rails.logger.info "[CC_PERMISSIONS] Current permissions: #{permissions.inspect}"
-    Rails.logger.info "[CC_PERMISSIONS] User: #{user.inspect}"
+    Rails.logger.info "[CC_PERMISSIONS] Permissions class: #{permissions.class}"
+    Rails.logger.info "[CC_PERMISSIONS] User: #{user&.id} (#{user&.login})"
     
-    if permissions.present?
-      Rails.logger.info "[CC_PERMISSIONS] Permissions already set to: #{permissions.inspect}, skipping"
+    # CRITICAL: Check if permissions are already explicitly set
+    # Don't override if array has content
+    if permissions.is_a?(Array) && permissions.length > 0
+      Rails.logger.info "[CC_PERMISSIONS] ✅ Permissions already explicitly set to: #{permissions.inspect}, SKIPPING callback to prevent override"
       return
     end
+    
+    Rails.logger.info "[CC_PERMISSIONS] Permissions not set yet, will set based on user role"
 
     # CRITICAL: Agents get full access, customers get read + comment
     # This ensures CC'd users can actually interact with tickets

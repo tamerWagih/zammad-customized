@@ -852,14 +852,34 @@ returns a hex color code
       # Create CC record (triggers HasTransactionDispatcher automatically)
       # CRITICAL: Set permissions explicitly (don't rely on database default)
       # Database default is ['read', 'comment'], but agents should get ['full']
-      permissions = if user.permissions?('ticket.agent')
+      
+      # Check user permissions
+      is_agent = user.permissions?('ticket.agent')
+      is_customer = user.permissions?('ticket.customer')
+      is_admin = user.permissions?('admin')
+      
+      Rails.logger.info "[CC] ===== PERMISSION CHECK FOR USER #{user.id} (#{user.login}) ====="
+      Rails.logger.info "[CC] User roles: #{user.roles.pluck(:name).inspect}"
+      Rails.logger.info "[CC] Has ticket.agent: #{is_agent}"
+      Rails.logger.info "[CC] Has ticket.customer: #{is_customer}"
+      Rails.logger.info "[CC] Has admin: #{is_admin}"
+      
+      # Determine permissions based on role
+      # CRITICAL: Admins have ticket.agent permission, so they get 'full' too
+      # Regular agents also have ticket.agent, so they get 'full'
+      # Customers only have ticket.customer, so they get 'read', 'comment'
+      permissions = if is_agent
+                      Rails.logger.info "[CC] ✅ User has ticket.agent → Setting permissions to ['full']"
                       ['full']
+                    elsif is_customer
+                      Rails.logger.info "[CC] ✅ User is customer only → Setting permissions to ['read', 'comment']"
+                      ['read', 'comment']
                     else
+                      Rails.logger.warn "[CC] ⚠️ User has neither agent nor customer permission → Defaulting to ['read', 'comment']"
                       ['read', 'comment']
                     end
       
-      Rails.logger.info "[CC] User #{user.id} (#{user.login}): agent=#{user.permissions?('ticket.agent')}, customer=#{user.permissions?('ticket.customer')}"
-      Rails.logger.info "[CC] Setting permissions to: #{permissions.inspect}"
+      Rails.logger.info "[CC] Final permissions array: #{permissions.inspect}"
       
       cc = ccs.build(
         user:           user,
@@ -867,9 +887,16 @@ returns a hex color code
         created_by_id:  current_user_id,
         updated_by_id:  current_user_id
       )
+      
+      # Disable before_validation callback temporarily to prevent override
+      cc.skip_callbacks = true if cc.respond_to?(:skip_callbacks=)
+      
       cc.save!
       
-      Rails.logger.info "[CC] Created CC ##{cc.id} for user #{user.id} (#{user.fullname}) with permissions: #{cc.permissions.inspect}"
+      Rails.logger.info "[CC] ===== CC RECORD SAVED ====="
+      Rails.logger.info "[CC] CC ##{cc.id} for user #{user.id} (#{user.fullname})"
+      Rails.logger.info "[CC] Permissions IN DATABASE: #{cc.reload.permissions.inspect}"
+      Rails.logger.info "[CC] ============================="
       
       # NOTE: Online notification is created by Transaction::CcNotification (HasTransactionDispatcher)
       # Don't create it here to avoid duplicates
