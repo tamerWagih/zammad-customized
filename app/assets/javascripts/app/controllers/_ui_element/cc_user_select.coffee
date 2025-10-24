@@ -71,5 +71,22 @@ class App.UiElement.cc_user_select
     # Render searchable_select with all options
     element = App.UiElement.searchable_select.render(attribute, params)
     
+    # CRITICAL: If params has existing cc_user_ids, we need to make sure they display properly
+    # The issue is that params might have IDs like [689, 682, 688] which need to be matched
+    # to display names from our options
+    if params.cc_user_ids && params.cc_user_ids.length > 0
+      console.log "[CC_USERS] Found existing cc_user_ids in params:", params.cc_user_ids
+      
+      # Ensure the select element has the right values selected
+      selectElement = element.find('select')
+      if selectElement.length > 0
+        # Set the values (as strings to match our options)
+        stringValues = params.cc_user_ids.map((id) -> id.toString())
+        selectElement.val(stringValues)
+        
+        # Trigger change to update the visual display
+        selectElement.trigger('change')
+        console.log "[CC_USERS] Set selected values:", stringValues
+    
     console.log "[CC_USERS] CC dropdown rendered"
     element
