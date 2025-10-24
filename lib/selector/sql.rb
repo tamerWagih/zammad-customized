@@ -274,8 +274,13 @@ class Selector::Sql < Selector::Base
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'shared_with_me'
       # Handle shared with me selector (ONLY in custom filter context)
       # CRITICAL: Check BOTH group shares AND individual user shares
+      # Must handle BOTH operator ('is'/'is not') AND value (true/false)
       if current_user
-        should_include = (block_condition[:value] == true || block_condition[:value] == 'true')
+        value_is_true = (block_condition[:value] == true || block_condition[:value] == 'true')
+        operator_is = (block_condition[:operator] == 'is')
+        
+        # Determine final logic: include if (is + true) OR (is not + false)
+        should_include = (operator_is && value_is_true) || (!operator_is && !value_is_true)
         
         # Get user's groups safely
         user_groups = current_user.group_ids_access('read') rescue []
@@ -308,8 +313,13 @@ class Selector::Sql < Selector::Base
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
       # Handle requested for approval selector (ONLY in custom filter context)
       # Shows tickets where approval is REQUESTED FROM current user (I'm the approver)
+      # Must handle BOTH operator ('is'/'is not') AND value (true/false)
       if current_user
-        should_include = (block_condition[:value] == true || block_condition[:value] == 'true')
+        value_is_true = (block_condition[:value] == true || block_condition[:value] == 'true')
+        operator_is = (block_condition[:operator] == 'is')
+        
+        # Determine final logic: include if (is + true) OR (is not + false)
+        should_include = (operator_is && value_is_true) || (!operator_is && !value_is_true)
         
         if should_include
           # Yes - show tickets where approval is requested FROM ME (I'm approver, status pending)
@@ -324,8 +334,13 @@ class Selector::Sql < Selector::Base
       end
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'is_approved'
       # Handle "Is Approved" selector (checks for 'approved' tag)
+      # Must handle BOTH operator ('is'/'is not') AND value (true/false)
       if current_user
-        should_include = (block_condition[:value] == true || block_condition[:value] == 'true')
+        value_is_true = (block_condition[:value] == true || block_condition[:value] == 'true')
+        operator_is = (block_condition[:operator] == 'is')
+        
+        # Determine final logic: include if (is + true) OR (is not + false)
+        should_include = (operator_is && value_is_true) || (!operator_is && !value_is_true)
         
         if should_include
           # Yes - show tickets with 'approved' tag
@@ -337,8 +352,13 @@ class Selector::Sql < Selector::Base
       end
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'is_rejected'
       # Handle "Is Rejected" selector (checks for 'rejected' tag)
+      # Must handle BOTH operator ('is'/'is not') AND value (true/false)
       if current_user
-        should_include = (block_condition[:value] == true || block_condition[:value] == 'true')
+        value_is_true = (block_condition[:value] == true || block_condition[:value] == 'true')
+        operator_is = (block_condition[:operator] == 'is')
+        
+        # Determine final logic: include if (is + true) OR (is not + false)
+        should_include = (operator_is && value_is_true) || (!operator_is && !value_is_true)
         
         if should_include
           # Yes - show tickets with 'rejected' tag

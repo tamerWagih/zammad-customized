@@ -59,12 +59,14 @@ class App.TicketOverviewTable extends App.Controller
       ticketListShow.push App.Ticket.fullLocal(ticket.id)
     
     # For custom filters, use the overview object directly
+    # CRITICAL: Always ensure we have a valid overview object
     if overview && overview.is_custom
       @overview = overview
-    else if overview
+    else if overview && overview.id
       @overview = App.Overview.find(overview.id)
     else
-      # Handle case where overview is undefined
+      # Handle case where overview is undefined or invalid
+      console.warn('[OVERVIEW] Invalid overview data:', overview)
       return
 
     @removePopovers()
@@ -103,10 +105,15 @@ class App.TicketOverviewTable extends App.Controller
 
     # set page title
     # For custom filters, create a virtual overview object since they don't exist in the model store
+    # CRITICAL: Always ensure we have a valid overview object
     if overview && overview.is_custom
       @overview = overview
-    else
+    else if overview && overview.id
       @overview = App.Overview.find(overview.id)
+    else
+      # Handle case where overview is undefined or invalid
+      console.error('[OVERVIEW] Cannot render - invalid overview data:', overview)
+      return
 
     # render init page
     checkbox = false

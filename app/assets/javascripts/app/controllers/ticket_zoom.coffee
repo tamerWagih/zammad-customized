@@ -186,9 +186,10 @@ class App.TicketZoom extends App.Controller
     # remember time_accountings
     @time_accountings = data.time_accountings
 
-    # remember approvals and shares (same pattern as tags and links)
+    # remember approvals, shares, and CCs (same pattern as tags and links)
     @approvals = data.approvals || []
     @shares = data.shares || []
+    @ccs = data.ccs || []
     
 
     if draft = App.TicketSharedDraftZoom.findByAttribute 'ticket_id', @ticket_id
@@ -200,9 +201,10 @@ class App.TicketZoom extends App.Controller
     @ticket         = App.Ticket.fullLocal(@ticket_id)
     @ticket.article = undefined
     
-    # Set approvals and shares on ticket object for permission checks (same pattern as tags)
+    # Set approvals, shares, and CCs on ticket object for permission checks (same pattern as tags)
     @ticket._approvals_cache = @approvals
     @ticket._shares_cache = @shares
+    @ticket._ccs_cache = @ccs
     
     
     # Evaluate permissions with detailed logging
@@ -259,10 +261,12 @@ class App.TicketZoom extends App.Controller
               # Update instance variables (same pattern as tags/links)
               @approvals = ticketData.approvals || []
               @shares = ticketData.shares || []
+              @ccs = ticketData.ccs || []
               
               # Set cache on ticket object for permission checks
               @ticket._approvals_cache = @approvals if @ticket
               @ticket._shares_cache = @shares if @ticket
+              @ticket._ccs_cache = @ccs if @ticket
               
               
               # Trigger sidebar rerender for approval/share widgets
@@ -301,10 +305,12 @@ class App.TicketZoom extends App.Controller
               # Update instance variables (same pattern as tags/links)
               @approvals = ticketData.approvals || []
               @shares = ticketData.shares || []
+              @ccs = ticketData.ccs || []
               
               # Set cache on ticket object for permission checks
               @ticket._approvals_cache = @approvals if @ticket
               @ticket._shares_cache = @shares if @ticket
+              @ticket._ccs_cache = @ccs if @ticket
               
               
               # Trigger sidebar rerender for approval/share widgets
@@ -329,13 +335,16 @@ class App.TicketZoom extends App.Controller
           App.Ticket.refresh([ticketData]) if ticketData?
           @ticket = App.Ticket.findNative(@ticket_id)
           
-          # Update approvals/shares cache for permission checks
+          # Update approvals/shares/CCs cache for permission checks
           if ticketData.approvals
             @approvals = ticketData.approvals
             @ticket._approvals_cache = @approvals if @ticket
           if ticketData.shares
             @shares = ticketData.shares
             @ticket._shares_cache = @shares if @ticket
+          if ticketData.ccs
+            @ccs = ticketData.ccs
+            @ticket._ccs_cache = @ccs if @ticket
           
           # Trigger sidebar rerender
           App.Event.trigger('ui::ticket::sidebarRerender')

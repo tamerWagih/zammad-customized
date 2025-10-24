@@ -226,7 +226,13 @@ class App.Ticket extends App.Model
     user = App.User.current()
 
     return false if !user?
-    return true  if @editableByCustomer(user)
+    
+    # Check if customer has edit rights (owner or organization)
+    return true if @editableByCustomer(user)
+    
+    # Check if customer is CC'd with comment permissions
+    if user.permission('ticket.customer') && @hasCcPermission(permission)
+      return true
 
     return @userGroupAccess(permission)
 
@@ -237,24 +243,27 @@ class App.Ticket extends App.Model
     user.allOrganizationIds().includes(@organization_id)
 
   userGroupAccess: (permission) ->
-    # Check all access methods: standard group access, approvals, and shares
+    # Check all access methods: standard group access, approvals, shares, and CC
     # Backend TicketPolicy checks these too, so frontend should match
     
     user = App.User.current()
     return false unless user
     return false unless user.permission('ticket.agent')
     
-    # 1. Check standard group access
+    # 1. Check CC permissions FIRST (highest priority after group access)
+    return true if @hasCcPermission(permission)
+    
+    # 2. Check standard group access
     return true if @isAccessibleByGroup(user, permission)
     
-    # 2. Check if user is an approver (approvers get full access)
+    # 3. Check if user is an approver (approvers get full access)
     if @_approvals_cache or @approvals
       approvals = @_approvals_cache or @approvals or []
       for approval in approvals
         if parseInt(approval.approver_id) is parseInt(user.id)
           return true
     
-    # 3. Check share permissions (uses share_permissions from backend)
+    # 4. Check share permissions (uses share_permissions from backend)
     return true if @hasSharePermission(permission)
     
     false
@@ -341,6 +350,48 @@ class App.Ticket extends App.Model
       comment: hasFull or permissions.includes('comment')
       edit: hasFull or permissions.includes('edit') or permissions.includes('change')
     }
+
+  hasCcPermission: (permission) ->
+    # Check if current user is CC'd on this ticket
+    # Agents get full access, customers get read + comment
+    user = App.User.current()
+    return false unless user
+    
+    # Get CC records from cache or model
+    ccs = @_ccs_cache || @ccs || []
+    return false unless ccs.length
+    
+    # Find CC record for current user
+    ccRecord = null
+    for cc in ccs
+      if parseInt(cc.user_id) is parseInt(user.id)
+        ccRecord = cc
+        break
+    
+    return false unless ccRecord
+    
+    # Check permissions from CC record
+    ccPermissions = ccRecord.permissions || []
+    ccPermissions = [ccPermissions] unless Array.isArray(ccPermissions)
+    ccPermissions = ccPermissions.map (perm) -> perm?.toString()?.toLowerCase?() || perm
+    
+    hasFull = ccPermissions.includes('full')
+    hasComment = ccPermissions.includes('comment')
+    hasRead = ccPermissions.includes('read')
+    
+    # Map requested permission to CC permissions
+    requested = permission?.toString()?.toLowerCase() || 'read'
+    switch requested
+      when 'read'
+        hasFull or hasRead
+      when 'change', 'create', 'edit'
+        hasFull or hasComment  # comment permission allows adding articles/notes
+      when 'full'
+        hasFull
+      when 'comment'
+        hasFull or hasComment
+      else
+        false
 
   userIsCustomer: ->
     user = App.User.current()

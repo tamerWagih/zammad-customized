@@ -25,16 +25,14 @@ class Tickets::CcUsersController < ApplicationController
     offset = (page - 1) * per_page
 
     # Get ALL users with agent OR customer PERMISSIONS
-    # CRITICAL: Use a more reliable query that doesn't miss users
-    # 
-    # Strategy: Get ALL active users, then filter by permissions in Ruby
-    # This ensures we don't miss any users due to complex JOIN issues
+    # CRITICAL: Exclude current user (ticket creator) from CC list
+    # On ticket creation page, current user is the creator and shouldn't CC themselves
     
-    # First, get all active users except current user
+    # First, get all active users except current user (ticket creator)
     base_users = User.where(active: true)
                      .where.not(id: current_user.id)
     
-    Rails.logger.info "[CC_API] Total active users (excluding current): #{base_users.count}"
+    Rails.logger.info "[CC_API] Total active users (excluding ticket creator): #{base_users.count}"
     
     # Filter to only agents and customers using Ruby (more reliable than SQL joins)
     all_users = base_users.select do |user|
@@ -42,12 +40,12 @@ class Tickets::CcUsersController < ApplicationController
     end
     
     Rails.logger.info "[CC_API] Found #{all_users.count} users with agent/customer permissions"
-    Rails.logger.info "[CC_API] EXCLUDING current user: #{current_user.id} (#{current_user.login})"
+    Rails.logger.info "[CC_API] EXCLUDED ticket creator: #{current_user.id} (#{current_user.login})"
     
     # Debug: Log all user IDs
     all_user_ids = all_users.map(&:id)
     Rails.logger.info "[CC_API] All user IDs: #{all_user_ids.inspect}"
-    Rails.logger.info "[CC_API] Current user #{current_user.id} in list? #{all_user_ids.include?(current_user.id)}"
+    Rails.logger.info "[CC_API] Creator #{current_user.id} in list? #{all_user_ids.include?(current_user.id)}"
 
     # Search (in Ruby since we already loaded users)
     if search_query.present?
