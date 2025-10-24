@@ -50,33 +50,7 @@ class App.UiElement.cc_user_select
     # Bind lazy loading to dropdown events
     @bindLazyLoading(element, attribute, params)
 
-    # IMMEDIATE LOAD: On ticket create screens, load users immediately
-    # Check if we're on ticket create (no ticket ID in params)
-    isTicketCreate = !params.ticket_id && !params.id
-    if isTicketCreate
-      console.log "[CC_USERS] Ticket create detected - loading users immediately"
-      # Wait for searchable_select to fully initialize before loading
-      # Use longer delay and poll for instance to be ready
-      loadAttempt = 0
-      maxAttempts = 10
-      
-      attemptLoad = =>
-        loadAttempt++
-        searchableSelectInstance = element.data('controller')
-        
-        if searchableSelectInstance
-          console.log "[CC_USERS] SearchableSelect instance ready, loading users (attempt #{loadAttempt})"
-          @loadUsers(element, attribute, params, '', 1)
-        else if loadAttempt < maxAttempts
-          console.log "[CC_USERS] Waiting for SearchableSelect instance (attempt #{loadAttempt}/#{maxAttempts})"
-          setTimeout attemptLoad, 100
-        else
-          console.log "[CC_USERS] Max attempts reached, loading anyway"
-          @loadUsers(element, attribute, params, '', 1)
-      
-      setTimeout attemptLoad, 100
-    else
-      console.log "[CC_USERS] CC dropdown initialized with lazy loading"
+    console.log "[CC_USERS] CC dropdown initialized with lazy loading (loads on click/focus)"
 
     # Return the element
     element
