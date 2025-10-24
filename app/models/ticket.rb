@@ -850,11 +850,13 @@ returns a hex color code
       end
 
       # Create CC record (triggers HasTransactionDispatcher automatically)
-      cc = ccs.create!(
-        user_id:        user.id,
+      # CRITICAL: Pass user object directly so set_default_permissions can check permissions
+      cc = ccs.build(
+        user:           user,  # Pass user object, not just user_id
         created_by_id:  current_user_id,
         updated_by_id:  current_user_id
       )
+      cc.save!
       
       Rails.logger.info "[CC] Created CC ##{cc.id} for user #{user.id} (#{user.fullname}) with permissions: #{cc.permissions.inspect}"
       
