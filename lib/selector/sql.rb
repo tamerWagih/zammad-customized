@@ -274,42 +274,53 @@ class Selector::Sql < Selector::Base
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'shared_with_me'
       # Handle shared with me selector (ONLY in custom filter context)
       # CRITICAL: Check BOTH group shares AND individual user shares
-      return nil if !current_user
-      
-      if block_condition[:operator] == 'is'
-        query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
-        bind_params.push current_user.group_ids_access('read')
-        bind_params.push current_user.id
-      else
-        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
-        bind_params.push current_user.group_ids_access('read')
-        bind_params.push current_user.id
+      # Don't use "return nil" - causes errors. Skip the condition instead.
+      if current_user
+        # Check if value is true (Yes) or operator determines inclusion/exclusion
+        should_include = (block_condition[:value] == true || block_condition[:value] == 'true')
+        
+        if should_include
+          query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
+          bind_params.push current_user.group_ids_access('read')
+          bind_params.push current_user.id
+        else
+          query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
+          bind_params.push current_user.group_ids_access('read')
+          bind_params.push current_user.id
+        end
       end
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'approval_status'
       # Handle approval status selector (ONLY in custom filter context)
       # CRITICAL: Only show approvals where current user is the APPROVER
-      return nil if !current_user
-      
-      if block_condition[:operator] == 'is'
-        query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = ? AND approver_id = ?)"
-        bind_params.push block_condition[:value]
-        bind_params.push current_user.id
-      else
-        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = ? AND approver_id = ?)"
-        bind_params.push block_condition[:value]
-        bind_params.push current_user.id
+      if current_user
+        if block_condition[:operator] == 'is'
+          query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = ? AND approver_id = ?)"
+          bind_params.push block_condition[:value]
+          bind_params.push current_user.id
+        else
+          query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = ? AND approver_id = ?)"
+          bind_params.push block_condition[:value]
+          bind_params.push current_user.id
+        end
       end
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
       # Handle requested for approval selector (ONLY in custom filter context)
       # CRITICAL: Only show pending approvals where current user is the APPROVER
-      return nil if !current_user
-      
-      if block_condition[:operator] == 'is'
-        query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
-        bind_params.push current_user.id
-      else
-        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
-        bind_params.push current_user.id
+      # Check VALUE (true/false) not just operator
+      if current_user
+        # value = true => show tickets where I HAVE pending approvals
+        # value = false => show tickets where I DON'T HAVE pending approvals
+        should_include = (block_condition[:value] == true || block_condition[:value] == 'true')
+        
+        if should_include
+          # Yes - show tickets where I have pending approvals
+          query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
+          bind_params.push current_user.id
+        else
+          # No - show tickets where I DON'T have pending approvals
+          query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
+          bind_params.push current_user.id
+        end
       end
     elsif attribute_table == 'user' && attribute_name == 'role_ids'
       query << if block_condition[:operator] == 'is'
