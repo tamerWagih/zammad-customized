@@ -1,412 +1,98 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
-    # Lazy loading implementation: Load users only when dropdown is opened
-    # This prevents performance issues with large user bases
-    # Includes: ONLY Agents and Customers (for ticket sharing)
-    # Excludes: The current user (ticket creator) and admins/other roles
-    # Note: CC grants ticket access regardless of group permissions
+    # Simple clean approach: Load users from API FIRST, then render searchable_select
+    # This is the proper way - searchable_select expects options when rendered
     
     attribute.tag = 'searchable_select'
     attribute.multiple = true
     attribute.nulloption = true
-    attribute.placeholder = __('Click to search for users to CC...')
-    # DON'T set relation - it causes component to load from User model
-    # We provide explicit options from our API only
+    attribute.placeholder = __('Loading users...')
     attribute.relation = ''
-    # Start with empty options - will be populated from API on click
-    attribute.options = {}
     
-    # Add performance hints for large datasets
-    if params.organization_size && params.organization_size > 1000
-      attribute.placeholder = __('Large organization detected. Type to search users...')
-      console.log "[CC_USERS] Large organization mode enabled"
-
-    # Render the searchable select first (empty state)
+    console.log "[CC_USERS] Starting CC dropdown render"
+    
+    # Load users synchronously so we can populate options before rendering
+    options = @loadUsersSync()
+    
+    if options && Object.keys(options).length > 0
+      # Users loaded successfully - render with options
+      attribute.options = options
+      attribute.placeholder = __('Select users to CC...')
+      console.log "[CC_USERS] Rendering with #{Object.keys(options).length} users"
+    else
+      # Failed to load or no users - render empty with helpful message
+      attribute.options = {}
+      attribute.placeholder = __('No users available for CC')
+      console.log "[CC_USERS] No users loaded, rendering empty dropdown"
+    
+    # Render the searchable select with options already populated
     element = App.UiElement.searchable_select.render(attribute, params)
     
-    # Store references for lazy loading and caching
-    element.data('cc-lazy-load-needed', true)
-    element.data('cc-search-query', '')
-    element.data('cc-current-page', 1)
-    element.data('cc-has-more-pages', false)
-    element.data('cc-search-cache', {})  # Cache for search results
-    element.data('cc-last-search-time', 0)  # Prevent excessive API calls
-
-    # Add logging and validation for value changes
+    # Add validation to prevent selecting current user
     currentUserId = App.Session.get('id')?.toString()
     element.find('select').on 'change', ->
       selectedValues = $(this).val() || []
-      console.log "[CC_USERS] Selection changed, current values:", selectedValues
-      console.log "[CC_USERS] Selected count:", selectedValues.length
       
-      # CRITICAL: Filter out current user if somehow selected
+      # Filter out current user if somehow selected
       if currentUserId && selectedValues.includes(currentUserId)
-        console.error "[CC_USERS] ❌ CRITICAL: Current user #{currentUserId} was selected! Removing..."
+        console.error "[CC_USERS] ❌ Current user #{currentUserId} was selected! Removing..."
         filteredValues = selectedValues.filter (id) -> id != currentUserId
-        $(this).val(filteredValues)
-        console.log "[CC_USERS] Filtered to:", filteredValues
-
-    # Bind lazy loading to dropdown events
-    @bindLazyLoading(element, attribute, params)
-
-    console.log "[CC_USERS] CC dropdown initialized with lazy loading (loads on click/focus)"
-
-    # Return the element
+        $(this).val(filteredValues).trigger('change')
+    
+    console.log "[CC_USERS] CC dropdown rendered successfully"
     element
 
-  # Get the selected group ID from the form or attribute (for potential future use)
-  @getSelectedGroupId: (attribute) ->
-    # First check if group_id was passed in the attribute (from form handler)
-    if attribute && attribute.group_id
-      console.log "[CC_USERS] Using group_id from attribute:", attribute.group_id
-      return attribute.group_id
-
-    # Try to find the group_id field in the form (for debugging)
-    form = $('form')
-    if form.length > 0
-      groupField = form.find('[data-attribute-name="group_id"] select')
-      if groupField.length == 0
-        groupField = form.find('[name="group_id"]')
-      if groupField.length == 0
-        groupField = form.find('select[data-attribute-name*="group"]')
-
-      if groupField.length > 0
-        selectedValue = groupField.val()
-        console.log "[CC_USERS] Found group field with value:", selectedValue
-        return selectedValue if selectedValue && selectedValue != ''
-
-    # If no form or no group selected, return null
-    console.log "[CC_USERS] No group selected or form not found"
-    null
-
-  # Bind lazy loading and search functionality
-  @bindLazyLoading: (element, attribute, params) ->
-    # Find the SearchableSelect instance
-    searchableSelectInstance = element.data('controller')
-
-    if searchableSelectInstance
-      # Override the onFocus and onClick methods to trigger lazy loading
-      originalOnFocus = searchableSelectInstance.onFocus
-      originalOnClick = searchableSelectInstance.onClick
-      originalOnInput = searchableSelectInstance.onInput
-
-      searchableSelectInstance.onFocus = (event) =>
-        console.log "[CC_USERS] Dropdown focused, checking if lazy load needed"
-        @loadUsersIfNeeded(element, attribute, params)
-        originalOnFocus?.call(searchableSelectInstance, event)
-
-      searchableSelectInstance.onClick = (event) =>
-        console.log "[CC_USERS] Dropdown clicked, checking if lazy load needed"
-        @loadUsersIfNeeded(element, attribute, params)
-        originalOnClick?.call(searchableSelectInstance, event)
-
-      # Override onInput for search-as-you-type with caching and debouncing
-      searchableSelectInstance.onInput = (event) =>
-        searchQuery = event.target.value.trim()
-        console.log "[CC_USERS] Search input changed:", searchQuery
-
-        # Update search query
-        element.data('cc-search-query', searchQuery)
-        element.data('cc-current-page', 1)  # Reset to first page on new search
-
-        # Debounce search requests (300ms delay)
-        clearTimeout(element.data('cc-search-timeout'))
-        searchTimeout = setTimeout =>
-          # Check cache first
-          searchCache = element.data('cc-search-cache')
-          cacheKey = "#{searchQuery}_1"
-
-          if searchCache[cacheKey]
-            console.log "[CC_USERS] Loading from cache:", cacheKey
-            @updateDropdownOptions(element, attribute, params, searchCache[cacheKey])
-          else
-            # Load from API
-            if searchQuery.length > 0
-              @loadUsers(element, attribute, params, searchQuery, 1)
-            else
-              @loadUsers(element, attribute, params, '', 1)
-        , 300
-
-        element.data('cc-search-timeout', searchTimeout)
-        originalOnInput?.call(searchableSelectInstance, event)
-
-      # Add scroll handler for "load more" functionality
-      dropdownElement = element.find('.dropdown-menu')
-      if dropdownElement.length > 0
-        dropdownElement.on 'scroll.cc_load_more', (event) =>
-          @handleScrollForMore(element, attribute, params)
-
-    else
-      # Fallback: bind to element events
-      element.on 'focus.searchable_select', (event) =>
-        console.log "[CC_USERS] Element focused, loading users"
-        @loadUsersIfNeeded(element, attribute, params)
-
-      element.on 'click.searchable_select', (event) =>
-        console.log "[CC_USERS] Element clicked, loading users"
-        @loadUsersIfNeeded(element, attribute, params)
-
-  # Load users only when needed
-  @loadUsersIfNeeded: (element, attribute, params) ->
-    if element.data('cc-lazy-load-needed')
-      console.log "[CC_USERS] Lazy loading triggered, fetching users"
-      searchQuery = element.data('cc-search-query') || ''
-      page = element.data('cc-current-page') || 1
-      @loadUsers(element, attribute, params, searchQuery, page)
-
-  # Load users from API with search and pagination
-  @loadUsers: (element, attribute, params, searchQuery = '', page = 1) ->
-    # Show loading state
-    attribute.placeholder = __('Loading users...')
-    element.data('cc-lazy-load-needed', false)
-
-    # Build API URL with search and pagination (no group filtering)
-    apiUrl = "#{App.Config.get('api_path')}/tickets/cc_users"
-    apiUrl += "?search=#{encodeURIComponent(searchQuery)}" if searchQuery
-    apiUrl += "&page=#{page}" if page > 1
-
-    console.log "[CC_USERS] Loading users from:", apiUrl
-
+  # Load users synchronously from API
+  @loadUsersSync: ->
+    console.log "[CC_USERS] Loading users synchronously from API"
+    
+    options = {}
+    currentUserId = App.Session.get('id')
+    
+    # Make synchronous AJAX request to load users
     App.Ajax.request(
       type: 'GET'
-      url: apiUrl
-      async: true
-      success: (data) =>
-        # Handle both old format (array) and new format (object with users array)
+      url: "#{App.Config.get('api_path')}/tickets/cc_users"
+      async: false  # CRITICAL: Synchronous so we can return options immediately
+      success: (data) ->
         users = if data.users then data.users else data
-        pagination = data.pagination || {}
-
-        console.log "[CC_USERS] Loaded #{users?.length || 0} users"
-        console.log "[CC_USERS] Pagination:", pagination
-        
-        # Get current user from session for debugging
-        currentUserId = App.Session.get('id')
-        console.log "[CC_USERS] Current user ID from session: #{currentUserId}"
-        
-        options = {}
-        currentUserInList = false
+        console.log "[CC_USERS] Loaded #{users?.length || 0} users from API"
         
         if users && users.length > 0
           for user in users
-            # CRITICAL: Filter out current user on client side as safety net
+            # Skip current user
             if user.id == currentUserId
-              currentUserInList = true
-              console.warn "[CC_USERS] ⚠️ WARNING: Current user #{currentUserId} found in API response! Filtering it out..."
-              continue  # SKIP this user
+              console.log "[CC_USERS] Skipping current user #{currentUserId}"
+              continue
             
             # Build display name
             display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
             display_name = user.login if display_name == ''
             display_name = user.email if !display_name
             display_name = "User ##{user.id}" if !display_name
-
+            
             # Add user type indicator
             user_type_label = switch user.user_type
               when 'agent' then '[Agent]'
               when 'customer' then '[Customer]'
               else '[User]'
-
+            
             if user.email && display_name != user.email
               display_name += " (#{user.email})"
             display_name += " #{user_type_label}"
-
-            # CRITICAL: Store with STRING key for searchable_select
+            
+            # Store with STRING key (important for searchable_select)
             options[user.id.toString()] = display_name
-        
-        console.log "[CC_USERS] Built #{Object.keys(options).length} options"
-        console.log "[CC_USERS] Current user #{currentUserId} in CC list: #{currentUserInList}"
-        console.log "[CC_USERS] All user IDs in list: #{Object.keys(options).join(', ')}"
-        console.log "[CC_USERS] First 3 options:", Object.keys(options).slice(0, 3).map (k) -> "#{k}: #{options[k]}"
-
-        # Update element data for pagination
-        element.data('cc-current-page', pagination.current_page || 1)
-        element.data('cc-has-more-pages', pagination.has_next_page || false)
-
-        # Cache the results (with cleanup for memory management)
-        searchCache = element.data('cc-search-cache')
-        cacheKey = "#{searchQuery}_#{page}"
-
-        # Clean cache if it gets too large (max 50 entries)
-        if Object.keys(searchCache).length > 50
-          console.log "[CC_USERS] Cleaning cache, too many entries"
-          # Keep only recent entries (last 30)
-          cacheKeys = Object.keys(searchCache)
-          cacheKeys.sort (a, b) =>
-            (searchCache[a].timestamp || 0) - (searchCache[b].timestamp || 0)
-          # Keep only the 30 most recent
-          keysToRemove = cacheKeys.slice(0, cacheKeys.length - 30)
-          keysToRemove.forEach (key) -> delete searchCache[key]
-
-        searchCache[cacheKey] = options
-        searchCache[cacheKey].timestamp = Date.now()
-        searchCache[cacheKey].user_types = _.uniq(users.map((u) -> u.user_type)) if users
-        element.data('cc-search-cache', searchCache)
-        element.data('cc-last-search-time', Date.now())
-
-        # Update options and re-render
-        @updateDropdownOptions(element, attribute, params, options)
-
-        console.log "[CC_USERS] Successfully loaded and cached CC dropdown results"
-
-        # Show message if no users found
-        if Object.keys(options).length == 0
-          attribute.placeholder = __('No agents or customers found for CC.')
-          App.Notice.info(__('No agents or customers found for CC. Only agents and customers can be CC\'d on tickets (administrators are excluded).'))
-
-        # Check for admin users that were excluded
-        excluded_admins = users.filter (u) -> u.user_type == 'admin_excluded'
-        if excluded_admins.length > 0
-          console.log "[CC_USERS] Excluded #{excluded_admins.length} admin users from CC list: #{excluded_admins.map((u) -> u.login).join(', ')}"
-        
-      error: (xhr) =>
-        console.error '[CC_USERS] Failed to load CC users:', xhr
-        console.error '[CC_USERS] Error status:', xhr.status
-        console.error '[CC_USERS] Error response:', xhr.responseText
-
-        # Handle different types of errors
-        if xhr.status == 403
-          # Permission error - user doesn't have agent or customer permissions
-          attribute.placeholder = __('You need agent or customer permissions to CC users')
-          attribute.options = {}
-          App.Notice.error(__('You need agent or customer permissions to CC users on tickets. Please contact your administrator.'))
+          
+          console.log "[CC_USERS] Built #{Object.keys(options).length} options"
+          console.log "[CC_USERS] User IDs: #{Object.keys(options).slice(0, 5).join(', ')}..."
         else
-          # Other errors (network, server, etc.)
-          attribute.placeholder = __('Error loading users - please refresh')
-          attribute.options = {}
-          App.Notice.error(__('Failed to load CC users. Please refresh the page and try again.'))
-
-        # Reset lazy loading flag so it can retry
-        element.data('cc-lazy-load-needed', true)
+          console.log "[CC_USERS] No users returned from API"
+      
+      error: (xhr) ->
+        console.error "[CC_USERS] Failed to load users:", xhr.status, xhr.responseText
+        options = {}
     )
-
-  # Update dropdown options without closing dropdown
-  @updateDropdownOptions: (element, attribute, params, options) ->
-    # Update attribute options for the component
-    attribute.options = options
     
-    console.log "[CC_USERS] Updating dropdown with #{Object.keys(options).length} options"
-    
-    # Find the select element directly (more reliable than using instance)
-    selectElement = element.find('select')
-    
-    if selectElement.length > 0
-      console.log "[CC_USERS] Found select element, updating options"
-      
-      # Get currently selected values before clearing
-      currentValues = selectElement.val() || []
-      console.log "[CC_USERS] Current selected values:", currentValues
-      
-      # Clear existing options
-      selectElement.empty()
-      
-      # Add new options
-      optionsAdded = 0
-      for id, name of options
-        option = $('<option></option>').attr('value', id).text(name)
-        selectElement.append(option)
-        optionsAdded++
-      
-      console.log "[CC_USERS] Added #{optionsAdded} options to select element"
-      
-      # Restore selection if values still exist in new options
-      if currentValues.length > 0
-        validValues = currentValues.filter (val) -> options[val]?
-        if validValues.length > 0
-          selectElement.val(validValues)
-          console.log "[CC_USERS] Restored selection:", validValues
-      
-      # CRITICAL: Trigger change event to notify searchable_select
-      # This forces the searchable_select component to rebuild its visual dropdown
-      selectElement.trigger('change')
-      console.log "[CC_USERS] Triggered change event on select"
-      
-      # Try to find and update searchable select instance if it exists
-      searchableSelectInstance = element.data('controller')
-      if searchableSelectInstance
-        console.log "[CC_USERS] Found SearchableSelect instance, forcing rebuild"
-        searchableSelectInstance.options = options
-        
-        # Force rebuild of the dropdown UI
-        if searchableSelectInstance.rebuildTree
-          searchableSelectInstance.rebuildTree()
-          console.log "[CC_USERS] Called rebuildTree()"
-        
-        if searchableSelectInstance.updateOptions
-          searchableSelectInstance.updateOptions()
-          console.log "[CC_USERS] Called updateOptions()"
-        
-        # Force the dropdown to open and show the new options
-        if searchableSelectInstance.showDropdown
-          # Wait a moment for the rebuild to complete
-          setTimeout ->
-            searchableSelectInstance.showDropdown()
-            console.log "[CC_USERS] Opened dropdown to show new options"
-          , 50
-      else
-        console.log "[CC_USERS] No SearchableSelect instance found"
-      
-      console.log "[CC_USERS] Options updated successfully"
-    else
-      console.log "[CC_USERS] No select element found, trying alternative approach"
-      
-      # Alternative: Re-render the entire searchable_select
-      attribute.options = options
-      newElement = App.UiElement.searchable_select.render(attribute, params)
-      element.replaceWith(newElement)
-      console.log "[CC_USERS] Replaced element with new render"
-
-  # Get the selected group ID from the form or attribute
-  @getSelectedGroupId: (attribute) ->
-    # First check if group_id was passed in the attribute (from form handler)
-    if attribute && attribute.group_id
-      console.log "[CC_USERS] Using group_id from attribute:", attribute.group_id
-      return attribute.group_id
-
-    # Try to find the group_id field in the form
-    form = $('form')
-    if form.length > 0
-      # Look for group_id field by different selectors
-      groupField = form.find('[data-attribute-name="group_id"] select')
-      if groupField.length == 0
-        groupField = form.find('[name="group_id"]')
-      if groupField.length == 0
-        groupField = form.find('select[data-attribute-name*="group"]')
-
-      if groupField.length > 0
-        selectedValue = groupField.val()
-        console.log "[CC_USERS] Found group field with value:", selectedValue
-        return selectedValue if selectedValue && selectedValue != ''
-
-    # If no form or no group selected, return null (will show all accessible groups)
-    console.log "[CC_USERS] No group selected or form not found"
-    null
-
-  # Handle scroll events for loading more users
-  @handleScrollForMore: (element, attribute, params) ->
-    dropdownElement = element.find('.dropdown-menu')
-    return unless dropdownElement.length > 0
-
-    # Check if we're near the bottom (within 100px)
-    scrollTop = dropdownElement.scrollTop()
-    scrollHeight = dropdownElement.prop('scrollHeight')
-    clientHeight = dropdownElement.prop('clientHeight')
-
-    # Load more if scrolled within 100px of bottom and more pages available
-    if (scrollTop + clientHeight >= scrollHeight - 100) && element.data('cc-has-more-pages')
-      currentPage = element.data('cc-current-page') || 1
-      searchQuery = element.data('cc-search-query') || ''
-
-      console.log "[CC_USERS] Loading more users - page #{currentPage + 1}"
-
-      # Load next page
-      @loadUsers(element, attribute, params, searchQuery, currentPage + 1)
-
-  # Load more users (public method for manual triggering)
-  @loadMoreUsers: (element, attribute, params) ->
-    if element.data('cc-has-more-pages')
-      currentPage = element.data('cc-current-page') || 1
-      searchQuery = element.data('cc-search-query') || ''
-
-      console.log "[CC_USERS] Manually loading more users - page #{currentPage + 1}"
-      @loadUsers(element, attribute, params, searchQuery, currentPage + 1)
+    return options
