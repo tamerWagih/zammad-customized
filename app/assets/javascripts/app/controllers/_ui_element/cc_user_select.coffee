@@ -128,6 +128,7 @@ class App.UiElement.cc_user_select
               
               # Trigger searchable_select to rebuild dropdown
               searchInput.trigger('change')
+          )
       , 500)
     
     console.log "[CC_USERS] Rendered with #{userOptions.length} options + backend search"
