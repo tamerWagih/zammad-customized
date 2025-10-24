@@ -272,34 +272,28 @@ class Selector::Sql < Selector::Base
         end
       end
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'shared_with_me'
-      # Handle shared with me selector (ONLY in custom filter context)
-      # CRITICAL: Check BOTH group shares AND individual user shares
-      # Must handle BOTH operator ('is'/'is not') AND value (true/false)
+      # SIMPLIFIED: Show only tickets shared with me
+      # No operator, no value - just presence of this filter
       raise "shared_with_me requires current_user" unless current_user
       
-      Rails.logger.info "[SQL_FILTER] shared_with_me: value=#{block_condition[:value].inspect}, operator=#{block_condition[:operator]}"
-      
-      value_is_true = (block_condition[:value] == true || block_condition[:value] == 'true')
-      operator_is = (block_condition[:operator] == 'is')
-      
-      # Determine final logic: include if (is + true) OR (is not + false)
-      should_include = (operator_is && value_is_true) || (!operator_is && !value_is_true)
-      
-      # Get user's groups safely
       user_groups = current_user.group_ids_access('read') rescue []
       user_groups = [0] if user_groups.blank?  # Prevent SQL error with empty array
       
-      Rails.logger.info "[SQL_FILTER] shared_with_me: should_include=#{should_include}, user_groups=#{user_groups.inspect}"
+      query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
+      bind_params.push user_groups
+      bind_params.push current_user.id
+    
+    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'not_shared_with_me'
+      # SIMPLIFIED: Show only tickets NOT shared with me
+      # No operator, no value - just presence of this filter
+      raise "not_shared_with_me requires current_user" unless current_user
       
-      if should_include
-        query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
-        bind_params.push user_groups
-        bind_params.push current_user.id
-      else
-        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
-        bind_params.push user_groups
-        bind_params.push current_user.id
-      end
+      user_groups = current_user.group_ids_access('read') rescue []
+      user_groups = [0] if user_groups.blank?
+      
+      query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
+      bind_params.push user_groups
+      bind_params.push current_user.id
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'approval_status'
       # Handle approval status selector (ONLY in custom filter context)
       # Shows ALL tickets with specific approval status (any approver, not just me)
@@ -315,83 +309,28 @@ class Selector::Sql < Selector::Base
         bind_params.push block_condition[:value]
       end
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
-      # Handle requested for approval selector (ONLY in custom filter context)
-      # Shows tickets where approval is REQUESTED FROM current user (I'm the approver)
-      # Must handle BOTH operator ('is'/'is not') AND value (true/false)
+      # SIMPLIFIED: Show only tickets where approval is requested FROM ME (I'm the approver)
+      # No operator, no value - just presence of this filter
       raise "requested_for_approval requires current_user" unless current_user
       
-      Rails.logger.info "[SQL_FILTER] requested_for_approval: value=#{block_condition[:value].inspect}, operator=#{block_condition[:operator]}"
+      query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
+      bind_params.push current_user.id
+    
+    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'not_requested_for_approval'
+      # SIMPLIFIED: Show only tickets where I'm NOT the approver
+      # No operator, no value - just presence of this filter
+      raise "not_requested_for_approval requires current_user" unless current_user
       
-      value_is_true = (block_condition[:value] == true || block_condition[:value] == 'true')
-      operator_is = (block_condition[:operator] == 'is')
-      
-      # Determine final logic: include if (is + true) OR (is not + false)
-      should_include = (operator_is && value_is_true) || (!operator_is && !value_is_true)
-      
-      Rails.logger.info "[SQL_FILTER] requested_for_approval: should_include=#{should_include}, current_user_id=#{current_user.id}"
-      
-      if should_include
-        # Yes - show tickets where approval is requested FROM ME (I'm approver, status pending)
-        query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
-        bind_params.push current_user.id
-      else
-        # No - show tickets where I'm NOT the approver OR my approval is already done
-        # This means: all tickets EXCEPT those where I have pending approval
-        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
-        bind_params.push current_user.id
-      end
+      query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
+      bind_params.push current_user.id
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'is_approved'
-      # Handle "Is Approved" selector (checks for 'approved' tag)
-      # Must handle BOTH operator ('is'/'is not') AND value (true/false)
-      raise "is_approved requires current_user" unless current_user
-      
-      Rails.logger.info "[SQL_FILTER] is_approved: value=#{block_condition[:value].inspect}, operator=#{block_condition[:operator]}"
-      
-      value_is_true = (block_condition[:value] == true || block_condition[:value] == 'true')
-      operator_is = (block_condition[:operator] == 'is')
-      
-      # Determine final logic: include if (is + true) OR (is not + false)
-      should_include = (operator_is && value_is_true) || (!operator_is && !value_is_true)
-      
-      Rails.logger.info "[SQL_FILTER] is_approved: should_include=#{should_include}, value_is_true=#{value_is_true}, operator_is=#{operator_is}"
-      
-      if should_include
-        # Yes - show tickets with 'approved' tag
-        sql_query = "tickets.id IN (SELECT taggable_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'approved' AND tags.taggable_type = 'Ticket')"
-        Rails.logger.info "[SQL_FILTER] is_approved: Adding query: #{sql_query}"
-        query << sql_query
-      else
-        # No - show tickets without 'approved' tag
-        sql_query = "tickets.id NOT IN (SELECT taggable_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'approved' AND tags.taggable_type = 'Ticket')"
-        Rails.logger.info "[SQL_FILTER] is_approved: Adding query: #{sql_query}"
-        query << sql_query
-      end
+      # SIMPLIFIED: Show only tickets with 'approved' tag
+      # No operator, no value - just presence of this filter
+      query << "tickets.id IN (SELECT taggable_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'approved' AND tags.taggable_type = 'Ticket')"
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'is_rejected'
-      # Handle "Is Rejected" selector (checks for 'rejected' tag)
-      # Must handle BOTH operator ('is'/'is not') AND value (true/false)
-      raise "is_rejected requires current_user" unless current_user
-      
-      Rails.logger.info "[SQL_FILTER] is_rejected: value=#{block_condition[:value].inspect}, operator=#{block_condition[:operator]}"
-      
-      value_is_true = (block_condition[:value] == true || block_condition[:value] == 'true')
-      operator_is = (block_condition[:operator] == 'is')
-      
-      # Determine final logic: include if (is + true) OR (is not + false)
-      should_include = (operator_is && value_is_true) || (!operator_is && !value_is_true)
-      
-      Rails.logger.info "[SQL_FILTER] is_rejected: should_include=#{should_include}, value_is_true=#{value_is_true}, operator_is=#{operator_is}"
-      
-      if should_include
-        # Yes - show tickets with 'rejected' tag
-        sql_query = "tickets.id IN (SELECT taggable_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'rejected' AND tags.taggable_type = 'Ticket')"
-        Rails.logger.info "[SQL_FILTER] is_rejected: Adding query: #{sql_query}"
-        query << sql_query
-      else
-        # No - show tickets without 'rejected' tag
-        sql_query = "tickets.id NOT IN (SELECT taggable_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'rejected' AND tags.taggable_type = 'Ticket')"
-        Rails.logger.info "[SQL_FILTER] is_rejected: Adding query: #{sql_query}"
-        query << sql_query
-      end
+      # SIMPLIFIED: Show only tickets with 'rejected' tag
+      # No operator, no value - just presence of this filter
+      query << "tickets.id IN (SELECT taggable_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'rejected' AND tags.taggable_type = 'Ticket')"
     elsif attribute_table == 'user' && attribute_name == 'role_ids'
       query << if block_condition[:operator] == 'is'
                  "users.id IN (

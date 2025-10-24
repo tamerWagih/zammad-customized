@@ -80,19 +80,52 @@ class CustomFilterAttributesController < ApplicationController
     ]
 
     # Add custom filter specific attributes (shared with me, approval status, etc.)
+    # SIMPLIFIED: Each filter is a simple yes/no presence check (like tags)
+    # No complex boolean operators - just include the filter or don't!
     custom_attributes = [
+      # Share Filters
       { 
         name: 'shared_with_me', 
         display: 'Shared with Me', 
-        tag: 'select', 
-        type: 'boolean', 
-        searchable: true, 
-        operator: ['is', 'is not'], 
-        options: [
-          { value: true, name: 'Yes' },
-          { value: false, name: 'No' }
-        ] 
+        tag: 'has_tag',  # Acts like a tag - just present or not
+        searchable: true,
       },
+      { 
+        name: 'not_shared_with_me', 
+        display: 'Not Shared with Me', 
+        tag: 'has_tag',
+        searchable: true,
+      },
+      
+      # Approval Tag Filters (checking for approved/rejected tags)
+      { 
+        name: 'is_approved', 
+        display: 'Is Approved', 
+        tag: 'has_tag',
+        searchable: true,
+      },
+      { 
+        name: 'is_rejected', 
+        display: 'Is Rejected', 
+        tag: 'has_tag',
+        searchable: true,
+      },
+      
+      # Approval Request Filters
+      { 
+        name: 'requested_for_approval', 
+        display: 'Requested for Approval (from me)', 
+        tag: 'has_tag',
+        searchable: true,
+      },
+      { 
+        name: 'not_requested_for_approval', 
+        display: 'Not Requested for Approval (from me)', 
+        tag: 'has_tag',
+        searchable: true,
+      },
+      
+      # Approval Status (keep as select since it has 3 values)
       { 
         name: 'approval_status', 
         display: 'Approval Status', 
@@ -104,42 +137,6 @@ class CustomFilterAttributesController < ApplicationController
           { value: 'pending', name: 'Pending' },
           { value: 'approved', name: 'Approved' },
           { value: 'rejected', name: 'Rejected' }
-        ] 
-      },
-      { 
-        name: 'requested_for_approval', 
-        display: 'Requested for Approval', 
-        tag: 'select', 
-        type: 'boolean', 
-        searchable: true, 
-        operator: ['is', 'is not'], 
-        options: [
-          { value: true, name: 'Yes' },
-          { value: false, name: 'No' }
-        ] 
-      },
-      { 
-        name: 'is_approved', 
-        display: 'Is Approved', 
-        tag: 'select', 
-        type: 'boolean', 
-        searchable: true, 
-        operator: ['is', 'is not'], 
-        options: [
-          { value: true, name: 'Yes' },
-          { value: false, name: 'No' }
-        ] 
-      },
-      { 
-        name: 'is_rejected', 
-        display: 'Is Rejected', 
-        tag: 'select', 
-        type: 'boolean', 
-        searchable: true, 
-        operator: ['is', 'is not'], 
-        options: [
-          { value: true, name: 'Yes' },
-          { value: false, name: 'No' }
         ] 
       },
     ]
