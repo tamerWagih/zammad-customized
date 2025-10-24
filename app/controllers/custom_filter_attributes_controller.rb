@@ -118,38 +118,6 @@ class CustomFilterAttributesController < ApplicationController
           { value: false, name: 'No' }
         ] 
       },
-      { 
-        name: 'cc_to_me', 
-        display: 'CC\'d to Me', 
-        tag: 'select', 
-        type: 'boolean', 
-        searchable: true, 
-        operator: ['is', 'is not'], 
-        options: [
-          { value: true, name: 'Yes' },
-          { value: false, name: 'No' }
-        ] 
-      },
-      { 
-        name: 'has_cc_users', 
-        display: 'Has CC Users', 
-        tag: 'select', 
-        type: 'boolean', 
-        searchable: true, 
-        operator: ['is', 'is not'], 
-        options: [
-          { value: true, name: 'Yes' },
-          { value: false, name: 'No' }
-        ] 
-      },
-      { 
-        name: 'cc_user_ids', 
-        display: 'CC\'d Users', 
-        tag: 'select', 
-        relation: 'User', 
-        searchable: true, 
-        operator: ['is', 'is not']
-      },
     ]
 
     base_attributes + custom_attributes
