@@ -172,9 +172,20 @@ class App.UiElement.cc_user_select
         console.log "[CC_USERS] Loaded #{users?.length || 0} users"
         console.log "[CC_USERS] Pagination:", pagination
         
+        # Get current user from session for debugging
+        currentUserId = App.Session.get('id')
+        console.log "[CC_USERS] Current user ID from session: #{currentUserId}"
+        
         options = {}
+        currentUserInList = false
+        
         if users && users.length > 0
           for user in users
+            # Check if this is the current user
+            if user.id == currentUserId
+              currentUserInList = true
+              console.warn "[CC_USERS] ⚠️ WARNING: Current user #{currentUserId} found in CC list! This should NOT happen!"
+            
             # Build display name
             display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
             display_name = user.login if display_name == ''
@@ -195,6 +206,8 @@ class App.UiElement.cc_user_select
             options[user.id.toString()] = display_name
         
         console.log "[CC_USERS] Built #{Object.keys(options).length} options"
+        console.log "[CC_USERS] Current user #{currentUserId} in CC list: #{currentUserInList}"
+        console.log "[CC_USERS] All user IDs in list: #{Object.keys(options).join(', ')}"
         console.log "[CC_USERS] First 3 options:", Object.keys(options).slice(0, 3).map (k) -> "#{k}: #{options[k]}"
 
         # Update element data for pagination

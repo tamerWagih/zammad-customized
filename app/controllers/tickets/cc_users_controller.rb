@@ -40,6 +40,12 @@ class Tickets::CcUsersController < ApplicationController
                 .distinct
     
     Rails.logger.info "[CC_API] Found #{query.count} users with agent/customer permissions"
+    Rails.logger.info "[CC_API] EXCLUDING current user: #{current_user.id} (#{current_user.login})"
+    
+    # Debug: Log all user IDs before search
+    all_user_ids = query.pluck(:id)
+    Rails.logger.info "[CC_API] All user IDs (before search): #{all_user_ids.inspect}"
+    Rails.logger.info "[CC_API] Current user #{current_user.id} in list? #{all_user_ids.include?(current_user.id)}"
 
     # Search
     if search_query.present?
