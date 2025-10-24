@@ -11,19 +11,19 @@ class App.UiElement.cc_user_select
     userOptions = []
     
     # Load users synchronously to ensure options are ready for searchable_select
-    # This is a one-time load per form, acceptable for UX
+    # Load ALL users (up to 10,000) so search finds everyone
     $.ajax(
       type: 'GET'
-      url: "#{App.Config.get('api_path')}/tickets/cc_users"
+      url: "#{App.Config.get('api_path')}/tickets/cc_users?per_page=10000"
       async: false
       success: (data) ->
         users = if data.users then data.users else data
         console.log "[CC_USERS] Loaded #{users?.length || 0} users from API"
         
-        for user in users
+          for user in users
           continue if user.id == currentUserId
-          
-          # Build display name
+            
+            # Build display name
           displayName = "#{user.firstname || ''} #{user.lastname || ''}".trim()
           displayName = user.login if displayName == ''
           displayName = user.email if !displayName
