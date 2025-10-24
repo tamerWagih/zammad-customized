@@ -31,43 +31,26 @@ class CustomFilterSelectorsController < ApplicationController
       }
     end
     
-    # Use Ticket.selector2sql with custom filter context
-    # This ensures custom attributes (shared_with_me, approval_status, etc.) work
-    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] Calling Ticket.selector2sql with custom_filter_context"
-    query, bind_params, tables = Ticket.selector2sql(
-      condition, 
+    # Use Ticket.selectors (like admin does) with custom filter context
+    # This method handles everything: sql generation, scopes, transactions
+    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] Calling Ticket.selectors with custom_filter_context"
+    
+    ticket_count, ticket_results = Ticket.selectors(
+      condition,
+      limit: 6,
       current_user: current_user,
-      custom_filter_context: true  # Mark this as custom filter context
+      custom_filter_context: true,  # Enable custom filter attributes
+      access: 'full'  # Use full access like overviews
     )
     
-    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] Query: #{query}"
-    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] Bind params: #{bind_params.inspect}"
-    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] Tables: #{tables.inspect}"
+    Rails.logger.info "[CUSTOM_FILTER_PREVIEW] Got #{ticket_count} total, #{ticket_results&.length || 0} results"
     
     tickets = []
     assets = {}
-    ticket_count = 0
     
-    if query.present?
-      # Apply user permission scope first (like Zammad's overview system)
-      # Use OverviewScope for standard conditions, ReadScope for mentions
-      base_scope = if condition.key?('ticket.mention_user_ids')
-                     TicketPolicy::ReadScope.new(current_user).resolve
-                   else
-                     TicketPolicy::OverviewScope.new(current_user).resolve
-                   end
-      
-      # Apply the custom filter condition on top of permission scope
-      scoped_tickets = base_scope.where(query, *bind_params)
-      scoped_tickets = scoped_tickets.joins(tables) if tables.present?
-      
-      ticket_results = scoped_tickets.limit(6)
-      ticket_count = scoped_tickets.count
-      
-      ticket_results.each do |ticket|
-        tickets.push ticket.id
-        assets = ticket.assets(assets)
-      end
+    ticket_results&.each do |ticket|
+      tickets.push ticket.id
+      assets = ticket.assets(assets)
     end
 
     Rails.logger.info "[CUSTOM_FILTER_PREVIEW] Found #{ticket_count} tickets (showing #{tickets.length})"
