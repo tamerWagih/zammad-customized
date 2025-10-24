@@ -33,13 +33,13 @@ class App.UiElement.cc_user_select
         
         # Build options array
         options = []
-        for user in users
+          for user in users
           continue if user.id == currentUserId
-          
-          # Build display name
-          display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
-          display_name = user.login if display_name == ''
-          display_name = user.email if !display_name
+            
+            # Build display name
+            display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
+            display_name = user.login if display_name == ''
+            display_name = user.email if !display_name
           
           # Add user type and email
           user_type = if user.user_type == 'agent' then 'Agent' else 'Customer'
@@ -81,7 +81,7 @@ class App.UiElement.cc_user_select
     console.log "[CC_USERS] Selected from params:", selectedFromParams
     
     # Clear and rebuild options
-    selectElement.empty()
+        selectElement.empty()
     
     for option in options
       optionElement = $('<option></option>')
@@ -104,7 +104,21 @@ class App.UiElement.cc_user_select
     # Update placeholder
     element.find('.form-control').attr('placeholder', __('Select users to CC...'))
     
-    # Trigger change to update searchable_select visual display
-    selectElement.trigger('change')
+    # CRITICAL: Force searchable_select to rebuild its visual display
+    # Find the searchable_select controller instance
+    controller = element.data('controller')
+    if controller
+      console.log "[CC_USERS] Found searchable_select controller, rebuilding"
+      # Update the options in the controller
+      controller.attribute.options = options
+      # Rebuild the select element display
+      if controller.buildSelectList
+        controller.buildSelectList()
+      # Force UI update
+      selectElement.trigger('change')
+    else
+      # Fallback: just trigger change
+      selectElement.trigger('change')
+      console.log "[CC_USERS] No controller found, triggered change event"
     
     console.log "[CC_USERS] Dropdown updated successfully"
