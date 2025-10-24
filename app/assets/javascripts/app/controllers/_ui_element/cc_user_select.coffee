@@ -55,10 +55,26 @@ class App.UiElement.cc_user_select
     isTicketCreate = !params.ticket_id && !params.id
     if isTicketCreate
       console.log "[CC_USERS] Ticket create detected - loading users immediately"
-      # Load users immediately (don't wait for click)
-      setTimeout =>
-        @loadUsers(element, attribute, params, '', 1)
-      , 100  # Small delay to ensure element is fully rendered
+      # Wait for searchable_select to fully initialize before loading
+      # Use longer delay and poll for instance to be ready
+      loadAttempt = 0
+      maxAttempts = 10
+      
+      attemptLoad = =>
+        loadAttempt++
+        searchableSelectInstance = element.data('controller')
+        
+        if searchableSelectInstance
+          console.log "[CC_USERS] SearchableSelect instance ready, loading users (attempt #{loadAttempt})"
+          @loadUsers(element, attribute, params, '', 1)
+        else if loadAttempt < maxAttempts
+          console.log "[CC_USERS] Waiting for SearchableSelect instance (attempt #{loadAttempt}/#{maxAttempts})"
+          setTimeout attemptLoad, 100
+        else
+          console.log "[CC_USERS] Max attempts reached, loading anyway"
+          @loadUsers(element, attribute, params, '', 1)
+      
+      setTimeout attemptLoad, 100
     else
       console.log "[CC_USERS] CC dropdown initialized with lazy loading"
 
@@ -295,30 +311,52 @@ class App.UiElement.cc_user_select
     # Update attribute options for the component
     attribute.options = options
     
-    # Find searchable select instance
-    searchableSelectInstance = element.data('controller')
+    console.log "[CC_USERS] Updating dropdown with #{Object.keys(options).length} options"
     
-    if searchableSelectInstance
-      console.log "[CC_USERS] Updating SearchableSelect options"
+    # Find the select element directly (more reliable than using instance)
+    selectElement = element.find('select')
+    
+    if selectElement.length > 0
+      console.log "[CC_USERS] Found select element, updating options"
       
-      # Update options in the instance
-      searchableSelectInstance.options = options
+      # Get currently selected values before clearing
+      currentValues = selectElement.val() || []
+      console.log "[CC_USERS] Current selected values:", currentValues
       
-      # Update the select element options
-      selectElement = element.find('select')
-      if selectElement.length > 0
-        # Clear and rebuild options (don't preserve selection as it might be invalid)
-        selectElement.empty()
-        for id, name of options
-          option = $('<option></option>').attr('value', id).text(name)
-          selectElement.append(option)
+      # Clear existing options
+      selectElement.empty()
+      
+      # Add new options
+      for id, name of options
+        option = $('<option></option>').attr('value', id).text(name)
+        selectElement.append(option)
+      
+      # Restore selection if values still exist in new options
+      if currentValues.length > 0
+        validValues = currentValues.filter (val) -> options[val]?
+        if validValues.length > 0
+          selectElement.val(validValues)
+          console.log "[CC_USERS] Restored selection:", validValues
+      
+      # Try to find and update searchable select instance if it exists
+      searchableSelectInstance = element.data('controller')
+      if searchableSelectInstance
+        console.log "[CC_USERS] Found SearchableSelect instance, updating it"
+        searchableSelectInstance.options = options
         
-        # Trigger change to update UI
-        selectElement.trigger('change')
-        
-        console.log "[CC_USERS] Options updated"
+        # Trigger update on the instance
+        if searchableSelectInstance.updateOptions
+          searchableSelectInstance.updateOptions()
+      
+      console.log "[CC_USERS] Options updated successfully"
     else
-      console.log "[CC_USERS] No searchable select instance"
+      console.log "[CC_USERS] No select element found, trying alternative approach"
+      
+      # Alternative: Re-render the entire searchable_select
+      attribute.options = options
+      newElement = App.UiElement.searchable_select.render(attribute, params)
+      element.replaceWith(newElement)
+      console.log "[CC_USERS] Replaced element with new render"
 
   # Get the selected group ID from the form or attribute
   @getSelectedGroupId: (attribute) ->
