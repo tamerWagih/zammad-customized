@@ -67,9 +67,12 @@ class App.UiElement.cc_user_select
     attribute.tag = 'searchable_select'
     attribute.multiple = true
     attribute.nulloption = true
-    attribute.relation = 'User'  # CRITICAL: Set relation so it uses cache for display names!
+    # CRITICAL: Do NOT set relation = 'User' - it bypasses our filtered options!
+    # We provide explicit options with current user already filtered out
     attribute.placeholder = __('Type to search users...')
     attribute.options = userOptions
+    
+    console.log "[CC_USERS] Configured searchable_select with #{userOptions.length} filtered options (no relation set)"
     
     # Ensure selected users are in App.User cache
     for option in userOptions
