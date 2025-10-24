@@ -861,14 +861,14 @@ returns a hex color code
       # Create online notification
       begin
         OnlineNotification.add(
-          type:          'cc',
+          type:          'Ticket/Cc created',
           object:        'Ticket',
           o_id:          id,
           seen:          false,
           user_id:       user.id,
           created_by_id: current_user_id,
         )
-        Rails.logger.info "[CC] Created online notification for user #{user.id}"
+        Rails.logger.info "[CC] Created online notification (type: 'Ticket/Cc created') for user #{user.id}"
       rescue => notif_error
         Rails.logger.error "[CC] Failed to create online notification: #{notif_error.message}"
       end

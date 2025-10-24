@@ -3,23 +3,12 @@
 <div>Hi #{recipient.firstname},</div>
 <br>
 <% if @objects[:action] == 'create' %>
-  <% if @objects[:recipient].id == @objects[:cc_user]&.id %>
-    <% creator_name = @objects[:creator]&.fullname || @objects[:creator_name] || 'Unknown User' %>
-    <div>You have been <b>CC'd</b> on ticket "<b>#{ticket.title}</b>" by "<b>#{creator_name}</b>".</div>
-    <div>You now have access to view and participate in this ticket.</div>
-  <% else %>
-    <% cc_user_name = @objects[:cc_user]&.fullname || @objects[:cc_user_name] || 'Unknown User' %>
-    <div>You have <b>CC'd</b> "<b>#{cc_user_name}</b>" on ticket "<b>#{ticket.title}</b>".</div>
-    <div>They now have access to this ticket.</div>
-  <% end %>
+  <% creator_name = @objects[:creator]&.fullname || @objects[:creator_name] || 'Unknown User' %>
+  <div>You have been <b>CC'd</b> on ticket "<b>#{ticket.title}</b>" by "<b>#{creator_name}</b>".</div>
+  <div>You now have access to view and participate in this ticket.</div>
 <% elsif @objects[:action] == 'delete' %>
-  <% if @objects[:recipient].id.to_s == @objects[:cc][:user_id].to_s %>
-    <div>You have been <b>removed from CC</b> on ticket "<b>#{ticket.title}</b>".</div>
-    <div>You no longer have access to this ticket.</div>
-  <% else %>
-    <% cc_user_name = @objects[:cc_user]&.fullname || @objects[:cc_user_name] || 'Unknown User' %>
-    <div>You have <b>removed</b> "<b>#{cc_user_name}</b>" from CC on ticket "<b>#{ticket.title}</b>".</div>
-  <% end %>
+  <div>You have been <b>removed from CC</b> on ticket "<b>#{ticket.title}</b>".</div>
+  <div>You no longer have access to this ticket.</div>
 <% else %>
   <div>There has been an update to the CC list for ticket "<b>#{ticket.title}</b>".</div>
 <% end %>

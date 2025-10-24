@@ -117,7 +117,8 @@ class TicketPolicy < ApplicationPolicy
     when 'read'
       cc_record.read_access?
     when 'change', 'create'
-      cc_record.comment_access?
+      # Allow if user has full access OR comment access
+      cc_record.full_access? || cc_record.comment_access?
     when 'full'
       cc_record.full_access?
     else

@@ -86,15 +86,12 @@ class Transaction::CcNotification
   def get_recipients
     recipients = []
 
-    # ALWAYS send to BOTH CC user and creator
+    # Only send to the CC'd user (not the creator)
+    # The creator doesn't need a confirmation email every time they CC someone
     if cc_record.user_id.present?
       cc_user = ::User.find_by(id: cc_record.user_id)
       recipients << cc_user if cc_user
-    end
-
-    if cc_record.created_by_id.present?
-      creator_user = ::User.find_by(id: cc_record.created_by_id)
-      recipients << creator_user if creator_user
+      Rails.logger.info "[CC_NOTIFICATION] Recipient: #{cc_user.login} (CC'd user)"
     end
 
     recipients.compact.uniq

@@ -142,6 +142,12 @@ class App.Ticket extends App.Model
         App.i18n.translateContent('%s deleted share on |%s|', item.created_by.displayName(), item.title)
       when 'Ticket/Share updated'
         App.i18n.translateContent('%s updated share on |%s|', item.created_by.displayName(), item.title)
+      when 'Ticket/Cc created', 'CC created'
+        App.i18n.translateContent('%s CC\'d you on |%s|', item.created_by.displayName(), item.title)
+      when 'Ticket/Cc updated', 'CC updated'
+        App.i18n.translateContent('CC updated on |%s| by %s', item.title, item.created_by.displayName())
+      when 'Ticket/Cc deleted', 'CC deleted'
+        App.i18n.translateContent('You were removed from CC on |%s| by %s', item.title, item.created_by.displayName())
       else
         "Unknow action for (#{@objectDisplayName()}/#{item.type}), extend activityMessage() of model."
 
