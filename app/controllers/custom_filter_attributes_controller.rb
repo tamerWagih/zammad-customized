@@ -118,6 +118,30 @@ class CustomFilterAttributesController < ApplicationController
           { value: false, name: 'No' }
         ] 
       },
+      { 
+        name: 'is_approved', 
+        display: 'Is Approved', 
+        tag: 'select', 
+        type: 'boolean', 
+        searchable: true, 
+        operator: ['is', 'is not'], 
+        options: [
+          { value: true, name: 'Yes' },
+          { value: false, name: 'No' }
+        ] 
+      },
+      { 
+        name: 'is_rejected', 
+        display: 'Is Rejected', 
+        tag: 'select', 
+        type: 'boolean', 
+        searchable: true, 
+        operator: ['is', 'is not'], 
+        options: [
+          { value: true, name: 'Yes' },
+          { value: false, name: 'No' }
+        ] 
+      },
     ]
 
     base_attributes + custom_attributes

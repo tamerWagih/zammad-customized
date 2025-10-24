@@ -322,6 +322,32 @@ class Selector::Sql < Selector::Base
           bind_params.push current_user.id
         end
       end
+    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'is_approved'
+      # Handle "Is Approved" selector (checks for 'approved' tag)
+      if current_user
+        should_include = (block_condition[:value] == true || block_condition[:value] == 'true')
+        
+        if should_include
+          # Yes - show tickets with 'approved' tag
+          query << "tickets.id IN (SELECT taggable_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'approved' AND tags.taggable_type = 'Ticket')"
+        else
+          # No - show tickets without 'approved' tag
+          query << "tickets.id NOT IN (SELECT taggable_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'approved' AND tags.taggable_type = 'Ticket')"
+        end
+      end
+    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'is_rejected'
+      # Handle "Is Rejected" selector (checks for 'rejected' tag)
+      if current_user
+        should_include = (block_condition[:value] == true || block_condition[:value] == 'true')
+        
+        if should_include
+          # Yes - show tickets with 'rejected' tag
+          query << "tickets.id IN (SELECT taggable_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'rejected' AND tags.taggable_type = 'Ticket')"
+        else
+          # No - show tickets without 'rejected' tag
+          query << "tickets.id NOT IN (SELECT taggable_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'rejected' AND tags.taggable_type = 'Ticket')"
+        end
+      end
     elsif attribute_table == 'user' && attribute_name == 'role_ids'
       query << if block_condition[:operator] == 'is'
                  "users.id IN (
