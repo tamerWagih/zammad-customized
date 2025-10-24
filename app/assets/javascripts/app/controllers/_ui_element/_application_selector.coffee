@@ -390,11 +390,17 @@ class App.UiElement.ApplicationSelector
     # Check if we're in custom filter mode by looking for the modal class
     isCustomFilterMode = item.closest('.custom-filter-modal').length > 0
     
+    console.log "[SELECTOR_PREVIEW] Item:", item
+    console.log "[SELECTOR_PREVIEW] Is custom filter mode:", isCustomFilterMode
+    console.log "[SELECTOR_PREVIEW] Params:", params
+    
     # Use custom filter selector endpoint for custom filters
     previewUrl = if isCustomFilterMode
       "#{App.Config.get('api_path')}/custom_filter_selectors/preview"
     else
       "#{App.Config.get('api_path')}/tickets/selector"
+    
+    console.log "[SELECTOR_PREVIEW] Using URL:", previewUrl
     
     # Add object type for custom filter endpoint
     if isCustomFilterMode

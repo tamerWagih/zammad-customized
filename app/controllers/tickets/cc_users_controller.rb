@@ -19,16 +19,10 @@ class Tickets::CcUsersController < ApplicationController
     # Get pagination and search
     search_query = params[:search]&.strip
     
-    # For search: return up to 200 results (more specific results)
-    # For no search: not used (would return all users)
-    per_page = if search_query.present?
-                 200  # Return up to 200 matching users
-               else
-                 50   # Without search, limit to 50
-               end
-    
-    page = 1  # Always page 1 for simplicity
-    offset = 0
+    # Allow up to 1000 users for dropdown (reasonable limit)
+    per_page = [params[:per_page]&.to_i || 200, 1000].min
+    page = params[:page]&.to_i || 1
+    offset = (page - 1) * per_page
 
     # Get ALL users with agent OR customer PERMISSIONS
     # CRITICAL: Use a more reliable query that doesn't miss users
