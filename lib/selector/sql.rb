@@ -294,13 +294,16 @@ class Selector::Sql < Selector::Base
       # CRITICAL: Only show approvals where current user is the APPROVER
       if current_user
         if block_condition[:operator] == 'is'
+          # "is pending" - Show tickets where I'm approver AND status = pending
           query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = ? AND approver_id = ?)"
           bind_params.push block_condition[:value]
           bind_params.push current_user.id
         else
-          query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = ? AND approver_id = ?)"
-          bind_params.push block_condition[:value]
+          # "is not pending" - Show tickets where I'm approver AND status != pending
+          # CRITICAL: Must check approver_id first, then status != X
+          query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE approver_id = ? AND status != ?)"
           bind_params.push current_user.id
+          bind_params.push block_condition[:value]
         end
       end
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
