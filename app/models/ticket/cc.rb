@@ -78,23 +78,36 @@ class Ticket::Cc < ApplicationModel
   end
 
   def set_default_permissions
-    return if permissions.present?
+    Rails.logger.info "[CC_PERMISSIONS] ===== set_default_permissions called ====="
+    Rails.logger.info "[CC_PERMISSIONS] Current permissions: #{permissions.inspect}"
+    Rails.logger.info "[CC_PERMISSIONS] User: #{user.inspect}"
+    
+    if permissions.present?
+      Rails.logger.info "[CC_PERMISSIONS] Permissions already set to: #{permissions.inspect}, skipping"
+      return
+    end
 
     # CRITICAL: Agents get full access, customers get read + comment
     # This ensures CC'd users can actually interact with tickets
-    if user&.permissions?('ticket.agent')
+    has_agent = user&.permissions?('ticket.agent')
+    has_customer = user&.permissions?('ticket.customer')
+    
+    Rails.logger.info "[CC_PERMISSIONS] User #{user&.id} (#{user&.login}): agent=#{has_agent}, customer=#{has_customer}"
+    Rails.logger.info "[CC_PERMISSIONS] User roles: #{user&.roles&.pluck(:name)&.join(', ')}"
+    
+    if has_agent
       self.permissions = ['full']
-      Rails.logger.info "[CC_PERMISSIONS] User #{user.id} (#{user.login}) is AGENT, setting permissions to ['full']"
-      Rails.logger.info "[CC_PERMISSIONS] User roles: #{user.roles.pluck(:name).join(', ')}"
-    elsif user&.permissions?('ticket.customer')
+      Rails.logger.info "[CC_PERMISSIONS] ✅ SET permissions to ['full'] (agent)"
+    elsif has_customer
       self.permissions = ['read', 'comment']
-      Rails.logger.info "[CC_PERMISSIONS] User #{user.id} (#{user.login}) is CUSTOMER, setting permissions to ['read', 'comment']"
-      Rails.logger.info "[CC_PERMISSIONS] User roles: #{user.roles.pluck(:name).join(', ')}"
+      Rails.logger.info "[CC_PERMISSIONS] ✅ SET permissions to ['read', 'comment'] (customer only)"
     else
       # Fallback: Give read + comment if neither agent nor customer (shouldn't happen due to validation)
       self.permissions = ['read', 'comment']
-      Rails.logger.warn "[CC_PERMISSIONS] User #{user.id} (#{user.login}) has no agent/customer permission! Defaulting to ['read', 'comment']"
+      Rails.logger.warn "[CC_PERMISSIONS] ⚠️ User has no agent/customer permission! Defaulting to ['read', 'comment']"
     end
+    
+    Rails.logger.info "[CC_PERMISSIONS] Final permissions after set: #{self.permissions.inspect}"
   end
 
   def search_index_attribute_lookup(record)

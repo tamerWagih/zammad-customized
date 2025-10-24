@@ -18,7 +18,7 @@ class App.UiElement.cc_user_select
     console.log "[CC_USERS] Loading CC users from backend API"
     
     # Load users synchronously from our dedicated endpoint
-    options = {}
+    options = []  # CRITICAL: Array, not object!
     currentUserId = App.Session.get('id')
     
     App.Ajax.request(
@@ -46,22 +46,25 @@ class App.UiElement.cc_user_select
             else
               display_name += " [#{user_type}]"
             
-            # Store as string key (required by searchable_select)
-            options[user.id.toString()] = display_name
+            # CRITICAL: Push as object with 'value' and 'name' (searchable_select format)
+            options.push({
+              value: user.id.toString()
+              name: display_name
+            })
           
-          console.log "[CC_USERS] Built #{Object.keys(options).length} options from API"
+          console.log "[CC_USERS] Built #{options.length} options from API"
       error: (xhr) ->
         console.error "[CC_USERS] Failed to load users:", xhr.status
         # Leave options empty
     )
     
     # Set options and render
-    if Object.keys(options).length > 0
+    if options.length > 0
       attribute.options = options
       attribute.placeholder = __('Select users to CC...')
-      console.log "[CC_USERS] Rendering with #{Object.keys(options).length} users"
+      console.log "[CC_USERS] Rendering with #{options.length} users"
     else
-      attribute.options = {}
+      attribute.options = []
       attribute.placeholder = __('No users available')
       console.log "[CC_USERS] No users available"
     

@@ -169,14 +169,30 @@ class Transaction::CcNotification
   def send_online_notification(user)
     # Send online notification via WebSocket
     # This creates a notification that appears in the user's notification panel
+    # CRITICAL: Use correct type format to match activityMessage() in ticket.coffee
+    notification_type = case @item[:type]
+    when 'create'
+      'Ticket/Cc created'
+    when 'update'
+      'Ticket/Cc updated'
+    when 'delete'
+      'Ticket/Cc deleted'
+    else
+      'Ticket/Cc created'  # Default
+    end
+    
+    Rails.logger.info "[CC_NOTIFICATION] Creating online notification type: #{notification_type}"
+    
     OnlineNotification.add(
-      type:          'cc',
+      type:          notification_type,
       object:        'Ticket',
       o_id:          ticket.id,
       seen:          false,
       user_id:       user.id,
       created_by_id: current_user.id,
     )
+    
+    Rails.logger.info "[CC_NOTIFICATION] Online notification created successfully"
   rescue => e
     Rails.logger.error "[CC_NOTIFICATION] Error creating online notification: #{e.message}"
   end
