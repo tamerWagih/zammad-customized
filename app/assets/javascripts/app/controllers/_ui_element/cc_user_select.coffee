@@ -57,7 +57,7 @@ class App.UiElement.cc_user_select
       for userId in params.cc_user_ids
         do (userId) ->
           $.ajax(
-            type: 'GET'
+      type: 'GET'
             url: "#{App.Config.get('api_path')}/users/#{userId}"
             async: false
             success: (user) ->
@@ -127,6 +127,7 @@ class App.UiElement.cc_user_select
           error: ->
             console.error "[CC_USERS] Search failed"
             dropdown.html('<div class="cc-error">Search failed</div>').show()
+        )
       , 300)
     
     # Handle result click
