@@ -91,7 +91,8 @@ class CustomFilterAttributesController < ApplicationController
         tag: 'select',
         searchable: true,
         operator: ['is'],  # Only "is" operator
-        options: [{ value: true, name: 'Yes' }]  # Only "Yes" option
+        options: [{ value: true, name: 'Yes' }],  # Only "Yes" option
+        default: true  # Auto-select "Yes" when filter is added
       },
       { 
         name: 'not_shared_with_me', 
@@ -99,7 +100,8 @@ class CustomFilterAttributesController < ApplicationController
         tag: 'select',
         searchable: true,
         operator: ['is'],
-        options: [{ value: true, name: 'Yes' }]
+        options: [{ value: true, name: 'Yes' }],
+        default: true
       },
       
       # Approval Tag Filters (checking for approved/rejected tags)
@@ -109,7 +111,8 @@ class CustomFilterAttributesController < ApplicationController
         tag: 'select',
         searchable: true,
         operator: ['is'],
-        options: [{ value: true, name: 'Yes' }]
+        options: [{ value: true, name: 'Yes' }],
+        default: true
       },
       { 
         name: 'is_rejected', 
@@ -117,7 +120,8 @@ class CustomFilterAttributesController < ApplicationController
         tag: 'select',
         searchable: true,
         operator: ['is'],
-        options: [{ value: true, name: 'Yes' }]
+        options: [{ value: true, name: 'Yes' }],
+        default: true
       },
       
       # Approval Request Filters
@@ -127,7 +131,8 @@ class CustomFilterAttributesController < ApplicationController
         tag: 'select',
         searchable: true,
         operator: ['is'],
-        options: [{ value: true, name: 'Yes' }]
+        options: [{ value: true, name: 'Yes' }],
+        default: true
       },
       { 
         name: 'not_requested_for_approval', 
@@ -135,7 +140,8 @@ class CustomFilterAttributesController < ApplicationController
         tag: 'select',
         searchable: true,
         operator: ['is'],
-        options: [{ value: true, name: 'Yes' }]
+        options: [{ value: true, name: 'Yes' }],
+        default: true
       },
       
       # Approval Status (keep as select since it has 3 values)

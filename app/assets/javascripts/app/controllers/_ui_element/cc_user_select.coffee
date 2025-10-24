@@ -66,19 +66,8 @@ class App.UiElement.cc_user_select
     attribute.placeholder = __('Type to search users...')
     attribute.options = userOptions
     
-    # Ensure selected users are in App.User cache
-    for option in userOptions
-      if !App.User.exists(option.value)
-        # Create minimal User object in cache
-        App.User.refresh([{
-          id: option.value
-          firstname: option.name.split('(')[0].trim()
-          lastname: ''
-          login: option.name
-          email: option.name.match(/\((.*?)\)/)?[1] || ''
-        }], clear: false)
-    
     # Render with Zammad's standard searchable_select
+    # CRITICAL: Don't populate App.User cache - it might cause searchable_select to reload users
     element = App.UiElement.searchable_select.render(attribute, params)
     
     # Add backend search functionality
