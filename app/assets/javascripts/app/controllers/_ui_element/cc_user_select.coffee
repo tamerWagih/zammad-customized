@@ -20,7 +20,8 @@ class App.UiElement.cc_user_select
         console.log "[CC_USERS] Preloaded #{users.length} users"
         
         for user in users
-          continue if user.id == currentUserId
+          # CRITICAL: Compare as strings to avoid type mismatch issues
+          continue if String(user.id) == String(currentUserId)
           
           displayName = "#{user.firstname || ''} #{user.lastname || ''}".trim()
           displayName = user.login if displayName == ''
@@ -111,7 +112,8 @@ class App.UiElement.cc_user_select
               
               # Add new users to options
               for user in users
-                continue if user.id == currentUserId
+                # CRITICAL: Compare as strings to avoid type mismatch issues
+                continue if String(user.id) == String(currentUserId)
                 continue if loadedUserIds.includes(user.id)
                 
                 displayName = "#{user.firstname || ''} #{user.lastname || ''}".trim()
