@@ -11,9 +11,9 @@ class App.UiElement.cc_user_select
     attribute.multiple = true
     attribute.nulloption = true
     attribute.placeholder = __('Click to search for users to CC...')
-    # Keep relation for displaying selected user names
-    # But we override options with our API data
-    attribute.relation = 'User'
+    # DO NOT set attribute.relation = 'User' 
+    # This causes searchable_select to load ALL users from the model
+    # We want ONLY our filtered users from the API
     # Start with empty options - load only when needed
     attribute.options = {}
     
@@ -181,10 +181,11 @@ class App.UiElement.cc_user_select
         
         if users && users.length > 0
           for user in users
-            # Check if this is the current user
+            # CRITICAL: Filter out current user on client side as safety net
             if user.id == currentUserId
               currentUserInList = true
-              console.warn "[CC_USERS] ⚠️ WARNING: Current user #{currentUserId} found in CC list! This should NOT happen!"
+              console.warn "[CC_USERS] ⚠️ WARNING: Current user #{currentUserId} found in API response! Filtering it out..."
+              continue  # SKIP this user
             
             # Build display name
             display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
@@ -297,14 +298,18 @@ class App.UiElement.cc_user_select
         # Restore selection
         selectElement.val(currentValues) if currentValues.length > 0
       
-      # Update dropdown list if it's open
-      if searchableSelectInstance.buildOptionList
-        searchableSelectInstance.buildOptionList()
-      
-      console.log "[CC_USERS] Options updated, dropdown stays open"
-    else
-      console.log "[CC_USERS] No searchable select instance, updating attribute"
-      attribute.options = options
+        # Update dropdown list if it's open
+        if searchableSelectInstance.buildOptionList
+          searchableSelectInstance.buildOptionList()
+        
+        console.log "[CC_USERS] Options updated, dropdown stays open"
+      else
+        console.log "[CC_USERS] No searchable select instance, updating attribute"
+        attribute.options = options
+        
+        # Re-render with new options
+        newElement = App.UiElement.searchable_select.render(attribute, params)
+        element.replaceWith(newElement)
 
   # Get the selected group ID from the form or attribute
   @getSelectedGroupId: (attribute) ->
