@@ -19,7 +19,7 @@ class App.UiElement.cc_user_select
         users = if data.users then data.users else data
         console.log "[CC_USERS] Preloaded #{users.length} users"
         
-          for user in users
+        for user in users
           continue if user.id == currentUserId
           
           displayName = "#{user.firstname || ''} #{user.lastname || ''}".trim()
