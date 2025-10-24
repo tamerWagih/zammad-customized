@@ -4,9 +4,7 @@ class App.UiElement.cc_user_select
     # Hybrid approach: Small preload + backend search on demand
     # Best of both worlds: fast initial load + unlimited searchability
     
-    console.log "[CC_USERS] Rendering CC user select"
     currentUserId = App.Session.get('id')
-    console.log "[CC_USERS] Current user ID:", currentUserId, "(type: #{typeof currentUserId})"
     
     # Load initial 100 users for immediate dropdown (fast!)
     userOptions = []
@@ -18,13 +16,10 @@ class App.UiElement.cc_user_select
       async: false
       success: (data) ->
         users = if data.users then data.users else data
-        console.log "[CC_USERS] Preloaded #{users.length} users from backend"
         
         for user in users
           # CRITICAL: Compare as strings to avoid type mismatch issues
-          if String(user.id) == String(currentUserId)
-            console.log "[CC_USERS] FILTERING OUT current user:", user.id, user.login
-            continue
+          continue if String(user.id) == String(currentUserId)
           
           displayName = "#{user.firstname || ''} #{user.lastname || ''}".trim()
           displayName = user.login if displayName == ''
@@ -60,7 +55,6 @@ class App.UiElement.cc_user_select
               name: displayName
             })
             loadedUserIds.push(user.id)
-            console.log "[CC_USERS] Loaded selected user #{user.id}: #{displayName}"
         )
     
     # Configure searchable multi-select
@@ -71,8 +65,6 @@ class App.UiElement.cc_user_select
     # We provide explicit options with current user already filtered out
     attribute.placeholder = __('Type to search users...')
     attribute.options = userOptions
-    
-    console.log "[CC_USERS] Configured searchable_select with #{userOptions.length} filtered options (no relation set)"
     
     # Ensure selected users are in App.User cache
     for option in userOptions
@@ -85,13 +77,6 @@ class App.UiElement.cc_user_select
           login: option.name
           email: option.name.match(/\((.*?)\)/)?[1] || ''
         }], clear: false)
-    
-    # Final verification - check if current user is in the list
-    currentUserInList = userOptions.some (opt) -> String(opt.value) == String(currentUserId)
-    console.log "[CC_USERS] Final user list: #{userOptions.length} users"
-    console.log "[CC_USERS] Current user (#{currentUserId}) in final list?", currentUserInList
-    if currentUserInList
-      console.error "[CC_USERS] ❌ BUG: Current user should NOT be in list!"
     
     # Render with Zammad's standard searchable_select
     element = App.UiElement.searchable_select.render(attribute, params)
@@ -114,21 +99,16 @@ class App.UiElement.cc_user_select
         )
         
         if matchingOptions.length == 0
-          console.log "[CC_USERS] No match in preloaded users, searching backend for: #{query}"
-          
           $.ajax(
             type: 'GET'
             url: "#{App.Config.get('api_path')}/tickets/cc_users?search=#{encodeURIComponent(query)}&per_page=100"
             success: (data) ->
               users = if data.users then data.users else data
-              console.log "[CC_USERS] Backend search found #{users.length} users"
               
               # Add new users to options
               for user in users
                 # CRITICAL: Compare as strings to avoid type mismatch issues
-                if String(user.id) == String(currentUserId)
-                  console.log "[CC_USERS] FILTERING OUT current user from search:", user.id, user.login
-                  continue
+                continue if String(user.id) == String(currentUserId)
                 continue if loadedUserIds.includes(user.id)
                 
                 displayName = "#{user.firstname || ''} #{user.lastname || ''}".trim()
@@ -148,5 +128,4 @@ class App.UiElement.cc_user_select
           )
       , 500)
     
-    console.log "[CC_USERS] Rendered with #{userOptions.length} options + backend search"
     element

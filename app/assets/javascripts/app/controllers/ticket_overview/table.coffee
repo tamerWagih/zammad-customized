@@ -65,8 +65,6 @@ class App.TicketOverviewTable extends App.Controller
     else if overview && overview.id
       @overview = App.Overview.find(overview.id)
     else
-      # Handle case where overview is undefined or invalid
-      console.warn('[OVERVIEW] Invalid overview data:', overview)
       return
 
     @removePopovers()
@@ -111,8 +109,6 @@ class App.TicketOverviewTable extends App.Controller
     else if overview && overview.id
       @overview = App.Overview.find(overview.id)
     else
-      # Handle case where overview is undefined or invalid
-      console.error('[OVERVIEW] Cannot render - invalid overview data:', overview)
       return
 
     # render init page
