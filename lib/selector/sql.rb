@@ -312,7 +312,7 @@ class Selector::Sql < Selector::Base
       # Check VALUE (true/false) not just operator
       if current_user
         # value = true => show tickets where I HAVE pending approvals
-        # value = false => show tickets where I DON'T HAVE pending approvals
+        # value = false => show tickets where I'm approver but NOT pending (approved/rejected)
         should_include = (block_condition[:value] == true || block_condition[:value] == 'true')
         
         if should_include
@@ -320,8 +320,9 @@ class Selector::Sql < Selector::Base
           query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
           bind_params.push current_user.id
         else
-          # No - show tickets where I DON'T have pending approvals
-          query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
+          # No - show tickets where I'm approver but status is NOT pending
+          # This only shows MY approval tickets that are approved/rejected (not pending)
+          query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE approver_id = ? AND status != 'pending')"
           bind_params.push current_user.id
         end
       end

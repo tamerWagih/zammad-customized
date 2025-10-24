@@ -387,24 +387,29 @@ class App.UiElement.ApplicationSelector
   @preview: (item) ->
     params = App.ControllerForm.params(item)
     
-    # Check if we're in custom filter mode by looking for the modal class
+    # Check if we're in custom filter mode by multiple methods
     isCustomFilterMode = item.closest('.custom-filter-modal').length > 0
     
+    # Also check if attribute has customFilterMode flag
+    if !isCustomFilterMode
+      conditionField = item.find('[name="condition"]')
+      if conditionField.length > 0
+        fieldData = conditionField.data()
+        isCustomFilterMode = fieldData?.customFilterMode == true
+    
     console.log "[SELECTOR_PREVIEW] Item:", item
+    console.log "[SELECTOR_PREVIEW] Modal check:", item.closest('.custom-filter-modal').length
     console.log "[SELECTOR_PREVIEW] Is custom filter mode:", isCustomFilterMode
     console.log "[SELECTOR_PREVIEW] Params:", params
     
-    # Use custom filter selector endpoint for custom filters
-    previewUrl = if isCustomFilterMode
-      "#{App.Config.get('api_path')}/custom_filter_selectors/preview"
-    else
-      "#{App.Config.get('api_path')}/tickets/selector"
+    # ALWAYS use custom filter endpoint for safety (agents should use this)
+    # Only admins can use /tickets/selector
+    previewUrl = "#{App.Config.get('api_path')}/custom_filter_selectors/preview"
     
     console.log "[SELECTOR_PREVIEW] Using URL:", previewUrl
     
-    # Add object type for custom filter endpoint
-    if isCustomFilterMode
-      params.object = 'tickets'
+    # Add object type
+    params.object = 'tickets'
     
     App.Ajax.request(
       id:    'application_selector'
