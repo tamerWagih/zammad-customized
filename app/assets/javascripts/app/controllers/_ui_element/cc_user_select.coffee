@@ -11,10 +11,10 @@ class App.UiElement.cc_user_select
     attribute.multiple = true
     attribute.nulloption = true
     attribute.placeholder = __('Click to search for users to CC...')
-    # DO NOT set attribute.relation = 'User' 
-    # This causes searchable_select to load ALL users from the model
-    # We want ONLY our filtered users from the API
-    # Start with empty options - load only when needed
+    # DON'T set relation - it causes component to load from User model
+    # We provide explicit options from our API only
+    attribute.relation = ''
+    # Start with empty options - will be populated from API on click
     attribute.options = {}
     
     # Add performance hints for large datasets
@@ -33,11 +33,19 @@ class App.UiElement.cc_user_select
     element.data('cc-search-cache', {})  # Cache for search results
     element.data('cc-last-search-time', 0)  # Prevent excessive API calls
 
-    # Add logging for value changes
+    # Add logging and validation for value changes
+    currentUserId = App.Session.get('id')?.toString()
     element.find('select').on 'change', ->
-      selectedValues = $(this).val()
+      selectedValues = $(this).val() || []
       console.log "[CC_USERS] Selection changed, current values:", selectedValues
-      console.log "[CC_USERS] Selected count:", if selectedValues then selectedValues.length else 0
+      console.log "[CC_USERS] Selected count:", selectedValues.length
+      
+      # CRITICAL: Filter out current user if somehow selected
+      if currentUserId && selectedValues.includes(currentUserId)
+        console.error "[CC_USERS] ❌ CRITICAL: Current user #{currentUserId} was selected! Removing..."
+        filteredValues = selectedValues.filter (id) -> id != currentUserId
+        $(this).val(filteredValues)
+        console.log "[CC_USERS] Filtered to:", filteredValues
 
     # Bind lazy loading to dropdown events
     @bindLazyLoading(element, attribute, params)
@@ -274,6 +282,9 @@ class App.UiElement.cc_user_select
 
   # Update dropdown options without closing dropdown
   @updateDropdownOptions: (element, attribute, params, options) ->
+    # Update attribute options for the component
+    attribute.options = options
+    
     # Find searchable select instance
     searchableSelectInstance = element.data('controller')
     
@@ -286,30 +297,18 @@ class App.UiElement.cc_user_select
       # Update the select element options
       selectElement = element.find('select')
       if selectElement.length > 0
-        # Remember current selection
-        currentValues = selectElement.val() || []
-        
-        # Clear and rebuild options
+        # Clear and rebuild options (don't preserve selection as it might be invalid)
         selectElement.empty()
         for id, name of options
           option = $('<option></option>').attr('value', id).text(name)
           selectElement.append(option)
         
-        # Restore selection
-        selectElement.val(currentValues) if currentValues.length > 0
-      
-        # Update dropdown list if it's open
-        if searchableSelectInstance.buildOptionList
-          searchableSelectInstance.buildOptionList()
+        # Trigger change to update UI
+        selectElement.trigger('change')
         
-        console.log "[CC_USERS] Options updated, dropdown stays open"
-      else
-        console.log "[CC_USERS] No searchable select instance, updating attribute"
-        attribute.options = options
-        
-        # Re-render with new options
-        newElement = App.UiElement.searchable_select.render(attribute, params)
-        element.replaceWith(newElement)
+        console.log "[CC_USERS] Options updated"
+    else
+      console.log "[CC_USERS] No searchable select instance"
 
   # Get the selected group ID from the form or attribute
   @getSelectedGroupId: (attribute) ->
