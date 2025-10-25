@@ -99,6 +99,13 @@ class TicketOverviewsController < ApplicationController
   def count_tickets_for_filter(filter)
     condition = filter['condition'] || {}
     
+    # Clean up empty values in condition (fix value=[] issue)
+    condition.each do |key, value_hash|
+      if value_hash.is_a?(Hash) && value_hash[:value].is_a?(Array) && value_hash[:value].empty?
+        condition.delete(key)
+      end
+    end
+    
     # Use Ticket.selectors (like preview) to count with proper scopes
     ticket_count, _tickets = Ticket.selectors(
       condition,
@@ -118,6 +125,13 @@ class TicketOverviewsController < ApplicationController
     condition = filter['condition'] || {}
     order = filter['order'] || { 'by' => 'created_at', 'direction' => 'DESC' }
     view = filter['view'] || { 's' => ['number', 'title', 'customer', 'state', 'created_at'] }
+    
+    # Clean up empty values in condition (fix value=[] issue)
+    condition.each do |key, value_hash|
+      if value_hash.is_a?(Hash) && value_hash[:value].is_a?(Array) && value_hash[:value].empty?
+        condition.delete(key)
+      end
+    end
     
     # Build the overview object first (so it's always available even on error)
     overview_data = {
