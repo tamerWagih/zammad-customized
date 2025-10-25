@@ -16,7 +16,7 @@ class Tickets::CcUsersController < ApplicationController
 
     # Get pagination and search
     page = params[:page]&.to_i || 1
-    per_page = [params[:per_page]&.to_i || 200, 500].min  # Allow up to 500
+    per_page = [params[:per_page]&.to_i || 1000, 1000].min
     search_query = (params[:search] || params[:term] || params[:query])&.strip
     offset = (page - 1) * per_page
 
@@ -24,7 +24,7 @@ class Tickets::CcUsersController < ApplicationController
     base_users = User.where(active: true)
                      .where.not(id: current_user.id)
     
-    # Filter to only agents and customers (in Ruby - more reliable)
+    # Filter to only agents and customers
     all_users = base_users.select do |user|
       user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
     end
