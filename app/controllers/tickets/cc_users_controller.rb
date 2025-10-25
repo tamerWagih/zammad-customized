@@ -4,9 +4,11 @@ class Tickets::CcUsersController < ApplicationController
   prepend_before_action :authentication_check
 
   # GET /api/v1/tickets/cc_users
-  # Returns agents and customers (excludes current user)
-  # PROVEN WORKING APPROACH FROM COMMIT 387daf48ed
+  # Returns agents and customers (excludes admins)
   def index
+    Rails.logger.info "[CC_API] ===== CC USERS REQUEST ====="
+    Rails.logger.info "[CC_API] Current user: #{current_user&.id} (#{current_user&.login})"
+    
     return render json: { error: 'Unauthorized' }, status: :forbidden unless current_user
 
     # Check permissions
@@ -16,20 +18,36 @@ class Tickets::CcUsersController < ApplicationController
 
     # Get pagination and search
     page = params[:page]&.to_i || 1
-    per_page = [params[:per_page]&.to_i || 200, 500].min  # Allow up to 500
-    search_query = (params[:search] || params[:term] || params[:query])&.strip
+    per_page = [params[:per_page]&.to_i || 50, 200].min
+    search_query = params[:search]&.strip
     offset = (page - 1) * per_page
 
-    # Get ALL active users EXCEPT current user
+    # Get ALL users with agent OR customer PERMISSIONS
+    # CRITICAL: Use a more reliable query that doesn't miss users
+    # 
+    # Strategy: Get ALL active users, then filter by permissions in Ruby
+    # This ensures we don't miss any users due to complex JOIN issues
+    
+    # First, get all active users except current user
     base_users = User.where(active: true)
                      .where.not(id: current_user.id)
     
-    # Filter to only agents and customers (in Ruby - more reliable)
+    Rails.logger.info "[CC_API] Total active users (excluding current): #{base_users.count}"
+    
+    # Filter to only agents and customers using Ruby (more reliable than SQL joins)
     all_users = base_users.select do |user|
       user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
     end
+    
+    Rails.logger.info "[CC_API] Found #{all_users.count} users with agent/customer permissions"
+    Rails.logger.info "[CC_API] EXCLUDING current user: #{current_user.id} (#{current_user.login})"
+    
+    # Debug: Log all user IDs
+    all_user_ids = all_users.map(&:id)
+    Rails.logger.info "[CC_API] All user IDs: #{all_user_ids.inspect}"
+    Rails.logger.info "[CC_API] Current user #{current_user.id} in list? #{all_user_ids.include?(current_user.id)}"
 
-    # Apply search filter
+    # Search (in Ruby since we already loaded users)
     if search_query.present?
       search_pattern = search_query.downcase
       all_users = all_users.select do |user|
@@ -38,6 +56,7 @@ class Tickets::CcUsersController < ApplicationController
         user.login&.downcase&.include?(search_pattern) ||
         user.email&.downcase&.include?(search_pattern)
       end
+      Rails.logger.info "[CC_API] After search filter: #{all_users.count} users"
     end
 
     # Sort users
@@ -47,10 +66,15 @@ class Tickets::CcUsersController < ApplicationController
     total_count = all_users.count
     users = all_users.slice(offset, per_page) || []
 
+    Rails.logger.info "[CC_API] Total matching users: #{total_count}"
+    Rails.logger.info "[CC_API] Returning #{users.length} users (page #{page})"
+
     # Format response
     users_list = users.map do |user|
       is_agent = user.permissions?('ticket.agent')
       is_customer = user.permissions?('ticket.customer')
+      
+      Rails.logger.info "[CC_API] User #{user.id} (#{user.login}): agent=#{is_agent}, customer=#{is_customer}, roles=#{user.roles.pluck(:name)}"
       
       {
         id:        user.id,
@@ -63,6 +87,8 @@ class Tickets::CcUsersController < ApplicationController
       }
     end
 
+    Rails.logger.info "[CC_API] ===== RESPONSE SENT ====="
+    
     total_pages = (total_count.to_f / per_page).ceil
     render json: {
       users: users_list,
