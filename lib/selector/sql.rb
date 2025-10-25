@@ -278,7 +278,10 @@ class Selector::Sql < Selector::Base
       end
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'shared_with_me'
       # SIMPLIFIED: Show only tickets shared with me
-      # No operator, no value - just presence of this filter
+      # Skip if value is empty (not selected)
+      value = Array(block_condition[:value]).compact
+      next if value.blank?
+      
       raise "shared_with_me requires current_user" unless current_user
       
       user_groups = current_user.group_ids_access('read') rescue []
@@ -286,7 +289,7 @@ class Selector::Sql < Selector::Base
       
       Rails.logger.info "SQL: shared_with_me user_groups=#{user_groups.inspect}, user_id=#{current_user.id}"
       
-      query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
+      query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR user_id = ?))"
       bind_params.push user_groups
       bind_params.push current_user.id
     
@@ -317,7 +320,10 @@ class Selector::Sql < Selector::Base
       end
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
       # SIMPLIFIED: Show only tickets where approval is requested FROM ME (I'm the approver)
-      # No operator, no value - just presence of this filter
+      # Skip if value is empty (not selected)
+      value = Array(block_condition[:value]).compact
+      next if value.blank?
+      
       raise "requested_for_approval requires current_user" unless current_user
       
       Rails.logger.info "SQL: requested_for_approval user_id=#{current_user.id}"
@@ -327,21 +333,30 @@ class Selector::Sql < Selector::Base
     
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'not_requested_for_approval'
       # SIMPLIFIED: Show only tickets where I'm NOT the approver
-      # No operator, no value - just presence of this filter
+      # Skip if value is empty (not selected)
+      value = Array(block_condition[:value]).compact
+      next if value.blank?
+      
       raise "not_requested_for_approval requires current_user" unless current_user
       
       query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
       bind_params.push current_user.id
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'is_approved'
       # SIMPLIFIED: Show only tickets with 'approved' tag
-      # No operator, no value - just presence of this filter
+      # Skip if value is empty (not selected)
+      value = Array(block_condition[:value]).compact
+      next if value.blank?
+      
       Rails.logger.info "SQL: is_approved filter added"
-      query << "tickets.id IN (SELECT taggable_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'approved' AND tags.taggable_type = 'Ticket')"
+      query << "tickets.id IN (SELECT tags.o_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'approved' AND tags.o_type = 'Ticket')"
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'is_rejected'
       # SIMPLIFIED: Show only tickets with 'rejected' tag
-      # No operator, no value - just presence of this filter
+      # Skip if value is empty (not selected)
+      value = Array(block_condition[:value]).compact
+      next if value.blank?
+      
       Rails.logger.info "SQL: is_rejected filter added"
-      query << "tickets.id IN (SELECT taggable_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'rejected' AND tags.taggable_type = 'Ticket')"
+      query << "tickets.id IN (SELECT tags.o_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'rejected' AND tags.o_type = 'Ticket')"
     elsif attribute_table == 'user' && attribute_name == 'role_ids'
       query << if block_condition[:operator] == 'is'
                  "users.id IN (
