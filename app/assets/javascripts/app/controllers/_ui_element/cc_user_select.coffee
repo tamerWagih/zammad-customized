@@ -16,7 +16,7 @@ class App.UiElement.cc_user_select
     attribute.placeholder = __('Loading users...')
     
     # Load users from backend API
-    options = {}
+    options = []  # CRITICAL: Array, not object! (fixes IDs issue)
     currentUserId = App.Session.get('id')
     
     App.Ajax.request(
@@ -38,20 +38,20 @@ class App.UiElement.cc_user_select
             display_name = user.login if display_name == ''
             display_name = user.email if !display_name
             
-            # Add user type and email
-            user_type = if user.user_type == 'agent' then 'Agent' else 'Customer'
+            # Add email (NO ROLE - removed per user request)
             if user.email
-              display_name += " (#{user.email}) [#{user_type}]"
-            else
-              display_name += " [#{user_type}]"
+              display_name += " (#{user.email})"
             
-            # Store as string key (required by searchable_select)
-            options[user.id.toString()] = display_name
+            # CRITICAL: Push as {value, name} object for searchable_select (fixes IDs issue)
+            options.push({
+              value: user.id.toString()
+              name: display_name
+            })
     )
     
     # Set options and render
-    attribute.options = if Object.keys(options).length > 0 then options else {}
-    attribute.placeholder = if Object.keys(options).length > 0 then __('Select users to CC...') else __('No users available')
+    attribute.options = if options.length > 0 then options else []
+    attribute.placeholder = if options.length > 0 then __('Select users to CC...') else __('No users available')
     
     # Render searchable_select with all options
     element = App.UiElement.searchable_select.render(attribute, params)
