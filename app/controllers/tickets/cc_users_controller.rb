@@ -35,6 +35,8 @@ class Tickets::CcUsersController < ApplicationController
     # CRITICAL: Exclude current user (ticket creator)
     search_pattern = "%#{search_query}%"
     
+    Rails.logger.info "CC search: query='#{search_query}', current_user=#{current_user.id}"
+    
     users = User.where(active: true)
                 .where.not(id: current_user.id)
                 .where(
@@ -44,8 +46,12 @@ class Tickets::CcUsersController < ApplicationController
                 .order(:firstname, :lastname)
                 .limit(100)  # Max 100 results
     
+    Rails.logger.info "CC search: found #{users.count} users before permission filter"
+    
     # Filter to only agents and customers
     users = users.select { |u| u.permissions?('ticket.agent') || u.permissions?('ticket.customer') }
+    
+    Rails.logger.info "CC search: #{users.count} users after permission filter"
     
     total_count = users.count
 
