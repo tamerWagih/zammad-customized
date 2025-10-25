@@ -1,73 +1,67 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
+    # PROVEN WORKING APPROACH FROM COMMIT 387daf48ed
+    # Load ALL users from backend, build options, render searchable_select
+    # FIX: Also load selected user data to show names not IDs
     
-    # Get current user ID
-    currentUserId = String(App.Session.get('id'))
+    attribute.tag = 'searchable_select'
+    attribute.multiple = true
+    attribute.nulloption = true
+    attribute.relation = ''  # CRITICAL: Empty, NOT 'User'!
+    attribute.placeholder = __('Loading users...')
     
-    # Fetch initial users from backend (already excludes current user)
-    userOptions = []
+    # Load users from backend API
+    options = {}
+    currentUserId = App.Session.get('id')
     
-    $.ajax(
+    App.Ajax.request(
+      type: 'GET'
       url: "#{App.Config.get('api_path')}/tickets/cc_users"
       data:
-        term: 'a'  # Get users starting with 'a' (or any letter) for initial load
-        per_page: 100
+        term: 'a'  # Get users (backend filters current user)
+        per_page: 200
       async: false
       success: (data) ->
-        if data && Array.isArray(data)
-          userOptions = data.map (item) ->
-            # Backend already excludes current user, but double-check
-            return null if String(item.id) == currentUserId
+        users = if data.users then data.users else data
+        
+        if users && users.length > 0
+          for user in users
+            # Skip current user (backend should already exclude)
+            continue if user.id == currentUserId
             
-            {
-              value: item.id
-              name: item.label
-            }
-          userOptions = userOptions.filter (opt) -> opt != null
+            # Build display name
+            display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
+            display_name = user.login if display_name == ''
+            display_name = user.email if !display_name
+            
+            # Add email and type
+            user_type = if user.user_type == 'agent' then 'Agent' else 'Customer'
+            if user.email
+              display_name += " (#{user.email}) [#{user_type}]"
+            else
+              display_name += " [#{user_type}]"
+            
+            # Store as string key (required by searchable_select)
+            options[user.id.toString()] = display_name
+            
+            # FIX: Ensure user is in App.User cache to show name not ID
+            if !App.User.exists(user.id)
+              App.User.refresh([{
+                id: user.id
+                firstname: user.firstname
+                lastname: user.lastname
+                login: user.login
+                email: user.email
+                active: user.active
+              }], clear: false)
     )
     
-    # Configure for searchable_select
-    attribute.multiple = true
-    attribute.nulloption = false
-    attribute.placeholder = __('Type to search users...')
-    attribute.options = userOptions
-    # CRITICAL: Do NOT set attribute.relation = 'User' !!!
-    # This bypasses our filtered options and loads all users from cache
+    # Set options
+    attribute.options = options
+    attribute.placeholder = if Object.keys(options).length > 0 then __('Select users to CC...') else __('No users available')
     
     # Render searchable_select
     element = App.UiElement.searchable_select.render(attribute, params)
-    
-    # Add dynamic search
-    searchTimer = null
-    element.on 'input', '.select2-search__field', (e) ->
-      query = $(e.target).val()?.trim()
-      return if !query || query.length < 2
-      
-      clearTimeout(searchTimer) if searchTimer
-      searchTimer = setTimeout(->
-        $.ajax(
-          url: "#{App.Config.get('api_path')}/tickets/cc_users"
-          data:
-            term: query
-          success: (data) ->
-            if data && Array.isArray(data)
-              select2 = element.find('select')
-              
-              # Get currently selected IDs to preserve them
-              selectedIds = select2.val() || []
-              
-              # Rebuild options
-              select2.empty()
-              
-              for item in data
-                continue if String(item.id) == currentUserId
-                
-                isSelected = selectedIds.includes(String(item.id))
-                option = new Option(item.label, item.id, false, isSelected)
-                select2.append(option)
-              
-              select2.trigger('change')
-      , 300)
     
     element
