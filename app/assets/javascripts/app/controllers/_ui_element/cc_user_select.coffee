@@ -1,18 +1,15 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
-    # PROPER APPROACH (like Approval Request Modal):
-    # 1. Load ALL agents/customers from backend API
-    # 2. Build options object
-    # 3. Render searchable_select with options
-    # 
-    # DON'T use relation='User' - cache doesn't have all users!
-    # (Only has users from current session activities)
+    # HYBRID APPROACH:
+    # 1. Load ALL agents/customers from backend API for DROPDOWN
+    # 2. Use relation='User' for TOKEN DISPLAY (from App.User cache)
+    # 3. Best of both worlds: filtered dropdown + proper token names
     
     attribute.tag = 'searchable_select'
     attribute.multiple = true
     attribute.nulloption = true
-    attribute.relation = ''  # Empty - we provide explicit options
+    attribute.relation = 'User'  # CRITICAL: Use User relation for token name display
     attribute.placeholder = __('Loading users...')
     
     # Load users synchronously from our dedicated endpoint
