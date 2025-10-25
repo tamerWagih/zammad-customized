@@ -19,8 +19,7 @@ class App.UiElement.cc_user_select
       type: 'GET'
       url: "#{App.Config.get('api_path')}/tickets/cc_users"
       data:
-        term: 'a'  # Get users (backend filters current user)
-        per_page: 200
+        per_page: 200  # Get first 200 users (no search filter = all users)
       async: false
       success: (data) ->
         users = if data.users then data.users else data
