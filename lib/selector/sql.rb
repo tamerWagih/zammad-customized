@@ -286,9 +286,9 @@ class Selector::Sql < Selector::Base
       
       Rails.logger.info "SQL: shared_with_me user_groups=#{user_groups.inspect}, user_id=#{current_user.id}"
       
-      query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
+      # ticket_shares only has group_id (not individual user sharing)
+      query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
       bind_params.push user_groups
-      bind_params.push current_user.id
     
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'not_shared_with_me'
       # SIMPLIFIED: Show only tickets NOT shared with me
@@ -298,9 +298,9 @@ class Selector::Sql < Selector::Base
       user_groups = current_user.group_ids_access('read') rescue []
       user_groups = [0] if user_groups.blank?
       
-      query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
+      # ticket_shares only has group_id (not individual user sharing)
+      query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
       bind_params.push user_groups
-      bind_params.push current_user.id
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'approval_status'
       # Handle approval status selector (ONLY in custom filter context)
       # Shows ALL tickets with specific approval status (any approver, not just me)
