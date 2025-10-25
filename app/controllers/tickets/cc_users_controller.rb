@@ -76,5 +76,9 @@ class Tickets::CcUsersController < ApplicationController
         has_next_page: page < total_pages
       }
     }
+  rescue => e
+    Rails.logger.error "CC users API error: #{e.class}: #{e.message}"
+    Rails.logger.error e.backtrace.first(10).join("\n")
+    render json: { error: e.message, users: [], total: 0 }, status: 500
   end
 end
