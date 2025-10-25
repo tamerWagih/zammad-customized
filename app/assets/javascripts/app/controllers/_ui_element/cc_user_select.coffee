@@ -51,6 +51,7 @@ class App.UiElement.cc_user_select
       )
     
     # Create custom SearchableAjaxSelect for CC users
+    console.log '[CC_SELECT] Using SearchableAjaxSelect for server-side search'
     new App.CcUserAjaxSelect(attribute: attribute, params: params).element()
 
 # Custom SearchableAjaxSelect for CC users
@@ -61,6 +62,8 @@ class App.CcUserAjaxSelect extends App.SearchableAjaxSelect
     query = @input.val()
     cacheKey = @cacheKey()
     
+    console.log "[CC_AJAX] Searching users with query: '#{query}'"
+    
     {
       id:   @options.attribute.id
       type: 'GET'
@@ -70,10 +73,12 @@ class App.CcUserAjaxSelect extends App.SearchableAjaxSelect
         per_page: @options.attribute.limit || 50
       processData: true
       success: (data, status, xhr) =>
+        console.log "[CC_AJAX] Received #{data.users?.length || 0} users"
         # Cache search result
         @searchResultCache[cacheKey] = data
         @renderResponse(data, query)
       error: =>
+        console.error "[CC_AJAX] Failed to load users"
         @hideLoader()
     }
   
