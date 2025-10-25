@@ -3,6 +3,10 @@
 # Custom SearchableAjaxSelect for CC users
 class App.CcUserAjaxSelect extends App.SearchableAjaxSelect
   
+  constructor: ->
+    super
+    # Initialize search result cache (inherited from parent)
+  
   # Override to use our custom CC users endpoint
   ajaxAttributes: =>
     query = @input.val()
@@ -40,7 +44,7 @@ class App.CcUserAjaxSelect extends App.SearchableAjaxSelect
     users = if data.users then data.users else data
     return if !users
     
-    # Convert users to options format
+    # Convert users to options format {name, value}
     currentUserId = App.Session.get('id')
     options = []
     
@@ -57,28 +61,11 @@ class App.CcUserAjaxSelect extends App.SearchableAjaxSelect
         value: user.id.toString()
       })
     
-    # Update options
-    @attribute.options = options
+    # Update options using parent's renderOptions method
+    @optionsList.html @renderOptions(options)
     
-    # rebuild options list
-    @optionsList.empty()
-    @optionsList.html(@renderOptions(options))
-    
-    # Re-filter by current query (in case user kept typing)
-    currentQuery = @input.val()
-    if currentQuery isnt originalQuery
-      @filterByQuery(currentQuery)
-    else
-      @filterByQuery(query: originalQuery, force: true)
-  
-  # Override to render options in correct format
-  renderOptions: (options) ->
-    html = ''
-    for option in options
-      html += "<div class='searchableSelect-option js-option' data-value='#{option.value}'>"
-      html += "<span class='searchableSelect-option-text'>#{option.name}</span>"
-      html += "</div>"
-    html
+    # Refresh elements (CRITICAL - updates internal state)
+    @refreshElements()
 
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
@@ -89,10 +76,11 @@ class App.UiElement.cc_user_select
     # - Multi-select: Supports multiple CC users
     # - Caching: Same search queries use cached results
     
-    # Note: attribute.tag not needed - we directly instantiate CcUserAjaxSelect
+    # Configure attribute for SearchableAjaxSelect
     attribute.multiple = true
     attribute.nulloption = true
-    attribute.relation = ''  # Empty - we provide custom AJAX search
+    attribute.relation = ''  # Empty - we use custom endpoint, not standard search
+    attribute.ajax = true  # Enable AJAX search mode
     attribute.placeholder = __('Type to search users...')
     attribute.limit = 50  # Max results per search request
     
