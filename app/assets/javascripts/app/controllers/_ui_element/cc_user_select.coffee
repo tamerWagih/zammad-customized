@@ -70,60 +70,7 @@ class App.UiElement.cc_user_select
           })
     
     # Render searchable_select with all options AND pre-rendered tokens
+    # Note: SearchableSelect has built-in client-side filtering (types to filter the 200 users)
     element = App.UiElement.searchable_select.render(attribute, params)
-    
-    # Add dynamic search support - load more users from server on search
-    searchInput = element.find('.js-input')
-    if searchInput.length
-      searchInput.on 'input', _.debounce( ->
-        query = $(this).val()?.trim()
-        return if !query || query.length < 2  # Minimum 2 characters
-        
-        # Load matching users from server
-        App.Ajax.request(
-          type: 'GET'
-          url: "#{App.Config.get('api_path')}/tickets/cc_users?per_page=200&search=#{encodeURIComponent(query)}"
-          success: (data) ->
-            users = if data.users then data.users else data
-            return if !users || users.length == 0
-            
-            # Find the SearchableSelect controller instance
-            controller = element.data('controller')
-            return if !controller
-            
-            # Build new options (keeping existing + adding search results)
-            newOptions = []
-            existingValues = {}
-            
-            # Keep existing options
-            if controller.attribute.options
-              for opt in controller.attribute.options
-                newOptions.push(opt)
-                existingValues[opt.value] = true
-            
-            # Add search results (only new ones)
-            for user in users
-              continue if user.id == currentUserId
-              userId = user.id.toString()
-              continue if existingValues[userId]  # Skip duplicates
-              
-              display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
-              display_name = user.login if display_name == ''
-              display_name = user.email if !display_name
-              display_name += " (#{user.email})" if user.email
-              
-              newOptions.push({
-                name: display_name
-                value: userId
-              })
-            
-            # Update controller options
-            controller.attribute.options = newOptions
-            
-            # Rebuild dropdown list
-            if controller.buildSelectList
-              controller.buildSelectList()
-        )
-      , 300)  # Debounce 300ms
     
     element
