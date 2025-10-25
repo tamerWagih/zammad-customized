@@ -1,8 +1,7 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
-    # Hybrid approach from commit 0c9c4aa6c7 (fixed IDs issue)
-    # Load users async, properly handle selected values
+    # NEW APPROACH: Pre-load selected users, render with existingTokens
     
     attribute.tag = 'searchable_select'
     attribute.multiple = true
@@ -12,8 +11,29 @@ class App.UiElement.cc_user_select
     attribute.options = []  # Start empty
     
     currentUserId = App.Session.get('id')
+    selectedIds = params.cc_user_ids || []
     
-    # Render first (empty state, non-blocking)
+    # If we have selected CCs, pre-render their tokens (prevents IDs from showing)
+    if selectedIds.length > 0
+      attribute.existingTokens = ''
+      attribute.value = []
+      
+      # Build tokens from App.User cache (for immediate display)
+      for userId in selectedIds
+        continue if userId == currentUserId
+        user = App.User.find(userId) if App.User.exists(userId)
+        if user
+          display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
+          display_name = user.login if display_name == ''
+          display_name = user.email if !display_name
+          display_name += " (#{user.email})" if user.email
+          
+          tokenData = { name: display_name, value: userId.toString() }
+          attribute.value.push(userId.toString())
+          attribute.options.push(tokenData)
+          attribute.existingTokens += App.view('generic/token')(tokenData)
+    
+    # Render with pre-rendered tokens (shows names, not IDs)
     element = App.UiElement.searchable_select.render(attribute, params)
     
     # Load users asynchronously
