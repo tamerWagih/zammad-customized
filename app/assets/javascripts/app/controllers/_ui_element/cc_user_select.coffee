@@ -2,54 +2,72 @@
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
     
-    # Get current user ID for filtering
+    # Get current user ID
     currentUserId = String(App.Session.get('id'))
     
-    # Configure searchable_select (proven to work)
-    # CRITICAL: Do NOT set attribute.relation = 'User' - it bypasses our filtering!
+    # Fetch initial users from backend (already excludes current user)
+    userOptions = []
+    
+    $.ajax(
+      url: "#{App.Config.get('api_path')}/tickets/cc_users"
+      data:
+        term: 'a'  # Get users starting with 'a' (or any letter) for initial load
+        per_page: 100
+      async: false
+      success: (data) ->
+        if data && Array.isArray(data)
+          userOptions = data.map (item) ->
+            # Backend already excludes current user, but double-check
+            return null if String(item.id) == currentUserId
+            
+            {
+              value: item.id
+              name: item.label
+            }
+          userOptions = userOptions.filter (opt) -> opt != null
+    )
+    
+    # Configure for searchable_select
     attribute.multiple = true
     attribute.nulloption = false
-    attribute.placeholder = __('Type to search users (min 2 chars)...')
-    attribute.options = []  # Start empty
+    attribute.placeholder = __('Type to search users...')
+    attribute.options = userOptions
+    # CRITICAL: Do NOT set attribute.relation = 'User' !!!
+    # This bypasses our filtered options and loads all users from cache
     
-    # Render standard searchable_select
+    # Render searchable_select
     element = App.UiElement.searchable_select.render(attribute, params)
     
-    # Manual AJAX search on the rendered element
-    select2 = element.find('select')
+    # Add dynamic search
     searchTimer = null
-    
-    # Hook into select2 search
-    element.on 'select2:opening', ->
-      # Message to type
-      console.log 'CC: Opening - user must type to search'
-    
     element.on 'input', '.select2-search__field', (e) ->
       query = $(e.target).val()?.trim()
-      
-      clearTimeout(searchTimer) if searchTimer
       return if !query || query.length < 2
       
+      clearTimeout(searchTimer) if searchTimer
       searchTimer = setTimeout(->
         $.ajax(
           url: "#{App.Config.get('api_path')}/tickets/cc_users"
           data:
-            term: query  # Use 'term' like native Zammad search
+            term: query
           success: (data) ->
-            # Data is in Zammad's label/value format from model_search_render
-            select2.empty()
-            
-            for item in data
-              # Skip current user (double-check, backend should already filter)
-              continue if String(item.id) == currentUserId
+            if data && Array.isArray(data)
+              select2 = element.find('select')
               
-              # Add to select2
-              option = new Option(item.label, item.id, false, false)
-              $(option).data('inactive', item.inactive) if item.inactive
-              select2.append(option)
-            
-            select2.trigger('change')
-        )
+              # Get currently selected IDs to preserve them
+              selectedIds = select2.val() || []
+              
+              # Rebuild options
+              select2.empty()
+              
+              for item in data
+                continue if String(item.id) == currentUserId
+                
+                isSelected = selectedIds.includes(String(item.id))
+                option = new Option(item.label, item.id, false, isSelected)
+                select2.append(option)
+              
+              select2.trigger('change')
       , 300)
     
     element
