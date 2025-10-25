@@ -7,9 +7,9 @@ class App.UiElement.cc_user_select
     attribute.tag = 'searchable_select'
     attribute.multiple = true
     attribute.nulloption = true
-    attribute.relation = ''  # No relation - use our custom options
+    attribute.relation = 'User'  # Use User relation - displays names from App.User cache
     attribute.placeholder = __('Loading users...')
-    attribute.options = []  # Start empty
+    attribute.options = []  # Start empty (dropdown will be populated async)
     
     currentUserId = App.Session.get('id')
     
