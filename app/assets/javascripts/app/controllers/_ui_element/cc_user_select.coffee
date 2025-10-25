@@ -15,19 +15,18 @@ class App.UiElement.cc_user_select
     attribute.relation = ''  # Empty - we provide explicit options
     attribute.placeholder = __('Loading users...')
     
-    console.log "[CC_USERS] Loading CC users from backend API"
-    
-    # Load users synchronously from our dedicated endpoint
+    # Load users from backend API
     options = {}
     currentUserId = App.Session.get('id')
     
     App.Ajax.request(
       type: 'GET'
       url: "#{App.Config.get('api_path')}/tickets/cc_users"
-      async: false  # Synchronous to get all users before rendering
+      data:
+        per_page: 1000  # Load up to 1000 users
+      async: false
       success: (data) ->
         users = if data.users then data.users else data
-        console.log "[CC_USERS] Loaded #{users?.length || 0} users from API"
         
         if users && users.length > 0
           for user in users
@@ -48,25 +47,21 @@ class App.UiElement.cc_user_select
             
             # Store as string key (required by searchable_select)
             options[user.id.toString()] = display_name
-          
-          console.log "[CC_USERS] Built #{Object.keys(options).length} options from API"
-      error: (xhr) ->
-        console.error "[CC_USERS] Failed to load users:", xhr.status
-        # Leave options empty
     )
     
     # Set options and render
-    if Object.keys(options).length > 0
-      attribute.options = options
-      attribute.placeholder = __('Select users to CC...')
-      console.log "[CC_USERS] Rendering with #{Object.keys(options).length} users"
-    else
-      attribute.options = {}
-      attribute.placeholder = __('No users available')
-      console.log "[CC_USERS] No users available"
+    attribute.options = if Object.keys(options).length > 0 then options else {}
+    attribute.placeholder = if Object.keys(options).length > 0 then __('Select users to CC...') else __('No users available')
     
     # Render searchable_select with all options
     element = App.UiElement.searchable_select.render(attribute, params)
     
-    console.log "[CC_USERS] CC dropdown rendered"
+    # FIX: If params has existing cc_user_ids, ensure they display as names not IDs
+    if params.cc_user_ids && params.cc_user_ids.length > 0
+      selectElement = element.find('select')
+      if selectElement.length > 0
+        stringValues = params.cc_user_ids.map((id) -> id.toString())
+        selectElement.val(stringValues)
+        selectElement.trigger('change')
+    
     element
