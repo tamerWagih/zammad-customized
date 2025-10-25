@@ -57,6 +57,30 @@ class App.UiElement.cc_user_select
               }], clear: false)
     )
     
+    # FIX: Load selected users to ensure they show names not IDs
+    # This handles the case where a ticket is being edited with existing CCs
+    if params.cc_user_ids && params.cc_user_ids.length > 0
+      for userId in params.cc_user_ids
+        # Skip if already loaded
+        continue if options[userId.toString()]
+        
+        # Fetch user data
+        $.ajax(
+          url: "#{App.Config.get('api_path')}/users/#{userId}"
+          async: false
+          success: (user) ->
+            # Add to options
+            display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
+            display_name = user.login if display_name == ''
+            display_name += " (#{user.email})" if user.email
+            
+            options[user.id.toString()] = display_name
+            
+            # Add to cache
+            if !App.User.exists(user.id)
+              App.User.refresh([user], clear: false)
+        )
+    
     # Set options
     attribute.options = options
     attribute.placeholder = if Object.keys(options).length > 0 then __('Select users to CC...') else __('No users available')
