@@ -15,6 +15,14 @@ class CustomFilterSelectorsController < ApplicationController
     # Convert ActionController::Parameters to hash
     condition = params[:condition].to_h rescue {}
     
+    # Clean up empty values in condition (fix value=[] issue)
+    condition.each do |key, value_hash|
+      if value_hash.is_a?(Hash) && value_hash[:value].is_a?(Array) && value_hash[:value].empty?
+        # Remove this condition entirely if value is empty
+        condition.delete(key)
+      end
+    end
+    
     # Handle empty or invalid conditions gracefully
     if condition.blank? || !has_valid_conditions?(condition)
       return render json: {
