@@ -100,14 +100,12 @@ class Ticket::Approval < ApplicationModel
     status.blank? || status == 'pending'
   end
 
-  def search_index_attribute_lookup(record)
-    {
-      ticket_id: record.ticket_id,
-      approver:  record.approver&.fullname,
-      requester: record.requester&.fullname,
-      status:    record.status,
-      message:   record.message,
-    }
+  def search_index_attribute_lookup(include_references: true)
+    attributes = super
+    attributes.merge(
+      approver:  approver&.fullname,
+      requester: requester&.fullname,
+    )
   end
 
   def activity_message

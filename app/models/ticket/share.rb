@@ -103,14 +103,13 @@ class Ticket::Share < ApplicationModel
     self.permissions = ['full'] if permissions.blank?
   end
 
-  def search_index_attribute_lookup(record)
-    {
-      ticket_id: record.ticket_id,
-      group:     record.group&.fullname || record.group&.name,
-      shared_by: record.shared_by&.fullname,
-      permissions: Array(record.permissions).join(', '),
-      message:     record.message,
-    }
+  def search_index_attribute_lookup(include_references: true)
+    attributes = super
+    attributes.merge(
+      group:     group&.fullname || group&.name,
+      shared_by: shared_by&.fullname,
+      permissions: Array(permissions).join(', '),
+    )
   end
 
   def activity_message
