@@ -4,8 +4,7 @@ class Tickets::CcUsersController < ApplicationController
   prepend_before_action :authentication_check
 
   # GET /api/v1/tickets/cc_users
-  # Returns agents and customers (excludes current user)
-  # PROVEN WORKING APPROACH FROM COMMIT 387daf48ed
+  # Returns agents and customers (excludes admins)
   def index
     return render json: { error: 'Unauthorized' }, status: :forbidden unless current_user
 
@@ -16,20 +15,24 @@ class Tickets::CcUsersController < ApplicationController
 
     # Get pagination and search
     page = params[:page]&.to_i || 1
-    per_page = [params[:per_page]&.to_i || 1000, 1000].min
-    search_query = (params[:search] || params[:term] || params[:query])&.strip
+    per_page = [params[:per_page]&.to_i || 50, 1000].min
+    search_query = params[:search]&.strip
     offset = (page - 1) * per_page
 
-    # Get ALL active users EXCEPT current user
+    # Get ALL users with agent OR customer PERMISSIONS
+    # Strategy: Get ALL active users, then filter by permissions in Ruby
+    # This ensures we don't miss any users due to complex JOIN issues
+    
+    # First, get all active users except current user
     base_users = User.where(active: true)
                      .where.not(id: current_user.id)
     
-    # Filter to only agents and customers
+    # Filter to only agents and customers using Ruby (more reliable than SQL joins)
     all_users = base_users.select do |user|
       user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
     end
 
-    # Apply search filter
+    # Search (in Ruby since we already loaded users)
     if search_query.present?
       search_pattern = search_query.downcase
       all_users = all_users.select do |user|
@@ -62,7 +65,7 @@ class Tickets::CcUsersController < ApplicationController
         user_type: is_agent ? 'agent' : 'customer'
       }
     end
-
+    
     total_pages = (total_count.to_f / per_page).ceil
     render json: {
       users: users_list,
