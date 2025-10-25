@@ -2,17 +2,18 @@
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
     # AJAX SELECT APPROACH: Server-side search for unlimited users
-    # Uses SearchableAjaxSelect to load users on-demand via search
-    # - Initial load: Empty or pre-selected users only
+    # Uses SearchableAjaxSelect (extends SearchableSelect) to load users on-demand
+    # - Initial load: Shows first 50 users or pre-selected users
     # - Search: Loads matching users from server dynamically
     # - Multi-select: Supports multiple CC users
+    # - Caching: Same search queries use cached results
     
-    attribute.tag = 'searchable_select'
+    # Note: attribute.tag not needed - we directly instantiate CcUserAjaxSelect
     attribute.multiple = true
     attribute.nulloption = true
-    attribute.relation = ''  # Empty - we provide custom search
+    attribute.relation = ''  # Empty - we provide custom AJAX search
     attribute.placeholder = __('Type to search users...')
-    attribute.limit = 50  # Max results per search
+    attribute.limit = 50  # Max results per search request
     
     # For existing CCs, pre-load their data for token display
     selectedIds = params.cc_user_ids || []
