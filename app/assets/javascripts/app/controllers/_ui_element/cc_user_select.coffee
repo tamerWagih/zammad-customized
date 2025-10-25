@@ -1,76 +1,129 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
-    # SOLUTION: Pre-render tokens with names using existingTokens pattern
-    # 1. Load ALL agents/customers from backend API
-    # 2. Build options for dropdown
-    # 3. Pre-render tokens for selected users (shows names, not IDs!)
+    # AJAX SELECT APPROACH: Server-side search for unlimited users
+    # Uses SearchableAjaxSelect to load users on-demand via search
+    # - Initial load: Empty or pre-selected users only
+    # - Search: Loads matching users from server dynamically
+    # - Multi-select: Supports multiple CC users
     
     attribute.tag = 'searchable_select'
     attribute.multiple = true
     attribute.nulloption = true
-    attribute.relation = ''  # Empty - we provide explicit options
-    attribute.placeholder = __('Loading users...')
+    attribute.relation = ''  # Empty - we provide custom search
+    attribute.placeholder = __('Type to search users...')
+    attribute.limit = 50  # Max results per search
     
-    # Load users synchronously from our dedicated endpoint
-    options = {}
-    users_by_id = {}  # Store user data for token rendering
-    currentUserId = App.Session.get('id')
-    
-    App.Ajax.request(
-      type: 'GET'
-      url: "#{App.Config.get('api_path')}/tickets/cc_users?per_page=200"
-      async: false  # Synchronous to get initial users before rendering
-      success: (data) ->
-        users = if data.users then data.users else data
-        
-        if users && users.length > 0
-          for user in users
-            # Skip current user (backend should already exclude, but safety check)
-            continue if user.id == currentUserId
-            
-            # Build display name (NO ROLE)
-            display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
-            display_name = user.login if display_name == ''
-            display_name = user.email if !display_name
-            
-            # Add email only (no role)
-            if user.email
-              display_name += " (#{user.email})"
-            
-            # Store as string key (required by searchable_select)
-            userId = user.id.toString()
-            options[userId] = display_name
-            users_by_id[userId] = display_name  # Store for token lookup
-      error: (xhr) ->
-        # Leave options empty
-    )
-    
-    # Set options and render
-    if Object.keys(options).length > 0
-      attribute.options = options
-      attribute.placeholder = __('Select users to CC...')
-    else
-      attribute.options = {}
-      attribute.placeholder = __('No users available')
-    
-    # CRITICAL: Pre-render tokens for selected users (prevents IDs from showing)
+    # For existing CCs, pre-load their data for token display
     selectedIds = params.cc_user_ids || []
     if selectedIds.length > 0
       attribute.existingTokens = ''
-      for userId in selectedIds
-        userIdStr = userId.toString()
-        # Look up name from our loaded users
-        userName = users_by_id[userIdStr]
-        if userName
-          # Pre-render token with name (not ID!)
-          attribute.existingTokens += App.view('generic/token')({
-            name: userName   # "Admin Amr (admin-amr@local.com)"
-            value: userIdStr # "346"
-          })
+      attribute.value = []
+      
+      # Load selected users to get their names
+      currentUserId = App.Session.get('id')
+      App.Ajax.request(
+        type: 'GET'
+        url: "#{App.Config.get('api_path')}/tickets/cc_users?per_page=200"
+        async: false  # Need names before rendering
+        success: (data) ->
+          users = if data.users then data.users else data
+          return if !users || users.length == 0
+          
+          for userId in selectedIds
+            userIdStr = userId.toString()
+            continue if userIdStr == currentUserId.toString()
+            
+            # Find user in loaded data
+            user = users.find((u) -> u.id.toString() == userIdStr)
+            if user
+              display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
+              display_name = user.login if display_name == ''
+              display_name = user.email if !display_name
+              display_name += " (#{user.email})" if user.email
+              
+              attribute.value.push(userIdStr)
+              attribute.existingTokens += App.view('generic/token')({
+                name: display_name
+                value: userIdStr
+              })
+      )
     
-    # Render searchable_select with all options AND pre-rendered tokens
-    # Note: SearchableSelect has built-in client-side filtering (types to filter the 200 users)
-    element = App.UiElement.searchable_select.render(attribute, params)
+    # Create custom SearchableAjaxSelect for CC users
+    new App.CcUserAjaxSelect(attribute: attribute, params: params).element()
+
+# Custom SearchableAjaxSelect for CC users
+class App.CcUserAjaxSelect extends App.SearchableAjaxSelect
+  
+  # Override to use our custom CC users endpoint
+  ajaxAttributes: =>
+    query = @input.val()
+    cacheKey = @cacheKey()
     
-    element
+    {
+      id:   @options.attribute.id
+      type: 'GET'
+      url:  "#{App.Config.get('api_path')}/tickets/cc_users"
+      data: 
+        search: query
+        per_page: @options.attribute.limit || 50
+      processData: true
+      success: (data, status, xhr) =>
+        # Cache search result
+        @searchResultCache[cacheKey] = data
+        @renderResponse(data, query)
+      error: =>
+        @hideLoader()
+    }
+  
+  # Override cache key (no object string, just query)
+  cacheKey: =>
+    query = @input.val()
+    "cc_users+#{query}"
+  
+  # Override to handle our custom response format
+  renderResponse: (data, originalQuery) =>
+    @hideLoader()
+    
+    users = if data.users then data.users else data
+    return if !users
+    
+    # Convert users to options format
+    currentUserId = App.Session.get('id')
+    options = []
+    
+    for user in users
+      continue if user.id == currentUserId
+      
+      display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
+      display_name = user.login if display_name == ''
+      display_name = user.email if !display_name
+      display_name += " (#{user.email})" if user.email
+      
+      options.push({
+        name: display_name
+        value: user.id.toString()
+      })
+    
+    # Update options
+    @attribute.options = options
+    
+    # rebuild options list
+    @optionsList.empty()
+    @optionsList.html(@renderOptions(options))
+    
+    # Re-filter by current query (in case user kept typing)
+    currentQuery = @input.val()
+    if currentQuery isnt originalQuery
+      @filterByQuery(currentQuery)
+    else
+      @filterByQuery(query: originalQuery, force: true)
+  
+  # Override to render options in correct format
+  renderOptions: (options) ->
+    html = ''
+    for option in options
+      html += "<div class='searchableSelect-option js-option' data-value='#{option.value}'>"
+      html += "<span class='searchableSelect-option-text'>#{option.name}</span>"
+      html += "</div>"
+    html
