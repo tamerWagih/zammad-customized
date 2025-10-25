@@ -13,44 +13,41 @@ class Tickets::CcUsersController < ApplicationController
     has_access = current_user.permissions.any? { |p| cc_permissions.include?(p.name) }
     return render json: { error: 'Unauthorized' }, status: :forbidden unless has_access
 
-    # Get pagination and search
-    search_query = params[:search]&.strip
+    # Get search query (check multiple param names for compatibility)
+    search_query = (params[:query] || params[:search] || params[:term] || params[:q])&.strip
     
-    # Allow up to 5000 users for dropdown
-    per_page = [params[:per_page]&.to_i || 200, 5000].min
-    page = params[:page]&.to_i || 1
-    offset = (page - 1) * per_page
-
-    # Get ALL users with agent OR customer PERMISSIONS
-    # CRITICAL: Exclude current user (ticket creator) from CC list
-    # On ticket creation page, current user is the creator and shouldn't CC themselves
+    # SIMPLE: No preloading. Only return results when user searches.
+    # This is more efficient and prevents loading thousands of users.
     
-    # First, get all active users except current user (ticket creator)
-    base_users = User.where(active: true)
-                     .where.not(id: current_user.id)
-    
-    # Filter to only agents and customers using Ruby (more reliable than SQL joins)
-    all_users = base_users.select do |user|
-      user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+    if search_query.blank?
+      # No search query = return empty (user must type to search)
+      render json: { users: [], total: 0 }
+      return
     end
-
-    # Search (in Ruby since we already loaded users)
-    if search_query.present?
-      search_pattern = search_query.downcase
-      all_users = all_users.select do |user|
-        user.firstname&.downcase&.include?(search_pattern) ||
-        user.lastname&.downcase&.include?(search_pattern) ||
-        user.login&.downcase&.include?(search_pattern) ||
-        user.email&.downcase&.include?(search_pattern)
-      end
-    end
-
-    # Sort users
-    all_users = all_users.sort_by { |u| [u.firstname || '', u.lastname || '', u.login || ''] }
     
-    # Paginate
-    total_count = all_users.count
-    users = all_users.slice(offset, per_page) || []
+    # Require at least 2 characters to search
+    if search_query.length < 2
+      render json: { users: [], total: 0 }
+      return
+    end
+    
+    # Search in database (SQL ILIKE for performance)
+    # CRITICAL: Exclude current user (ticket creator)
+    search_pattern = "%#{search_query}%"
+    
+    users = User.where(active: true)
+                .where.not(id: current_user.id)
+                .where(
+                  'firstname ILIKE ? OR lastname ILIKE ? OR email ILIKE ? OR login ILIKE ?',
+                  search_pattern, search_pattern, search_pattern, search_pattern
+                )
+                .order(:firstname, :lastname)
+                .limit(100)  # Max 100 results
+    
+    # Filter to only agents and customers
+    users = users.select { |u| u.permissions?('ticket.agent') || u.permissions?('ticket.customer') }
+    
+    total_count = users.count
 
     # Format response
     users_list = users.map do |user|
