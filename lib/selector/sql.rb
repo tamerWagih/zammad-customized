@@ -301,7 +301,7 @@ class Selector::Sql < Selector::Base
       user_groups = current_user.group_ids_access('read') rescue []
       user_groups = [0] if user_groups.blank?
       
-      query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR shared_with_id = ?))"
+      query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND (group_id IN (?) OR user_id = ?))"
       bind_params.push user_groups
       bind_params.push current_user.id
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'approval_status'
