@@ -16,9 +16,6 @@ class App.UiElement.cc_user_select
     # Render first (empty state, non-blocking)
     element = App.UiElement.searchable_select.render(attribute, params)
     
-    # Store attribute reference for later updates
-    element.data('ccAttribute', attribute)
-    
     # Load users asynchronously
     App.Ajax.request(
       type: 'GET'
@@ -80,35 +77,25 @@ class App.UiElement.cc_user_select
         .text(option.name)
       selectElement.append(optionElement)
     
-    # CRITICAL: Also update the visual dropdown HTML (SearchableSelect's rendered options)
-    optionsList = element.find('.js-optionsList')
-    if optionsList.length
-      optionsList.empty()
-      for option in options
-        optionHtml = $("<div class='searchableSelect-option js-option' data-value='#{option.value}'>")
-        optionHtml.append($("<span class='searchableSelect-option-text'>").text(option.name))
-        optionsList.append(optionHtml)
-    
-    # Set selection from params (for editing - render tokens with names)
+    # Set selection from params (for editing)
     if selectedFromParams.length > 0
       valuesToSelect = selectedFromParams.map((id) -> id.toString())
       selectElement.val(valuesToSelect)
-      
-      # Render tokens for pre-selected users (NOW with names available!)
-      tokenContainer = element.find('.js-input').parent()
-      for value in valuesToSelect
-        # Find matching option
-        matchingOption = options.find((opt) -> opt.value == value)
-        if matchingOption
-          # Create token with name (not ID!)
-          tokenHtml = App.view('generic/token')({
-            name: matchingOption.name
-            value: value
-          })
-          tokenContainer.find('.js-input').before(tokenHtml)
     
     # Update placeholder
     element.find('.form-control').attr('placeholder', __('Select users to CC...'))
     
-    # Trigger change to update visual display
-    selectElement.trigger('change')
+    # CRITICAL: Force searchable_select to rebuild its visual display
+    # Find the SearchableSelect controller instance
+    controller = element.data('controller')
+    if controller
+      # Update the options in the controller (THIS is what fixes IDs!)
+      controller.attribute.options = options
+      # Rebuild the select element display if method exists
+      if controller.buildSelectList
+        controller.buildSelectList()
+      # Force UI update
+      selectElement.trigger('change')
+    else
+      # Fallback: just trigger change
+      selectElement.trigger('change')
