@@ -15,7 +15,7 @@ class Tickets::CcUsersController < ApplicationController
 
     # Get pagination and search
     page = params[:page]&.to_i || 1
-    per_page = [params[:per_page]&.to_i || 50, 1000].min
+    per_page = [params[:per_page]&.to_i || 50, 200].min  # Max 200 users per request
     search_query = params[:search]&.strip
     offset = (page - 1) * per_page
 
