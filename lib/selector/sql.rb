@@ -292,10 +292,7 @@ class Selector::Sql < Selector::Base
     
     elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'not_shared_with_me'
       # SIMPLIFIED: Show only tickets NOT shared with me
-      # Skip if value is empty (not selected)
-      value = Array(block_condition[:value]).compact
-      next if value.blank?
-      
+      # If filter is present in condition, apply it (even if value is empty/default)
       raise "not_shared_with_me requires current_user" unless current_user
       
       user_groups = current_user.group_ids_access('read') rescue []
