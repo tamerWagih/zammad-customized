@@ -1,19 +1,20 @@
 # coffeelint: disable=camel_case_classes
 class App.UiElement.cc_user_select
   @render: (attribute, params = {}) ->
-    # HYBRID APPROACH:
-    # 1. Load ALL agents/customers from backend API for DROPDOWN
-    # 2. Use relation='User' for TOKEN DISPLAY (from App.User cache)
-    # 3. Best of both worlds: filtered dropdown + proper token names
+    # SOLUTION: Pre-render tokens with names using existingTokens pattern
+    # 1. Load ALL agents/customers from backend API
+    # 2. Build options for dropdown
+    # 3. Pre-render tokens for selected users (shows names, not IDs!)
     
     attribute.tag = 'searchable_select'
     attribute.multiple = true
     attribute.nulloption = true
-    attribute.relation = 'User'  # CRITICAL: Use User relation for token name display
+    attribute.relation = ''  # Empty - we provide explicit options
     attribute.placeholder = __('Loading users...')
     
     # Load users synchronously from our dedicated endpoint
     options = {}
+    users_by_id = {}  # Store user data for token rendering
     currentUserId = App.Session.get('id')
     
     App.Ajax.request(
@@ -38,7 +39,9 @@ class App.UiElement.cc_user_select
               display_name += " (#{user.email})"
             
             # Store as string key (required by searchable_select)
-            options[user.id.toString()] = display_name
+            userId = user.id.toString()
+            options[userId] = display_name
+            users_by_id[userId] = display_name  # Store for token lookup
       error: (xhr) ->
         # Leave options empty
     )
@@ -51,7 +54,22 @@ class App.UiElement.cc_user_select
       attribute.options = {}
       attribute.placeholder = __('No users available')
     
-    # Render searchable_select with all options
+    # CRITICAL: Pre-render tokens for selected users (prevents IDs from showing)
+    selectedIds = params.cc_user_ids || []
+    if selectedIds.length > 0
+      attribute.existingTokens = ''
+      for userId in selectedIds
+        userIdStr = userId.toString()
+        # Look up name from our loaded users
+        userName = users_by_id[userIdStr]
+        if userName
+          # Pre-render token with name (not ID!)
+          attribute.existingTokens += App.view('generic/token')({
+            name: userName   # "Admin Amr (admin-amr@local.com)"
+            value: userIdStr # "346"
+          })
+    
+    # Render searchable_select with all options AND pre-rendered tokens
     element = App.UiElement.searchable_select.render(attribute, params)
     
     element
