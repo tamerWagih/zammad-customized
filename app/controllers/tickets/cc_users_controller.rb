@@ -4,7 +4,7 @@ class Tickets::CcUsersController < ApplicationController
   prepend_before_action :authentication_check
 
   # GET /api/v1/tickets/cc_users
-  # Returns all active users except current user (includes agents, customers, admins)
+  # Returns active users with Agent OR Customer permissions (excluding current user)
   def index
     return render json: { error: 'Unauthorized' }, status: :forbidden unless current_user
 
@@ -19,11 +19,16 @@ class Tickets::CcUsersController < ApplicationController
     search_query = params[:search]&.strip
     offset = (page - 1) * per_page
 
-    # Get ALL active users except current user (no permission filtering)
-    # This allows CC'ing anyone: agents, customers, admins, etc.
-    all_users = User.where(active: true)
-                    .where.not(id: current_user.id)
-                    .to_a  # Convert to array for Ruby filtering
+    # Get ALL active users except current user, then filter for Agent OR Customer
+    # Note: Users can have multiple roles - if ANY role is Agent or Customer, include them
+    base_users = User.where(active: true)
+                     .where.not(id: current_user.id)
+                     .to_a
+    
+    # Filter to only users who have Agent OR Customer permission (among their roles)
+    all_users = base_users.select do |user|
+      user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+    end
 
     # Search (in Ruby since we already loaded users)
     if search_query.present?
@@ -45,19 +50,16 @@ class Tickets::CcUsersController < ApplicationController
 
     # Format response
     users_list = users.map do |user|
-      is_admin = user.permissions?('admin')
       is_agent = user.permissions?('ticket.agent')
       is_customer = user.permissions?('ticket.customer')
       
-      # Determine user type (priority: admin > agent > customer > other)
-      user_type = if is_admin
-                    'admin'
-                  elsif is_agent
+      # Determine primary user type (agent takes priority if user has both)
+      user_type = if is_agent
                     'agent'
                   elsif is_customer
                     'customer'
                   else
-                    'user'
+                    'user'  # Shouldn't happen due to filtering, but safe fallback
                   end
       
       {
