@@ -4,7 +4,7 @@ class Tickets::CcUsersController < ApplicationController
   prepend_before_action :authentication_check
 
   # GET /api/v1/tickets/cc_users
-  # Returns agents and customers (excludes admins)
+  # Returns all active users except current user (includes agents, customers, admins)
   def index
     return render json: { error: 'Unauthorized' }, status: :forbidden unless current_user
 
@@ -19,18 +19,11 @@ class Tickets::CcUsersController < ApplicationController
     search_query = params[:search]&.strip
     offset = (page - 1) * per_page
 
-    # Get ALL users with agent OR customer PERMISSIONS
-    # Strategy: Get ALL active users, then filter by permissions in Ruby
-    # This ensures we don't miss any users due to complex JOIN issues
-    
-    # First, get all active users except current user
-    base_users = User.where(active: true)
-                     .where.not(id: current_user.id)
-    
-    # Filter to only agents and customers using Ruby (more reliable than SQL joins)
-    all_users = base_users.select do |user|
-      user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
-    end
+    # Get ALL active users except current user (no permission filtering)
+    # This allows CC'ing anyone: agents, customers, admins, etc.
+    all_users = User.where(active: true)
+                    .where.not(id: current_user.id)
+                    .to_a  # Convert to array for Ruby filtering
 
     # Search (in Ruby since we already loaded users)
     if search_query.present?
@@ -52,8 +45,20 @@ class Tickets::CcUsersController < ApplicationController
 
     # Format response
     users_list = users.map do |user|
+      is_admin = user.permissions?('admin')
       is_agent = user.permissions?('ticket.agent')
       is_customer = user.permissions?('ticket.customer')
+      
+      # Determine user type (priority: admin > agent > customer > other)
+      user_type = if is_admin
+                    'admin'
+                  elsif is_agent
+                    'agent'
+                  elsif is_customer
+                    'customer'
+                  else
+                    'user'
+                  end
       
       {
         id:        user.id,
@@ -62,7 +67,7 @@ class Tickets::CcUsersController < ApplicationController
         lastname:  user.lastname,
         email:     user.email,
         active:    user.active,
-        user_type: is_agent ? 'agent' : 'customer'
+        user_type: user_type
       }
     end
     

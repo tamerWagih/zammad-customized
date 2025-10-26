@@ -21,7 +21,7 @@ class Ticket::Cc < ApplicationModel
   validates :user_id, uniqueness: { scope: :ticket_id }
   validates :permissions, presence: true
   validate :valid_permissions
-  validate :user_is_agent_or_customer
+  validate :user_is_active
 
   before_validation :set_default_permissions
 
@@ -69,12 +69,14 @@ class Ticket::Cc < ApplicationModel
     errors.add(:permissions, "contains invalid permissions: #{invalid_permissions.join(', ')}")
   end
 
-  def user_is_agent_or_customer
+  def user_is_active
     return if user.blank?
 
-    return if user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+    # Allow ANY active user to be CC'd (any role)
+    # Only requirement: user must be active
+    return if user.active?
 
-    errors.add(:user_id, 'must be an agent or customer')
+    errors.add(:user_id, 'must be an active user')
   end
 
   def set_default_permissions
@@ -84,17 +86,26 @@ class Ticket::Cc < ApplicationModel
       return
     end
 
-    # CRITICAL: Agents get full access, customers get read + comment
-    # This ensures CC'd users can actually interact with tickets
-    has_agent = user&.permissions?('ticket.agent')
-    has_customer = user&.permissions?('ticket.customer')
+    # Set permissions based on user role (hierarchical priority):
+    # 1. Admins: full access (highest privilege)
+    # 2. Agents: full access (can manage tickets)
+    # 3. Customers: read + comment (can view and respond)
+    # 4. Any other role: read + comment (default safe permissions)
     
-    if has_agent
+    return unless user
+    
+    if user.permissions?('admin')
+      # Admins get full access to everything
       self.permissions = ['full']
-    elsif has_customer
+    elsif user.permissions?('ticket.agent')
+      # Agents get full ticket access
+      self.permissions = ['full']
+    elsif user.permissions?('ticket.customer')
+      # Customers get read and comment access
       self.permissions = ['read', 'comment']
     else
-      # Fallback: Give read + comment if neither agent nor customer (shouldn't happen due to validation)
+      # Any other user role: give read + comment (safe default)
+      # This allows custom roles to receive CC notifications and participate
       self.permissions = ['read', 'comment']
     end
   end
