@@ -877,10 +877,10 @@ class App.UiElement.ApplicationAction
 
     name = "#{attribute.name}::share.#{shareType}"
     
-    # Build group selection
-    groupSelection = App.UiElement.select.render(
+    # Build group selection (multi-select to allow sharing with multiple departments)
+    groupSelection = App.UiElement.multiselect.render(
       name: "#{name}::group_id"
-      multiple: false
+      multiple: true
       null: false
       relation: 'Group'
       value: meta.group_id
@@ -901,7 +901,8 @@ class App.UiElement.ApplicationAction
     
     # Create form group for group selection
     groupGroup = $('<div class="form-group"></div>')
-    groupGroup.append('<label>' + App.i18n.translateInline('Share with Group') + '</label>')
+    groupGroup.append('<label>' + App.i18n.translateInline('Share with Groups') + '</label>')
+    groupGroup.append('<div class="help-text">' + App.i18n.translateInline('Select one or more departments') + '</div>')
     groupGroup.append(groupSelection)
     shareElement.append(groupGroup)
     
