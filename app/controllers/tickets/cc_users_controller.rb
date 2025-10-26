@@ -19,40 +19,36 @@ class Tickets::CcUsersController < ApplicationController
     search_query = params[:search]&.strip
     offset = (page - 1) * per_page
 
-    # Get ALL active users except current user, then filter for Agent OR Customer ROLE
-    # Note: Users can have multiple roles - if ANY role is Agent or Customer, include them
-    # IMPORTANT: Use role_ids, NOT permissions?() - Admins have all permissions by default!
-    base_users = User.where(active: true)
-                     .where.not(id: current_user.id)
-                     .to_a
-    
     # Get Agent and Customer role IDs
     agent_role = Role.find_by(name: 'Agent')
     customer_role = Role.find_by(name: 'Customer')
-    
-    # Filter to only users who have Agent OR Customer ROLE (not permission)
-    # This excludes Admin-only users (admins inherit all permissions but don't have Agent/Customer role)
-    all_users = base_users.select do |user|
-      user.role_ids.include?(agent_role&.id) || user.role_ids.include?(customer_role&.id)
-    end
+    role_ids = [agent_role&.id, customer_role&.id].compact
 
-    # Search (in Ruby since we already loaded users)
+    # SQL-based filtering (efficient, same as Approval search!)
+    # Uses database joins and WHERE clauses, not Ruby loops
+    all_users = User.joins(:roles)
+                    .where(active: true)
+                    .where.not(id: current_user.id)
+                    .where(roles: { id: role_ids })
+                    .distinct
+
+    # SQL-based search (if query provided) - much faster than Ruby loops
     if search_query.present?
-      search_pattern = search_query.downcase
-      all_users = all_users.select do |user|
-        user.firstname&.downcase&.include?(search_pattern) ||
-        user.lastname&.downcase&.include?(search_pattern) ||
-        user.login&.downcase&.include?(search_pattern) ||
-        user.email&.downcase&.include?(search_pattern)
-      end
+      search_pattern = "%#{search_query.downcase}%"
+      all_users = all_users.where(
+        "LOWER(users.firstname) LIKE ? OR LOWER(users.lastname) LIKE ? OR " \
+        "LOWER(users.login) LIKE ? OR LOWER(users.email) LIKE ?",
+        search_pattern, search_pattern, search_pattern, search_pattern
+      )
     end
 
-    # Sort users
-    all_users = all_users.sort_by { |u| [u.firstname || '', u.lastname || '', u.login || ''] }
-    
-    # Paginate
+    # Get total count BEFORE pagination (for pagination info)
     total_count = all_users.count
-    users = all_users.slice(offset, per_page) || []
+    
+    # SQL sorting and pagination (only loads needed records!)
+    users = all_users.order(:firstname, :lastname, :login)
+                     .offset(offset)
+                     .limit(per_page)
 
     # Format response
     users_list = users.map do |user|
