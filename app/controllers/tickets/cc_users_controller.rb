@@ -19,15 +19,21 @@ class Tickets::CcUsersController < ApplicationController
     search_query = params[:search]&.strip
     offset = (page - 1) * per_page
 
-    # Get ALL active users except current user, then filter for Agent OR Customer
+    # Get ALL active users except current user, then filter for Agent OR Customer ROLE
     # Note: Users can have multiple roles - if ANY role is Agent or Customer, include them
+    # IMPORTANT: Use role_ids, NOT permissions?() - Admins have all permissions by default!
     base_users = User.where(active: true)
                      .where.not(id: current_user.id)
                      .to_a
     
-    # Filter to only users who have Agent OR Customer permission (among their roles)
+    # Get Agent and Customer role IDs
+    agent_role = Role.find_by(name: 'Agent')
+    customer_role = Role.find_by(name: 'Customer')
+    
+    # Filter to only users who have Agent OR Customer ROLE (not permission)
+    # This excludes Admin-only users (admins inherit all permissions but don't have Agent/Customer role)
     all_users = base_users.select do |user|
-      user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+      user.role_ids.include?(agent_role&.id) || user.role_ids.include?(customer_role&.id)
     end
 
     # Search (in Ruby since we already loaded users)
@@ -50,13 +56,14 @@ class Tickets::CcUsersController < ApplicationController
 
     # Format response
     users_list = users.map do |user|
-      is_agent = user.permissions?('ticket.agent')
-      is_customer = user.permissions?('ticket.customer')
+      # Use role_ids to determine type (consistent with filtering logic)
+      has_agent_role = user.role_ids.include?(agent_role&.id)
+      has_customer_role = user.role_ids.include?(customer_role&.id)
       
-      # Determine primary user type (agent takes priority if user has both)
-      user_type = if is_agent
+      # Determine primary user type (agent takes priority if user has both roles)
+      user_type = if has_agent_role
                     'agent'
-                  elsif is_customer
+                  elsif has_customer_role
                     'customer'
                   else
                     'user'  # Shouldn't happen due to filtering, but safe fallback

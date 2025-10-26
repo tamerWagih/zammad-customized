@@ -72,9 +72,13 @@ class Ticket::Cc < ApplicationModel
   def user_is_agent_or_customer
     return if user.blank?
 
-    # Allow users who have Agent OR Customer permission (among their roles)
+    # Allow users who have Agent OR Customer ROLE (not permission)
+    # IMPORTANT: Use role_ids, NOT permissions?() - Admins have all permissions!
     # Users can have multiple roles - if ANY role is Agent or Customer, allow them
-    return if user.permissions?('ticket.agent') || user.permissions?('ticket.customer')
+    agent_role = Role.find_by(name: 'Agent')
+    customer_role = Role.find_by(name: 'Customer')
+    
+    return if user.role_ids.include?(agent_role&.id) || user.role_ids.include?(customer_role&.id)
 
     errors.add(:user_id, 'must have Agent or Customer role')
   end
@@ -86,18 +90,21 @@ class Ticket::Cc < ApplicationModel
       return
     end
 
-    # Set permissions based on user role:
+    # Set permissions based on user ROLE (not permission - admins inherit all permissions!)
     # - Agents: full access (can read, comment, edit)
     # - Customers: read + comment (can view and respond)
     # Note: User may have multiple roles - we check for agent first (higher privilege)
     
     return unless user
     
-    if user.permissions?('ticket.agent')
-      # Agents get full ticket access
+    agent_role = Role.find_by(name: 'Agent')
+    customer_role = Role.find_by(name: 'Customer')
+    
+    if user.role_ids.include?(agent_role&.id)
+      # Users with Agent role get full ticket access
       self.permissions = ['full']
-    elsif user.permissions?('ticket.customer')
-      # Customers get read and comment access
+    elsif user.role_ids.include?(customer_role&.id)
+      # Users with Customer role get read and comment access
       self.permissions = ['read', 'comment']
     else
       # Fallback: read + comment (shouldn't happen due to validation)
