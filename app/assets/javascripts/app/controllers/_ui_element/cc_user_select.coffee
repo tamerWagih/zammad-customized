@@ -53,5 +53,4 @@ class App.UiElement.cc_user_select
       )
     
     # Create custom SearchableAjaxSelect for CC users
-    console.log '[CC_SELECT] Using SearchableAjaxSelect for server-side search'
     new App.CcUserAjaxSelect(attribute: attribute, params: params).element()
