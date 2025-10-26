@@ -49,7 +49,7 @@
         </div>
       <% else: %>
         <div class="share-info">
-          <%- @T('Shared with your department by %s', share.shared_by_name || @T('another user')) %>
+          <%- @T('Shared with %s by %s', (share.group_name || share.group || @T('department')), (share.shared_by_name || @T('another user'))) %>
         </div>
       <% end %>
     </div>
