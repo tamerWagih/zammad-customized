@@ -13,16 +13,25 @@ class Ticket::PerformChanges::Action::ShareCreate < Ticket::PerformChanges::Acti
   private
 
   def create_share(share_data)
-    # Extract share parameters - support both single and multiple groups
-    group_ids = if share_data['group_id'].present?
-                  # Single group (legacy format)
-                  [share_data['group_id'] || share_data[:group_id]]
-                elsif share_data['group_ids'].present?
-                  # Multiple groups (new format)
+    # Extract share parameters - support multiple formats:
+    # 1. Single group: { 'group_id' => '123' }
+    # 2. Array field: { 'group_id' => ['123', '456'] } (from +/- buttons in UI)
+    # 3. Explicit array: { 'group_ids' => ['123', '456'] }
+    group_ids = if share_data['group_ids'].present?
+                  # Explicit array format
                   Array(share_data['group_ids'])
+                elsif share_data['group_id'].present?
+                  # Could be single value or array (from +/- UI buttons)
+                  Array(share_data['group_id'])
+                elsif share_data[:group_id].present?
+                  # Symbol key fallback
+                  Array(share_data[:group_id])
                 else
                   []
                 end
+    
+    # Remove empty/nil values
+    group_ids = group_ids.compact.reject(&:blank?)
     
     expires_at = share_data['expires_at'] || share_data[:expires_at]
     
