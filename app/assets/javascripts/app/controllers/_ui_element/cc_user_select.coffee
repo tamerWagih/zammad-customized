@@ -12,7 +12,7 @@ class App.UiElement.cc_user_select
     # Configure attribute for SearchableAjaxSelect
     attribute.multiple = true
     attribute.nulloption = true
-    attribute.relation = 'User'  # Needed for proper token display (we override ajaxAttributes for custom endpoint)
+    attribute.relation = ''  # Empty - we use custom endpoint and handle tokens ourselves
     attribute.ajax = true  # Enable AJAX search mode
     attribute.placeholder = __('Type to search users...')
     attribute.limit = 50  # Max results per search request

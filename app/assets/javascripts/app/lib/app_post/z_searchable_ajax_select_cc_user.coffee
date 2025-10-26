@@ -7,6 +7,16 @@ class App.CcUserAjaxSelect extends App.SearchableAjaxSelect
     super
     # Initialize search result cache (inherited from parent)
   
+  # Override render to prevent parent from using App.User model for initial options
+  render: ->
+    # Don't let parent load from App.User model - we use custom endpoint only
+    # Skip the parent's render logic that checks @attribute.relation
+    @renderElement()
+  
+  # Override objectString to prevent parent from using relation for URL construction
+  objectString: =>
+    'cc_users'
+  
   # Override to use our custom CC users endpoint
   ajaxAttributes: =>
     query = @input.val()
@@ -32,6 +42,16 @@ class App.CcUserAjaxSelect extends App.SearchableAjaxSelect
   cacheKey: =>
     query = @input.val()
     "cc_users+#{query}"
+  
+  # Override createToken to handle token creation with proper names
+  createToken: ({name, value}) =>
+    # Always use the name parameter (not value) for display
+    # This ensures tokens show user names, not IDs
+    content = {
+      name: String(name)
+      value: value
+    }
+    @input.before App.view('generic/token')(content)
   
   # Override to handle our custom response format
   renderResponse: (data, originalQuery) =>
