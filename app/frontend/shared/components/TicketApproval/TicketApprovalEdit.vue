@@ -1,31 +1,19 @@
 <template>
-  <div class="ticket-approval-create">
+  <div class="ticket-approval-edit">
     <div class="modal-overlay" @click="$emit('close')">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>{{ $t('Request Approval') }}</h3>
+          <h3>{{ $t('Edit Approval Request') }}</h3>
           <button @click="$emit('close')" class="close-btn">&times;</button>
         </div>
         
-        <form @submit.prevent="submitApproval" class="approval-form">
+        <form @submit.prevent="submitUpdate" class="approval-form">
           <div class="form-group">
-            <label for="approver">{{ $t('Approver') }} *</label>
-            <select 
-              id="approver"
-              v-model="form.approverId"
-              required
-              class="form-control"
-              :disabled="usersLoading || loading"
-            >
-              <option value="">{{ $t('Select an approver') }}</option>
-              <option 
-                v-for="user in agents" 
-                :key="user.id" 
-                :value="user.id"
-              >
-                {{ user.fullname || `${user.firstname} ${user.lastname}` }}
-              </option>
-            </select>
+            <label>{{ $t('Approver') }}</label>
+            <div class="form-control-static">
+              {{ getApproverName(approval) }}
+            </div>
+            <small class="form-text">{{ $t('The approver cannot be changed') }}</small>
           </div>
           
           <div class="form-group">
@@ -66,10 +54,10 @@
             </button>
             <button 
               type="submit" 
-              :disabled="loading || !form.approverId"
+              :disabled="loading"
               class="btn btn-primary"
             >
-              {{ loading ? $t('Creating...') : $t('Request Approval') }}
+              {{ loading ? $t('Updating...') : $t('Update') }}
             </button>
           </div>
         </form>
@@ -79,101 +67,72 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 
 interface Props {
   ticketId?: number
+  approval: any
 }
 
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
   close: []
-  created: []
+  updated: []
 }>()
 
 const loading = ref(false)
-const usersLoading = ref(false)
-const users = ref<any[]>([])
 
 const form = reactive({
-  approverId: '',
-  priority: 'normal',
+  priority: '',
   message: ''
 })
 
-// Filter to get only active agents
-const agents = computed(() => {
-  return users.value.filter((user: any) => {
-    return user.active && user.permissions && user.permissions.includes('ticket.agent')
-  }).sort((a: any, b: any) => {
-    const nameA = a.fullname || `${a.firstname} ${a.lastname}`
-    const nameB = b.fullname || `${b.firstname} ${b.lastname}`
-    return nameA.localeCompare(nameB)
-  })
+onMounted(() => {
+  // Initialize form with existing values
+  form.priority = props.approval?.priority || 'normal'
+  form.message = props.approval?.message || ''
 })
 
-const loadUsers = async () => {
-  usersLoading.value = true
-  try {
-    const response = await fetch('/api/v1/users', {
-      headers: {
-        Accept: 'application/json',
-      },
-      credentials: 'same-origin',
-    })
-
-    if (!response.ok) {
-      throw new Error(response.statusText)
-    }
-
-    const data = await response.json()
-    users.value = Array.isArray(data) ? data : data?.users || []
-  } catch (error) {
-    console.error('Failed to load users:', error)
-    users.value = []
-  } finally {
-    usersLoading.value = false
+const getApproverName = (approval: any) => {
+  if (typeof approval?.approver === 'object') {
+    return approval.approver?.fullname || 'Unknown'
   }
+  return approval?.approver || 'Unknown'
 }
 
-onMounted(loadUsers)
-
-const submitApproval = async () => {
-  if (!props.ticketId || !form.approverId) return
+const submitUpdate = async () => {
+  if (!props.ticketId || !props.approval?.id) return
   
   loading.value = true
   
   try {
     const body = new URLSearchParams()
-    body.set('approver_id', form.approverId)
     body.set('priority', form.priority)
     if (form.message) body.set('message', form.message)
 
-    const response = await fetch(`/api/v1/tickets/${props.ticketId}/approvals`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        Accept: 'application/json',
-      },
-      credentials: 'same-origin',
-      body: body.toString(),
-    })
+    const response = await fetch(
+      `/api/v1/tickets/${props.ticketId}/approvals/${props.approval.id}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          Accept: 'application/json',
+        },
+        credentials: 'same-origin',
+        body: body.toString(),
+      }
+    )
 
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}))
       throw new Error(errorBody.error || response.statusText)
     }
-
-    // Reset form
-    form.approverId = ''
-    form.priority = 'normal'
-    form.message = ''
     
-    emit('created')
+    emit('updated')
   } catch (error) {
-    console.error('Error creating approval:', error)
-    alert('Failed to create approval request. Please try again.')
+    console.error('Error updating approval:', error)
+    alert('Failed to update approval. Please try again.')
   } finally {
     loading.value = false
   }
@@ -181,7 +140,7 @@ const submitApproval = async () => {
 </script>
 
 <style scoped>
-.ticket-approval-create {
+.ticket-approval-edit {
   position: fixed;
   top: 0;
   left: 0;
@@ -269,6 +228,20 @@ const submitApproval = async () => {
   background-color: white;
 }
 
+.form-control-static {
+  padding: 8px 12px;
+  background-color: #f3f4f6;
+  border-radius: 6px;
+  color: #374151;
+}
+
+.form-text {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
 .form-control:disabled {
   background-color: #f3f4f6;
   cursor: not-allowed;
@@ -343,6 +316,15 @@ const submitApproval = async () => {
     color: #f3f4f6;
   }
   
+  .form-control-static {
+    background-color: #374151;
+    color: #e5e7eb;
+  }
+  
+  .form-text {
+    color: #9ca3af;
+  }
+  
   .form-control:disabled {
     background-color: #1f2937;
   }
@@ -356,3 +338,4 @@ const submitApproval = async () => {
   }
 }
 </style>
+

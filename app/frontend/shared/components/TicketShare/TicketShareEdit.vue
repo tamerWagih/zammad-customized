@@ -1,56 +1,41 @@
 <template>
-  <div class="ticket-approval-create">
+  <div class="ticket-share-edit">
     <div class="modal-overlay" @click="$emit('close')">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>{{ $t('Request Approval') }}</h3>
+          <h3>{{ $t('Edit Share') }}</h3>
           <button @click="$emit('close')" class="close-btn">&times;</button>
         </div>
         
-        <form @submit.prevent="submitApproval" class="approval-form">
+        <form @submit.prevent="submitUpdate" class="share-form">
           <div class="form-group">
-            <label for="approver">{{ $t('Approver') }} *</label>
-            <select 
-              id="approver"
-              v-model="form.approverId"
-              required
-              class="form-control"
-              :disabled="usersLoading || loading"
-            >
-              <option value="">{{ $t('Select an approver') }}</option>
-              <option 
-                v-for="user in agents" 
-                :key="user.id" 
-                :value="user.id"
-              >
-                {{ user.fullname || `${user.firstname} ${user.lastname}` }}
-              </option>
-            </select>
+            <label>{{ $t('Shared with group') }}</label>
+            <div class="form-control-static">
+              {{ getGroupName(share) }}
+            </div>
+            <small class="form-text">{{ $t('The group cannot be changed') }}</small>
           </div>
           
           <div class="form-group">
-            <label for="priority">{{ $t('Priority') }}</label>
-            <select 
-              id="priority"
-              v-model="form.priority"
+            <label for="expiresAt">{{ $t('Expire on (optional)') }}</label>
+            <input 
+              id="expiresAt"
+              type="date"
+              v-model="form.expiresAt"
               class="form-control"
               :disabled="loading"
             >
-              <option value="low">{{ $t('Low') }}</option>
-              <option value="normal">{{ $t('Normal') }}</option>
-              <option value="high">{{ $t('High') }}</option>
-              <option value="urgent">{{ $t('Urgent') }}</option>
-            </select>
+            <small class="form-text">{{ $t('Access ends at the end of the selected day') }}</small>
           </div>
           
           <div class="form-group">
-            <label for="message">{{ $t('Message (Optional)') }}</label>
+            <label for="message">{{ $t('Message (optional)') }}</label>
             <textarea 
               id="message"
               v-model="form.message"
               class="form-control"
               rows="3"
-              :placeholder="$t('Add a message for the approver...')"
+              :placeholder="$t('Add a message for the group...')"
               :disabled="loading"
             ></textarea>
           </div>
@@ -66,10 +51,10 @@
             </button>
             <button 
               type="submit" 
-              :disabled="loading || !form.approverId"
+              :disabled="loading"
               class="btn btn-primary"
             >
-              {{ loading ? $t('Creating...') : $t('Request Approval') }}
+              {{ loading ? $t('Updating...') : $t('Update Share') }}
             </button>
           </div>
         </form>
@@ -79,101 +64,76 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 
 interface Props {
   ticketId?: number
+  share: any
 }
 
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
   close: []
-  created: []
+  updated: []
 }>()
 
 const loading = ref(false)
-const usersLoading = ref(false)
-const users = ref<any[]>([])
 
 const form = reactive({
-  approverId: '',
-  priority: 'normal',
+  expiresAt: '',
   message: ''
 })
 
-// Filter to get only active agents
-const agents = computed(() => {
-  return users.value.filter((user: any) => {
-    return user.active && user.permissions && user.permissions.includes('ticket.agent')
-  }).sort((a: any, b: any) => {
-    const nameA = a.fullname || `${a.firstname} ${a.lastname}`
-    const nameB = b.fullname || `${b.firstname} ${b.lastname}`
-    return nameA.localeCompare(nameB)
-  })
+onMounted(() => {
+  // Initialize form with existing values
+  if (props.share?.expiresAt) {
+    // Convert to YYYY-MM-DD format for date input
+    const date = new Date(props.share.expiresAt)
+    form.expiresAt = date.toISOString().split('T')[0]
+  }
+  form.message = props.share?.message || ''
 })
 
-const loadUsers = async () => {
-  usersLoading.value = true
-  try {
-    const response = await fetch('/api/v1/users', {
-      headers: {
-        Accept: 'application/json',
-      },
-      credentials: 'same-origin',
-    })
-
-    if (!response.ok) {
-      throw new Error(response.statusText)
-    }
-
-    const data = await response.json()
-    users.value = Array.isArray(data) ? data : data?.users || []
-  } catch (error) {
-    console.error('Failed to load users:', error)
-    users.value = []
-  } finally {
-    usersLoading.value = false
+const getGroupName = (share: any) => {
+  if (typeof share?.group === 'object') {
+    return share.group?.fullname || share.group?.name || 'Unknown group'
   }
+  return share?.groupName || share?.group || 'Unknown group'
 }
 
-onMounted(loadUsers)
-
-const submitApproval = async () => {
-  if (!props.ticketId || !form.approverId) return
+const submitUpdate = async () => {
+  if (!props.ticketId || !props.share?.id) return
   
   loading.value = true
   
   try {
     const body = new URLSearchParams()
-    body.set('approver_id', form.approverId)
-    body.set('priority', form.priority)
+    if (form.expiresAt) body.set('expires_at', form.expiresAt)
     if (form.message) body.set('message', form.message)
 
-    const response = await fetch(`/api/v1/tickets/${props.ticketId}/approvals`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        Accept: 'application/json',
-      },
-      credentials: 'same-origin',
-      body: body.toString(),
-    })
+    const response = await fetch(
+      `/api/v1/tickets/${props.ticketId}/shares/${props.share.id}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          Accept: 'application/json',
+        },
+        credentials: 'same-origin',
+        body: body.toString(),
+      }
+    )
 
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}))
       throw new Error(errorBody.error || response.statusText)
     }
-
-    // Reset form
-    form.approverId = ''
-    form.priority = 'normal'
-    form.message = ''
     
-    emit('created')
+    emit('updated')
   } catch (error) {
-    console.error('Error creating approval:', error)
-    alert('Failed to create approval request. Please try again.')
+    console.error('Error updating share:', error)
+    alert('Failed to update share. Please try again.')
   } finally {
     loading.value = false
   }
@@ -181,7 +141,7 @@ const submitApproval = async () => {
 </script>
 
 <style scoped>
-.ticket-approval-create {
+.ticket-share-edit {
   position: fixed;
   top: 0;
   left: 0;
@@ -245,7 +205,7 @@ const submitApproval = async () => {
   color: #374151;
 }
 
-.approval-form {
+.share-form {
   padding: 20px;
 }
 
@@ -267,6 +227,20 @@ const submitApproval = async () => {
   border-radius: 6px;
   font-size: 14px;
   background-color: white;
+}
+
+.form-control-static {
+  padding: 8px 12px;
+  background-color: #f3f4f6;
+  border-radius: 6px;
+  color: #374151;
+}
+
+.form-text {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .form-control:disabled {
@@ -343,6 +317,15 @@ const submitApproval = async () => {
     color: #f3f4f6;
   }
   
+  .form-control-static {
+    background-color: #374151;
+    color: #e5e7eb;
+  }
+  
+  .form-text {
+    color: #9ca3af;
+  }
+  
   .form-control:disabled {
     background-color: #1f2937;
   }
@@ -356,3 +339,4 @@ const submitApproval = async () => {
   }
 }
 </style>
+
