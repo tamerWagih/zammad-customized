@@ -403,21 +403,25 @@ class App.UiElement.ApplicationSelector
     console.log "[SELECTOR_PREVIEW] Params:", params
     console.log "[SELECTOR_PREVIEW] Params.condition:", JSON.stringify(params.condition)
     
-    # ALWAYS use custom filter endpoint for safety (agents should use this)
-    # Only admins can use /tickets/selector
-    previewUrl = "#{App.Config.get('api_path')}/custom_filter_selectors/preview"
+    # Use appropriate endpoint based on context:
+    # - Custom filters (agents): /custom_filter_selectors/preview (includes custom filter attributes)
+    # - Admin overviews: /tickets/selector (standard selector with ObjectManager attributes)
+    if isCustomFilterMode
+      previewUrl = "#{App.Config.get('api_path')}/custom_filter_selectors/preview"
+      params.object = 'tickets'
+    else
+      # Admin overview - use standard selector endpoint
+      previewUrl = "#{App.Config.get('api_path')}/tickets/selector"
     
     console.log "[SELECTOR_PREVIEW] Using URL:", previewUrl
-    
-    # Add object type
-    params.object = 'tickets'
     
     App.Ajax.request(
       id:    'application_selector'
       type:  'POST'
       url:   previewUrl
       data:        JSON.stringify(params)
-      processData: true,
+      processData: false,
+      contentType: 'application/json',
       success: (data, status, xhr) =>
         console.log "[SELECTOR_PREVIEW] Success - count:", data.object_count, "ids:", data.object_ids
         App.Collection.loadAssets(data.assets)

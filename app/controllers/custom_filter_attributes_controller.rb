@@ -78,6 +78,17 @@ class CustomFilterAttributesController < ApplicationController
       { name: 'tags', display: 'Tags', tag: 'tag', searchable: true },
       { name: 'mention_user_ids', display: 'Subscribe', tag: 'select', relation: 'User', searchable: true },
     ]
+    
+    # Add ObjectManager custom attributes (like category, subcategory, etc.)
+    object_manager_attributes = build_object_manager_attributes('Ticket')
+    
+    # Merge base attributes with ObjectManager attributes
+    all_base_names = base_attributes.map { |a| a[:name] }
+    object_manager_attributes.each do |attr|
+      # Only add if not already in base_attributes
+      next if all_base_names.include?(attr[:name])
+      base_attributes.push(attr)
+    end
 
     # Add custom filter specific attributes (shared with me, approval status, etc.)
     # SIMPLIFIED: Each filter has a single "Yes" option (presence check)
@@ -226,6 +237,41 @@ class CustomFilterAttributesController < ApplicationController
       { name: 'created_at', display: 'Created at', tag: 'datetime', searchable: true },
       { name: 'updated_at', display: 'Updated at', tag: 'datetime', searchable: true },
     ]
+  end
+
+  def build_object_manager_attributes(model_name)
+    # Get ObjectManager custom attributes for the specified model
+    # This includes custom fields like category, subcategory, etc.
+    object = ObjectManager::Object.new(model_name)
+    attributes = object.attributes(current_user, nil, data_only: true, skip_permission: false)
+    
+    # Convert to format expected by frontend
+    attributes.map do |attr|
+      result = {
+        name: attr[:name],
+        display: attr[:display],
+        tag: attr[:tag],
+        searchable: true
+      }
+      
+      # Add additional properties based on tag type
+      result[:type] = attr[:type] if attr[:type]
+      result[:relation] = attr[:relation] if attr[:relation]
+      result[:multiple] = attr[:multiple] if attr.key?(:multiple)
+      result[:null] = attr[:null] if attr.key?(:null)
+      result[:translate] = attr[:translate] if attr.key?(:translate)
+      result[:options] = attr[:options] if attr[:options]
+      result[:default] = attr[:default] if attr.key?(:default)
+      result[:nulloption] = attr[:nulloption] if attr.key?(:nulloption)
+      result[:relation_condition] = attr[:relation_condition] if attr[:relation_condition]
+      result[:filter] = attr[:filter] if attr[:filter]
+      result[:operator] = attr[:operator] if attr[:operator]
+      
+      result
+    end
+  rescue => e
+    Rails.logger.error "Error building ObjectManager attributes for #{model_name}: #{e.message}"
+    []
   end
 end
 
