@@ -739,6 +739,7 @@ returns a hex color code
   end
 
   # Check share permissions for a given user
+  # Follow same pattern as approval: creator gets full access, receivers get comment-only
   def share_permissions_for(user)
     default = { read: false, comment: false, edit: false }
     return default unless user
@@ -748,35 +749,36 @@ returns a hex color code
       # Only agents can access shared tickets
       return default unless user.permissions?('ticket.agent')
       
-      user_group_ids = Array(user.group_ids_access('read'))
-      Rails.logger.info "[SHARE_PERMISSIONS] Checking permissions for user #{user.id} (#{user.email}) on ticket #{id}"
-      Rails.logger.info "[SHARE_PERMISSIONS] User group IDs: #{user_group_ids.inspect}"
-      return default if user_group_ids.blank?
+      # Check if user is the sharer (creator)
+      user_is_sharer = shares.active_current.exists?(shared_by_id: user.id)
       
-      # Find matching share for user's groups
-      matching_share = shares.active_current.find do |share|
-        user_group_ids.include?(share.group_id)
+      # Check if user is a receiver (member of shared group)
+      share_group_ids = shares.active_current.pluck(:group_id)
+      user_group_ids = Array(user.group_ids_access('read'))
+      user_is_receiver = share_group_ids.present? && (share_group_ids & user_group_ids).present?
+      
+      Rails.logger.info "[SHARE_PERMISSIONS] User #{user.id} (#{user.email}) - Sharer: #{user_is_sharer}, Receiver: #{user_is_receiver}"
+      
+      return default unless user_is_sharer || user_is_receiver
+      
+      # Map permissions based on role (like approval: creator = full, receiver = comment)
+      result = if user_is_sharer
+        # Creator gets full access (can do everything)
+        {
+          read: true,
+          comment: true,
+          edit: true
+        }
+      else
+        # Receiver gets comment-only access (can view and comment, not edit)
+        {
+          read: true,
+          comment: true,
+          edit: false
+        }
       end
       
-      Rails.logger.info "[SHARE_PERMISSIONS] Matching share: #{matching_share.inspect}"
-      return default unless matching_share
-      
-      # Get the actual permissions from the share record
-      share_perms = Array(matching_share.permissions).map(&:to_s).map(&:downcase)
-      Rails.logger.info "[SHARE_PERMISSIONS] Share permissions array: #{share_perms.inspect}"
-      
-      has_full = share_perms.include?('full')
-      has_comment = share_perms.include?('comment')
-      
-      # Comment permission includes read access
-      # Users with comment can view and add notes, but not edit ticket fields
-      result = {
-        read: has_full || has_comment || share_perms.include?('read'),
-        comment: has_full || has_comment,
-        edit: has_full || share_perms.include?('edit')
-      }
-      
-      Rails.logger.info "[SHARE_PERMISSIONS] Computed permissions: #{result.inspect}"
+      Rails.logger.info "[SHARE_PERMISSIONS] Final permissions: #{result.inspect}"
       result
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
