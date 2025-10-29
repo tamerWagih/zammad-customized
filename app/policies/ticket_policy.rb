@@ -154,56 +154,31 @@ class TicketPolicy < ApplicationPolicy
   end
 
   # Allow access via Ticket::Share for the current user.
-  # Maps Zammad policy accesses to share permissions:
-  # - 'read'  -> view ticket (allowed for comment-only shares)
-  # - 'create'-> add notes/comments (allowed for comment-only shares)
-  # - 'change'-> edit ticket fields (NOT allowed for comment-only shares, BUT sharer can manage their shares)
-  # - 'full'  -> full access (NOT allowed for comment-only shares, BUT sharer can manage their shares)
+  # Follow the same pattern as approval_access?: creator gets full access, receivers get comment-only
+  # - 'read'  -> view ticket
+  # - 'create'-> add notes/comments
+  # - 'change'-> edit ticket fields (sharer only)
+  # - 'full'  -> full access (sharer only)
   def share_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
 
-    share_group_ids = Ticket::Share.active_current.where(ticket_id: record.id).pluck(:group_id)
-    return nil if share_group_ids.empty?
-
-    # Check if user is the sharer (can manage their own shares)
+    # Check if user is the sharer (creator gets full access like approval creator)
     user_is_sharer = record.shares.active_current.exists?(shared_by_id: user.id)
     
-    # Check if user has ANY permission level in the shared groups (read, change, or full)
-    user_group_ids_read = Array(user.group_ids_access('read'))
-    user_group_ids_change = Array(user.group_ids_access('change'))
-    user_group_ids_full = Array(user.group_ids_access('full'))
-    
-    # Combine all group IDs where user has any permission
-    user_group_ids = (user_group_ids_read + user_group_ids_change + user_group_ids_full).uniq
-    return nil if (share_group_ids & user_group_ids).blank? && !user_is_sharer
+    # Check if user is a receiver (member of shared group)
+    share_group_ids = Ticket::Share.active_current.where(ticket_id: record.id).pluck(:group_id)
+    user_group_ids = Array(user.group_ids_access('read'))
+    user_is_receiver = share_group_ids.present? && (share_group_ids & user_group_ids).present?
 
-    # Get the actual share to check permissions (prefer matching share, otherwise any share if user is sharer)
-    matching_share = record.shares.active_current.find do |share|
-      if user_is_sharer && share.shared_by_id == user.id
-        true # User is the sharer
-      elsif (share_group_ids & user_group_ids).include?(share.group_id)
-        true # User is in the shared group
-      else
-        false
-      end
-    end
-    
-    return nil unless matching_share
+    return nil unless user_is_sharer || user_is_receiver
 
-    has_full = matching_share.full_access?
-    has_comment = matching_share.comment_access? || has_full
-
-    # Map access based on share permissions
-    # Shared tickets with comment permission can only view and add comments (like CC'd users)
-    # BUT sharers can always manage their shares (edit, revoke, delete)
+    # Map access based on role (like approval: creator = full, receiver = comment)
     case access.to_s
     when 'read', 'create'  # read = view, create = add notes/comments
-      has_comment # Allow viewing and adding comments
+      true  # Both sharer and receivers can view and comment
     when 'change', 'full'  # change = edit fields, full = full access
-      # Sharers can always manage their shares, even with comment-only permission
-      return true if user_is_sharer
-      has_full # Only allow if share has full permission (currently not used)
+      user_is_sharer  # Only sharer can edit ticket fields
     else
       nil
     end
