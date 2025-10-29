@@ -129,8 +129,7 @@ class TicketPolicy < ApplicationPolicy
 
   # Allow access via Ticket::Approval for approvers.
   # Only agents and admins can be approvers (standard Zammad requirement).
-  # Approvers get full access to tickets they need to approve.
-  # This prevents the need to create shares that give access to entire groups.
+  # Approvers get read and comment access (view and add notes, but not edit ticket fields).
   def approval_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can be approvers
@@ -139,21 +138,23 @@ class TicketPolicy < ApplicationPolicy
     is_approver = record.approvals.exists?(approver_id: user.id)
     return nil unless is_approver
     
-    # Approvers get full access (read, comment, edit) for tickets they need to approve
+    # Approvers get read and comment access (like shared tickets)
     case access.to_s
-    when 'read', 'change', 'create', 'full'
+    when 'read', 'create'  # read = view, create = add notes/comments
       true
+    when 'change', 'full'  # change = edit fields, full = full access
+      false  # Approvers cannot edit ticket fields, only view and add comments
     else
       nil
     end
   end
 
   # Allow access via Ticket::Share for the current user.
-  # Maps Zammad policy accesses to share permissions:
-  # - 'read'  -> read/comment
-  # - 'change'-> comment only (for shared tickets with comment permission)
-  # - 'create'-> comment
-  # - 'full'  -> full access (only if share has full permission)
+  # Maps Zammad policy accesses to share permissions (same as approval):
+  # - 'read'  -> view ticket
+  # - 'create'-> add notes/comments
+  # - 'change'-> edit ticket fields (NOT allowed for comment-only shares)
+  # - 'full'  -> full access (NOT allowed for comment-only shares)
   def share_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
@@ -180,14 +181,12 @@ class TicketPolicy < ApplicationPolicy
     has_full = matching_share.full_access?
     has_comment = matching_share.comment_access? || has_full
 
-    # Map access based on share permissions
+    # Map access based on share permissions (matching approval access)
     case access.to_s
-    when 'read'
-      has_comment # comment permission includes read
-    when 'change', 'create'
-      has_comment # change/create means add notes/comments
-    when 'full'
-      has_full # only if share has full permission
+    when 'read', 'create'  # read = view, create = add notes/comments
+      has_comment # Allow viewing and adding comments
+    when 'change', 'full'  # change = edit fields, full = full access
+      has_full # Only allow if share has full permission
     else
       nil
     end
