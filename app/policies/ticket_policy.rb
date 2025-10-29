@@ -132,19 +132,19 @@ class TicketPolicy < ApplicationPolicy
     end
   end
 
-  # Allow access via Ticket::Approval for approvers.
-  # Only agents and admins can be approvers (standard Zammad requirement).
-  # Approvers get full access to tickets they need to approve.
-  # This prevents the need to create shares that give access to entire groups.
+  # Allow access via Ticket::Approval.
+  # Only agents and admins can be approvers or requesters (standard Zammad requirement).
+  # Follow same pattern as share: creator gets full access, approver gets full access (for approval actions)
   def approval_access?(access)
     return nil unless user
-    return nil unless user.permissions?('ticket.agent') # Only agents can be approvers
+    return nil unless user.permissions?('ticket.agent') # Only agents can be approvers/requesters
     
-    # Check if user is an approver for this ticket (any status)
+    # Check if user is a requester (creator) or approver for this ticket
+    is_requester = record.approvals.exists?(requester_id: user.id)
     is_approver = record.approvals.exists?(approver_id: user.id)
-    return nil unless is_approver
+    return nil unless is_requester || is_approver
     
-    # Approvers get full access (read, comment, edit) for tickets they need to approve
+    # Both requester and approver get full access (read, comment, edit)
     case access.to_s
     when 'read', 'change', 'create', 'full'
       true
