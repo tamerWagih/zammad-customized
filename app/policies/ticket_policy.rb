@@ -40,6 +40,11 @@ class TicketPolicy < ApplicationPolicy
     # This method is used to check if a follow-up is possible (mostly based on the configuration).
     # Agents are always allowed to reopen tickets, configuration does not matter.
 
+    # For adding comments/articles, check 'create' permission instead of 'change'
+    # This allows users with comment-only share access to add comments
+    can_create = access?('create')
+    return true if can_create
+
     return update? if Ticket::StateType.lookup(id: record.state.state_type_id).name != 'closed' # check if the ticket state is already closed
     return true if agent_update_access?
 
@@ -152,8 +157,8 @@ class TicketPolicy < ApplicationPolicy
   # Maps Zammad policy accesses to share permissions:
   # - 'read'  -> view ticket (allowed for comment-only shares)
   # - 'create'-> add notes/comments (allowed for comment-only shares)
-  # - 'change'-> edit ticket fields (NOT allowed for comment-only shares)
-  # - 'full'  -> full access (NOT allowed for comment-only shares)
+  # - 'change'-> edit ticket fields (NOT allowed for comment-only shares, BUT sharer can manage their shares)
+  # - 'full'  -> full access (NOT allowed for comment-only shares, BUT sharer can manage their shares)
   def share_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
@@ -161,6 +166,9 @@ class TicketPolicy < ApplicationPolicy
     share_group_ids = Ticket::Share.active_current.where(ticket_id: record.id).pluck(:group_id)
     return nil if share_group_ids.empty?
 
+    # Check if user is the sharer (can manage their own shares)
+    user_is_sharer = record.shares.active_current.exists?(shared_by_id: user.id)
+    
     # Check if user has ANY permission level in the shared groups (read, change, or full)
     user_group_ids_read = Array(user.group_ids_access('read'))
     user_group_ids_change = Array(user.group_ids_access('change'))
@@ -168,11 +176,17 @@ class TicketPolicy < ApplicationPolicy
     
     # Combine all group IDs where user has any permission
     user_group_ids = (user_group_ids_read + user_group_ids_change + user_group_ids_full).uniq
-    return nil if (share_group_ids & user_group_ids).blank?
+    return nil if (share_group_ids & user_group_ids).blank? && !user_is_sharer
 
-    # Get the actual share to check permissions
+    # Get the actual share to check permissions (prefer matching share, otherwise any share if user is sharer)
     matching_share = record.shares.active_current.find do |share|
-      (share_group_ids & user_group_ids).include?(share.group_id)
+      if user_is_sharer && share.shared_by_id == user.id
+        true # User is the sharer
+      elsif (share_group_ids & user_group_ids).include?(share.group_id)
+        true # User is in the shared group
+      else
+        false
+      end
     end
     
     return nil unless matching_share
@@ -182,10 +196,13 @@ class TicketPolicy < ApplicationPolicy
 
     # Map access based on share permissions
     # Shared tickets with comment permission can only view and add comments (like CC'd users)
+    # BUT sharers can always manage their shares (edit, revoke, delete)
     case access.to_s
     when 'read', 'create'  # read = view, create = add notes/comments
       has_comment # Allow viewing and adding comments
     when 'change', 'full'  # change = edit fields, full = full access
+      # Sharers can always manage their shares, even with comment-only permission
+      return true if user_is_sharer
       has_full # Only allow if share has full permission (currently not used)
     else
       nil
