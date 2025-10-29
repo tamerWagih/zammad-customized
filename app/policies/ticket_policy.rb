@@ -171,10 +171,13 @@ class TicketPolicy < ApplicationPolicy
     user_group_ids = Array(user.group_ids_access('read'))
     user_is_receiver = share_group_ids.present? && (share_group_ids & user_group_ids).present?
 
+    Rails.logger.info "[SHARE_ACCESS] User #{user.id} - Sharer: #{user_is_sharer}, Receiver: #{user_is_receiver}, Access: #{access}"
+    Rails.logger.info "[SHARE_ACCESS] Share group IDs: #{share_group_ids}, User group IDs: #{user_group_ids}"
+
     return nil unless user_is_sharer || user_is_receiver
 
     # Map access based on role (like approval: creator = full, receiver = comment)
-    case access.to_s
+    result = case access.to_s
     when 'read', 'create'  # read = view, create = add notes/comments
       true  # Both sharer and receivers can view and comment
     when 'change', 'full'  # change = edit fields, full = full access
@@ -182,6 +185,9 @@ class TicketPolicy < ApplicationPolicy
     else
       nil
     end
+    
+    Rails.logger.info "[SHARE_ACCESS] Result: #{result}"
+    result
   end
 
   def customer_access?
