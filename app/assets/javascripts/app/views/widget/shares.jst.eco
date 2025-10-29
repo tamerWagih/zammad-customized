@@ -16,16 +16,22 @@
         </div>
       </div>
       <div class="share-content">
-        <div class="share-permissions">
-          <span class="label label-success">
-            <%- @T('Full access for department') %>
-          </span>
+        <div class="share-permissions" style="margin-bottom: 0.5rem;">
+          <% if share.permissions && (share.permissions.includes('full') || share.permissions.includes?('full')): %>
+            <span class="label label-success">
+              <%- @T('Full access') %>
+            </span>
+          <% else: %>
+            <span class="label label-info">
+              <%- @T('Comment access') %>
+            </span>
+          <% end %>
         </div>
         <div class="share-message">
           <%- share.message %>
         </div>
         <div class="share-meta">
-          <div class="share-date">
+          <div class="share-date" style="font-size: 0.9em; color: #666;">
             <%- @T('Shared') %> <%- new Date(share.created_at).toLocaleDateString() %>
             <% if share.expires_at: %>
               (<%- @T('Expires') %> <%- new Date(share.expires_at).toLocaleDateString() %>)
@@ -48,8 +54,9 @@
           </button>
         </div>
       <% else: %>
-        <div class="share-info">
-          <%- @T('Shared with %s by %s', (share.group_name || share.group || @T('department')), (share.shared_by_name || @T('another user'))) %>
+        <!-- Receiver view: Shows who shared it with this user's department -->
+        <div class="share-info" style="font-size: 0.9em; color: #666; margin-top: 0.5rem;">
+          <%- share.group_name || share.group || @T('department') %>
         </div>
       <% end %>
     </div>

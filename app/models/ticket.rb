@@ -766,10 +766,13 @@ returns a hex color code
       Rails.logger.info "[SHARE_PERMISSIONS] Share permissions array: #{share_perms.inspect}"
       
       has_full = share_perms.include?('full')
+      has_comment = share_perms.include?('comment')
       
+      # Comment permission includes read access
+      # Users with comment can view and add notes, but not edit ticket fields
       result = {
-        read: has_full || share_perms.include?('read'),
-        comment: has_full || share_perms.include?('comment'),
+        read: has_full || has_comment || share_perms.include?('read'),
+        comment: has_full || has_comment,
         edit: has_full || share_perms.include?('edit')
       }
       
