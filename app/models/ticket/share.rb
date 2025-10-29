@@ -8,9 +8,9 @@ class Ticket::Share < ApplicationModel
   include HasTransactionDispatcher
   include Ticket::Share::TriggersNotifications
 
-  VALID_PERMISSIONS = %w[full].freeze
+  VALID_PERMISSIONS = %w[full comment].freeze
 
-  before_validation :ensure_full_permission
+  before_validation :ensure_default_permission
 
   belongs_to :ticket, touch: true  # Touch parent ticket to trigger its TriggersSubscriptions
   belongs_to :group
@@ -28,6 +28,14 @@ class Ticket::Share < ApplicationModel
 
   def full_access?
     Array(permissions).include?('full')
+  end
+
+  def comment_access?
+    Array(permissions).include?('comment') || full_access?
+  end
+
+  def read_access?
+    full_access? || comment_access?
   end
 
   def revoke!
@@ -81,8 +89,9 @@ class Ticket::Share < ApplicationModel
     end
   end
 
-  def ensure_full_permission
-    self.permissions = ['full'] if permissions.blank?
+  def ensure_default_permission
+    # Default to comment permission for new shares
+    self.permissions = ['comment'] if permissions.blank?
   end
 
   def search_index_attribute_lookup(include_references: true)
@@ -95,9 +104,10 @@ class Ticket::Share < ApplicationModel
   end
 
   def activity_message
+    permission_text = full_access? ? 'full access' : 'comment access'
     case status
     when 'active'
-      "Ticket shared with group #{group_name} (full access)"
+      "Ticket shared with group #{group_name} (#{permission_text})"
     when 'revoked'
       "Share revoked for group #{group_name}"
     else

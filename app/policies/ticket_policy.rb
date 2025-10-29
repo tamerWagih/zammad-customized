@@ -150,9 +150,10 @@ class TicketPolicy < ApplicationPolicy
 
   # Allow access via Ticket::Share for the current user.
   # Maps Zammad policy accesses to share permissions:
-  # - 'read'  -> read/comment/edit
-  # - 'change'-> edit
-  # - 'create'-> comment (e.g., add notes)
+  # - 'read'  -> read/comment
+  # - 'change'-> comment only (for shared tickets with comment permission)
+  # - 'create'-> comment
+  # - 'full'  -> full access (only if share has full permission)
   def share_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
@@ -169,10 +170,24 @@ class TicketPolicy < ApplicationPolicy
     user_group_ids = (user_group_ids_read + user_group_ids_change + user_group_ids_full).uniq
     return nil if (share_group_ids & user_group_ids).blank?
 
-    # Users with share access get full permissions
+    # Get the actual share to check permissions
+    matching_share = record.shares.active_current.find do |share|
+      (share_group_ids & user_group_ids).include?(share.group_id)
+    end
+    
+    return nil unless matching_share
+
+    has_full = matching_share.full_access?
+    has_comment = matching_share.comment_access? || has_full
+
+    # Map access based on share permissions
     case access.to_s
-    when 'read', 'change', 'create', 'full'
-      true
+    when 'read'
+      has_comment # comment permission includes read
+    when 'change', 'create'
+      has_comment # change/create means add notes/comments
+    when 'full'
+      has_full # only if share has full permission
     else
       nil
     end

@@ -85,7 +85,7 @@ class Ticket::PerformChanges::Action::ShareCreate < Ticket::PerformChanges::Acti
         ticket_id:     record.id,
         group_id:      group_id.to_i,
         shared_by_id:  shared_by_id,
-        permissions:   ['full'],
+        permissions:   ['comment'],
         status:        'active',
         expires_at:    expires_at,
         created_by_id: user_id || 1,

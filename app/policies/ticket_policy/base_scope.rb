@@ -25,10 +25,18 @@ class TicketPolicy < ApplicationPolicy
         sql.push('group_id IN (?)')
         bind.push(user.group_ids_access(self.class::ACCESS_TYPE))
 
+        # Include shared tickets
         shared_ids = shared_ticket_ids(self.class::ACCESS_TYPE)
         if shared_ids.present?
           sql.push('tickets.id IN (?)')
           bind.push(shared_ids)
+        end
+
+        # Include approval tickets (approvers can see tickets they need to approve)
+        approval_ids = approval_ticket_ids
+        if approval_ids.present?
+          sql.push('tickets.id IN (?)')
+          bind.push(approval_ids)
         end
       end
 
@@ -70,6 +78,15 @@ class TicketPolicy < ApplicationPolicy
       Ticket::Share.active_current.where(group_id: group_ids).pluck(:ticket_id).uniq
     rescue StandardError => e
       Rails.logger.warn("Failed to resolve shared ticket ids for user #{user.id}: #{e.message}")
+      []
+    end
+
+    def approval_ticket_ids
+      return [] unless user.permissions?('ticket.agent')
+
+      Ticket::Approval.where(approver_id: user.id).pluck(:ticket_id).uniq
+    rescue StandardError => e
+      Rails.logger.warn("Failed to resolve approval ticket ids for user #{user.id}: #{e.message}")
       []
     end
   end

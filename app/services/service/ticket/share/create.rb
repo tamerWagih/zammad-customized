@@ -20,7 +20,7 @@ class Service::Ticket::Share::Create < Service::BaseWithCurrentUser
     share = ticket.shares.create!(
       group:        group,
       shared_by:   current_user,
-      permissions: ['full'],
+      permissions: ['comment'],
       message:     message,
       expires_at:  normalize_expires_at(expires_at),
       status:      'active'
