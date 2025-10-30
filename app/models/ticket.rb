@@ -744,12 +744,16 @@ returns a hex color code
   # Receiver from DIFFERENT group: comment-only
   def share_permissions_for(user)
     default = { read: false, comment: false, edit: false }
+    Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user&.id}: Starting calculation"
     return default unless user
     return default unless respond_to?(:shares)
 
     begin
       # Only agents can access shared tickets
-      return default unless user.permissions?('ticket.agent')
+      unless user.permissions?('ticket.agent')
+        Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Not an agent, returning default"
+        return default
+      end
       
       # Check if user is the sharer (creator)
       user_is_sharer = shares.active_current.exists?(shared_by_id: user.id)
@@ -760,24 +764,37 @@ returns a hex color code
       receiver_shares = active.select { |s| user_group_ids.include?(s.group_id) }
       user_is_receiver = receiver_shares.present?
       
-      return default unless user_is_sharer || user_is_receiver
+      Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Sharer=#{user_is_sharer}, Receiver=#{user_is_receiver}, Active shares=#{active.count}"
+      
+      unless user_is_sharer || user_is_receiver
+        Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Not sharer or receiver, returning default"
+        return default
+      end
       
       # Sharer: full access
-      return { read: true, comment: true, edit: true } if user_is_sharer
+      if user_is_sharer
+        result = { read: true, comment: true, edit: true }
+        Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Sharer - full access, returning #{result.inspect}"
+        return result
+      end
 
       # Receiver: check if they have group access to the ticket's group
       # Same group = full access, Different group = comment only
       user_has_ticket_group = user_group_ids.include?(group_id)
 
-      if user_has_ticket_group
+      result = if user_has_ticket_group
         # Receiver from SAME group gets full access
         { read: true, comment: true, edit: true }
       else
         # Receiver from DIFFERENT group gets comment-only
         { read: true, comment: true, edit: false }
       end
+      
+      Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Receiver (same_group=#{user_has_ticket_group}), returning #{result.inspect}"
+      result
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
+      Rails.logger.warn e.backtrace.first(5).join("\n")
       default
     end
   end
