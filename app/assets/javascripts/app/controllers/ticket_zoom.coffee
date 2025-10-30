@@ -269,14 +269,17 @@ class App.TicketZoom extends App.Controller
               @ticket._ccs_cache = @ccs if @ticket
               
               # CRITICAL: Recalculate permissions after approval change
+              oldReadable = @readable
               oldChangeable = @changeable
+              oldFullable = @fullable
+              
               @readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || false
               @changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || false
               @fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || false
               
-              # If permissions changed, force re-render
-              if oldChangeable != @changeable
-                console.log "[APPROVAL_REFRESH] Permissions changed, forcing re-render"
+              # If ANY permission changed, force re-render
+              if oldReadable != @readable || oldChangeable != @changeable || oldFullable != @fullable
+                console.log "[APPROVAL_REFRESH] Permissions changed (read: #{oldReadable}->#{@readable}, change: #{oldChangeable}->#{@changeable}), forcing re-render"
                 @renderDone = false
                 @render()
               
@@ -328,14 +331,17 @@ class App.TicketZoom extends App.Controller
                 @ticket.share_permissions = ticketData.share_permissions
               
               # CRITICAL: Recalculate permissions after share change
+              oldReadable = @readable
               oldChangeable = @changeable
+              oldFullable = @fullable
+              
               @readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || false
               @changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || false
               @fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || false
               
-              # If permissions changed, force re-render
-              if oldChangeable != @changeable
-                console.log "[SHARE_REFRESH] Permissions changed, forcing re-render"
+              # If ANY permission changed, force re-render
+              if oldReadable != @readable || oldChangeable != @changeable || oldFullable != @fullable
+                console.log "[SHARE_REFRESH] Permissions changed (read: #{oldReadable}->#{@readable}, change: #{oldChangeable}->#{@changeable}), forcing re-render"
                 @renderDone = false
                 @render()
               
