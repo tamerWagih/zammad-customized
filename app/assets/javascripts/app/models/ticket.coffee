@@ -271,8 +271,7 @@ class App.Ticket extends App.Model
     false
 
   hasSharePermission: (permission) ->
-    # SIMPLE PATTERN: Just like approval - check if user is in a shared group
-    # Backend policy handles the actual permission grants
+    # SIMPLE PATTERN: Check if user is in a shared group, but DON'T grant 'full' for different groups
     return false unless App.User.current()?.permission('ticket.agent')
     
     user = App.User.current()
@@ -291,23 +290,38 @@ class App.Ticket extends App.Model
     isSharer = shares.some (share) ->
       share?.shared_by_id?.toString?() is user.id?.toString?() and share?.status is 'active'
     
+    matchingShare = null
     isReceiver = shares.some (share) ->
       return false unless share?.status is 'active'
       return false unless share.group_id?
       groupMatch = userGroupIds.some (gid) -> gid?.toString?() is share.group_id?.toString?()
       return false unless groupMatch
       # Check expiry
-      return true unless share.expires_at
-      expiresAt = new Date(share.expires_at)
-      expiresAt > now
+      return false if share.expires_at and new Date(share.expires_at) <= now
+      matchingShare = share  # Remember the matching share
+      true
     
     hasShare = isSharer or isReceiver
+    return false unless hasShare
     
-    console.log "[FRONTEND_SHARE] Ticket ##{@id}, permission #{permission}, isSharer=#{isSharer}, isReceiver=#{isReceiver}, result=#{hasShare}"
+    # CRITICAL: For 'full' permission, check if user is in the ticket's group
+    # This ensures DIFFERENT group receivers only get comment access
+    requested = permission?.toString()?.toLowerCase() || 'read'
     
-    # SIMPLE: If user has ANY share (as sharer or receiver), backend policy decides permissions
-    # Just return true and let backend handle read/change/create/full distinctions
-    hasShare
+    if requested is 'full'
+      # Sharer always gets full
+      return true if isSharer
+      
+      # Receiver: only if they're in the SAME group as the ticket
+      ticketGroupId = @group_id?.toString?()
+      userInTicketGroup = userGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+      
+      console.log "[FRONTEND_SHARE] Ticket ##{@id}, permission full, userInTicketGroup=#{userInTicketGroup}"
+      return userInTicketGroup
+    
+    # For read/change/create, just return true - backend grants these for all shares
+    console.log "[FRONTEND_SHARE] Ticket ##{@id}, permission #{requested}, hasShare=#{hasShare}"
+    true
 
   sharePermissions: ->
     perms = @share_permissions ? @preferences?.share_permissions
