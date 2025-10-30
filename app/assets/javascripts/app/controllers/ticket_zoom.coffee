@@ -201,15 +201,11 @@ class App.TicketZoom extends App.Controller
     @ticket         = App.Ticket.fullLocal(@ticket_id)
     @ticket.article = undefined
     
-    # Set approvals, shares, CCs, and share_permissions on ticket object for permission checks
+    # Set approvals, shares, and CCs on ticket object for permission checks
+    # SIMPLE: Just like approvals - store the arrays and let the model check them
     @ticket._approvals_cache = @approvals
     @ticket._shares_cache = @shares
     @ticket._ccs_cache = @ccs
-    
-    # CRITICAL: Set share_permissions from backend data for accurate permission checks
-    if data.share_permissions && @ticket
-      @ticket.share_permissions = data.share_permissions
-      console.log "[TICKET_LOAD] Set share_permissions:", JSON.stringify(data.share_permissions)
     
     # Evaluate permissions with detailed logging
     @view           = @ticket && @ticket.currentView && @ticket.currentView()
@@ -326,13 +322,10 @@ class App.TicketZoom extends App.Controller
               @ccs = ticketData.ccs || []
               
               # Set cache on ticket object for permission checks
+              # SIMPLE: Just update the arrays, let the model check them
               @ticket._approvals_cache = @approvals if @ticket
               @ticket._shares_cache = @shares if @ticket
               @ticket._ccs_cache = @ccs if @ticket
-              
-              # CRITICAL: Update share_permissions for real-time permission changes
-              if ticketData.share_permissions && @ticket
-                @ticket.share_permissions = ticketData.share_permissions
               
               # CRITICAL: Recalculate permissions after share change
               oldReadable = @readable

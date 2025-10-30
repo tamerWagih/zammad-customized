@@ -271,39 +271,43 @@ class App.Ticket extends App.Model
     false
 
   hasSharePermission: (permission) ->
+    # SIMPLE PATTERN: Just like approval - check if user is in a shared group
+    # Backend policy handles the actual permission grants
     return false unless App.User.current()?.permission('ticket.agent')
-
-    # Check if user is shared with (group member)
-    perms = @sharePermissions()
-    perms ?= @sharePermissionsFallback()
     
-    return false unless perms
-
-    console.log "[FRONTEND_SHARE] Ticket ##{@id}, perms:", JSON.stringify(perms)
-
-    # Map requested permission to share permissions  
-    # Backend decides based on group membership - frontend just uses provided perms
-    requested = permission?.toString()?.toLowerCase() || 'read'
-    result = switch requested
-      when 'read'
-        !!perms.read or !!perms.comment or !!perms.edit
-      when 'change', 'edit'
-        # Backend grants 'change' for comment-only (fields disabled by form validation)
-        # Full access gets 'edit' = true
-        !!perms.comment or !!perms.edit
-      when 'create'
-        # Allow creating articles if comment or edit
-        !!perms.comment or !!perms.edit
-      when 'full'
-        # Only when edit explicitly allowed
-        !!perms.edit
-      when 'comment'
-        !!perms.comment or !!perms.edit
-      else
-        false
+    user = App.User.current()
+    return false unless user
     
-    console.log "[FRONTEND_SHARE] Ticket ##{@id}, permission #{requested}, result: #{result}"
-    result
+    # Get shares for this ticket (use cache if available)
+    shares = @_shares_cache or @shares or []
+    return false unless shares?.length
+    
+    # Get ALL user's groups (any access level)
+    userGroupIds = user.allGroupIds?() || []
+    return false unless userGroupIds.length
+    
+    # Check if user is sharer OR receiver (member of shared group)
+    now = new Date()
+    isSharer = shares.some (share) ->
+      share?.shared_by_id?.toString?() is user.id?.toString?() and share?.status is 'active'
+    
+    isReceiver = shares.some (share) ->
+      return false unless share?.status is 'active'
+      return false unless share.group_id?
+      groupMatch = userGroupIds.some (gid) -> gid?.toString?() is share.group_id?.toString?()
+      return false unless groupMatch
+      # Check expiry
+      return true unless share.expires_at
+      expiresAt = new Date(share.expires_at)
+      expiresAt > now
+    
+    hasShare = isSharer or isReceiver
+    
+    console.log "[FRONTEND_SHARE] Ticket ##{@id}, permission #{permission}, isSharer=#{isSharer}, isReceiver=#{isReceiver}, result=#{hasShare}"
+    
+    # SIMPLE: If user has ANY share (as sharer or receiver), backend policy decides permissions
+    # Just return true and let backend handle read/change/create/full distinctions
+    hasShare
 
   sharePermissions: ->
     perms = @share_permissions ? @preferences?.share_permissions
