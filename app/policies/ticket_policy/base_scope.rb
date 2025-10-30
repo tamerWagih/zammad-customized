@@ -72,7 +72,10 @@ class TicketPolicy < ApplicationPolicy
     def shared_ticket_ids(access)
       return [] unless user.permissions?('ticket.agent')
 
-      group_ids = Array(user.group_ids_access(access)).compact
+      # Get ALL groups the user belongs to (any access level)
+      # Don't filter by access - if user is in a group that's shared with, they should see the ticket
+      # This matches approval behavior where approvers see tickets regardless of group access
+      group_ids = user.group_ids
       return [] if group_ids.blank?
 
       Ticket::Share.active_current.where(group_id: group_ids).pluck(:ticket_id).uniq
