@@ -201,11 +201,15 @@ class App.TicketZoom extends App.Controller
     @ticket         = App.Ticket.fullLocal(@ticket_id)
     @ticket.article = undefined
     
-    # Set approvals, shares, and CCs on ticket object for permission checks (same pattern as tags)
+    # Set approvals, shares, CCs, and share_permissions on ticket object for permission checks
     @ticket._approvals_cache = @approvals
     @ticket._shares_cache = @shares
     @ticket._ccs_cache = @ccs
     
+    # CRITICAL: Set share_permissions from backend data for accurate permission checks
+    if data.share_permissions && @ticket
+      @ticket.share_permissions = data.share_permissions
+      console.log "[TICKET_LOAD] Set share_permissions:", data.share_permissions
     
     # Evaluate permissions with detailed logging
     @view           = @ticket && @ticket.currentView && @ticket.currentView()
