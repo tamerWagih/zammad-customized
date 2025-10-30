@@ -155,7 +155,10 @@ class TicketPolicy < ApplicationPolicy
   end
 
   # Allow access via Ticket::Share for the current user.
-  # Both sharer and receivers get full access
+  # Sharer gets full access. Receivers get access according to Ticket::Share.permissions:
+  # - read:    can read
+  # - comment: can create (add articles/notes) but not change ticket attributes
+  # - full:    can read/change/create/full
   def share_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
@@ -165,16 +168,30 @@ class TicketPolicy < ApplicationPolicy
     
     # Check if user is a receiver (member of shared group)
     # Get ALL groups user belongs to, not just those with 'read' access
-    share_group_ids = Ticket::Share.active_current.where(ticket_id: record.id).pluck(:group_id)
+    active_shares = Ticket::Share.active_current.where(ticket_id: record.id)
     user_group_ids = user.groups.pluck(:id)  # All groups, any access level
-    user_is_receiver = share_group_ids.present? && (share_group_ids & user_group_ids).present?
+    receiver_shares = active_shares.select { |s| user_group_ids.include?(s.group_id) }
+    user_is_receiver = receiver_shares.present?
 
     return nil unless user_is_sharer || user_is_receiver
 
-    # Both sharer and receivers get full access (read, comment, edit)
+    # Sharer has full access
+    return true if user_is_sharer && %w[read change create full].include?(access.to_s)
+
+    # Map receiver access based on share permissions (aggregate across matching shares)
+    can_read    = receiver_shares.any?(&:read_access?)
+    can_comment = receiver_shares.any?(&:comment_access?)
+    can_full    = receiver_shares.any?(&:full_access?)
+
     case access.to_s
-    when 'read', 'change', 'create', 'full'
-      true
+    when 'read'
+      can_read
+    when 'create'
+      # allow adding articles/notes if comment or full
+      can_comment || can_full
+    when 'change', 'full'
+      # only if full
+      can_full
     else
       nil
     end

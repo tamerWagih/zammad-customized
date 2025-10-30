@@ -739,7 +739,7 @@ returns a hex color code
   end
 
   # Check share permissions for a given user
-  # Follow same pattern as approval: creator gets full access, receivers get comment-only
+  # Sharer: full access. Receivers: derive from Ticket::Share.permissions
   def share_permissions_for(user)
     default = { read: false, comment: false, edit: false }
     return default unless user
@@ -754,28 +754,25 @@ returns a hex color code
       
       # Check if user is a receiver (member of shared group)
       # Get ALL groups user belongs to, not just those with 'read' access
-      share_group_ids = shares.active_current.pluck(:group_id)
+      active = shares.active_current
       user_group_ids = user.groups.pluck(:id)  # All groups, any access level
-      user_is_receiver = share_group_ids.present? && (share_group_ids & user_group_ids).present?
+      receiver_shares = active.select { |s| user_group_ids.include?(s.group_id) }
+      user_is_receiver = receiver_shares.present?
       
       return default unless user_is_sharer || user_is_receiver
       
-      # Map permissions based on role (like approval: creator = full, receiver = comment)
-      if user_is_sharer
-        # Creator gets full access (can do everything)
-        {
-          read: true,
-          comment: true,
-          edit: true
-        }
-      else
-        # Receiver gets comment-only access (can view and comment, not edit)
-        {
-          read: true,
-          comment: true,
-          edit: false
-        }
-      end
+      # Sharer: full access
+      return { read: true, comment: true, edit: true } if user_is_sharer
+
+      # Aggregate receiver permissions across all matching shares
+      can_full    = receiver_shares.any?(&:full_access?)
+      can_comment = receiver_shares.any?(&:comment_access?)
+
+      {
+        read:    can_comment || can_full,
+        comment: can_comment || can_full,
+        edit:    can_full,
+      }
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
       default

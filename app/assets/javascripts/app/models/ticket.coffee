@@ -272,15 +272,29 @@ class App.Ticket extends App.Model
     return false unless App.User.current()?.permission('ticket.agent')
 
     # Check if user is shared with (group member)
-    # If yes, give full access (aligned with approval behavior)
     perms = @sharePermissions()
     perms ?= @sharePermissionsFallback()
     
-    # If we have share permissions, user has access and gets full permissions
-    if perms
-      return true
+    return false unless perms
 
-    false
+    # Map requested permission to share permissions
+    requested = permission?.toString()?.toLowerCase() || 'read'
+    switch requested
+      when 'read'
+        !!perms.read
+      when 'change', 'edit'
+        # Only allow editing if share grants edit/full
+        !!perms.edit
+      when 'create'
+        # Allow creating articles/comments if share grants comment or edit
+        !!perms.comment or !!perms.edit
+      when 'full'
+        # Only when full/edit explicitly allowed
+        !!perms.edit
+      when 'comment'
+        !!perms.comment or !!perms.edit
+      else
+        false
 
   sharePermissions: ->
     perms = @share_permissions ? @preferences?.share_permissions
