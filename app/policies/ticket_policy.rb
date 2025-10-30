@@ -94,6 +94,10 @@ class TicketPolicy < ApplicationPolicy
     approval_decision = approval_access?(access)
     return approval_decision unless approval_decision.nil?
 
+    # Check if user is the ticket creator (view + comment access)
+    creator_decision = creator_access?(access)
+    return creator_decision unless creator_decision.nil?
+
     share_decision = share_access?(access)
     return share_decision unless share_decision.nil?
 
@@ -149,6 +153,29 @@ class TicketPolicy < ApplicationPolicy
     case access.to_s
     when 'read', 'change', 'create', 'full'
       true
+    else
+      nil
+    end
+  end
+
+  # Allow ticket creator (created_by) to view and comment on their tickets
+  # even if the ticket is in a different group
+  def creator_access?(access)
+    return nil unless user
+    return nil unless user.permissions?('ticket.agent')
+    
+    # Check if user created this ticket
+    return nil unless record.created_by_id == user.id
+    
+    # Creator gets view + comment access (but not full edit)
+    case access.to_s
+    when 'read', 'change', 'create'
+      Rails.logger.info "[CREATOR_ACCESS] Ticket ##{record.id}: Creator gets view+comment access"
+      true
+    when 'full'
+      # Creator doesn't get full access (can't edit fields in different group)
+      Rails.logger.info "[CREATOR_ACCESS] Ticket ##{record.id}: Creator denied full access (different group)"
+      false
     else
       nil
     end
