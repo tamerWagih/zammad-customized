@@ -209,7 +209,7 @@ class App.TicketZoom extends App.Controller
     # CRITICAL: Set share_permissions from backend data for accurate permission checks
     if data.share_permissions && @ticket
       @ticket.share_permissions = data.share_permissions
-      console.log "[TICKET_LOAD] Set share_permissions:", data.share_permissions
+      console.log "[TICKET_LOAD] Set share_permissions:", JSON.stringify(data.share_permissions)
     
     # Evaluate permissions with detailed logging
     @view           = @ticket && @ticket.currentView && @ticket.currentView()

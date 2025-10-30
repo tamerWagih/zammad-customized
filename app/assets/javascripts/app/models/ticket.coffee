@@ -279,7 +279,7 @@ class App.Ticket extends App.Model
     
     return false unless perms
 
-    console.log "[FRONTEND_SHARE] Ticket ##{@id}, perms:", perms
+    console.log "[FRONTEND_SHARE] Ticket ##{@id}, perms:", JSON.stringify(perms)
 
     # Map requested permission to share permissions  
     # Backend decides based on group membership - frontend just uses provided perms
