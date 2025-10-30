@@ -155,11 +155,7 @@ class TicketPolicy < ApplicationPolicy
   end
 
   # Allow access via Ticket::Share for the current user.
-  # Sharer gets full access, receivers get view + comment only
-  # - 'read'  -> view ticket (all)
-  # - 'create'-> add notes/comments (all)
-  # - 'change'-> edit ticket fields (sharer only)
-  # - 'full'  -> full access (sharer only)
+  # Both sharer and receivers get full access
   def share_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
@@ -174,19 +170,13 @@ class TicketPolicy < ApplicationPolicy
 
     return nil unless user_is_sharer || user_is_receiver
 
-    # Map access based on role: sharer = full, receiver = view + comment
-    result = case access.to_s
-    when 'read', 'create'
-      # All users (sharer and receivers) can view and comment
+    # Both sharer and receivers get full access (read, comment, edit)
+    case access.to_s
+    when 'read', 'change', 'create', 'full'
       true
-    when 'change', 'full'
-      # Only sharer can edit ticket fields and has full access
-      user_is_sharer
     else
       nil
     end
-    
-    result
   end
 
   def customer_access?

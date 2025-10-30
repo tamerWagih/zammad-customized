@@ -256,20 +256,12 @@ class App.Ticket extends App.Model
     # 2. Check standard group access
     return true if @isAccessibleByGroup(user, permission)
     
-    # 3. Check approval permissions (requester gets full, approver gets view + comment)
+    # 3. Check if user is an approver (approvers get full access)
     if @_approvals_cache or @approvals
       approvals = @_approvals_cache or @approvals or []
       for approval in approvals
-        is_requester = parseInt(approval.requester_id) is parseInt(user.id)
-        is_approver = parseInt(approval.approver_id) is parseInt(user.id)
-        
-        if is_requester
-          # Requester always gets full access
+        if parseInt(approval.approver_id) is parseInt(user.id)
           return true
-        else if is_approver
-          # Approver gets view + comment only (not change/full)
-          if permission in ['read', 'create']
-            return true
     
     # 4. Check share permissions (uses share_permissions from backend)
     return true if @hasSharePermission(permission)
@@ -279,29 +271,14 @@ class App.Ticket extends App.Model
   hasSharePermission: (permission) ->
     return false unless App.User.current()?.permission('ticket.agent')
 
+    # Check if user is shared with (group member)
+    # If yes, give full access (aligned with approval behavior)
     perms = @sharePermissions()
     perms ?= @sharePermissionsFallback()
-    return false unless perms
-
-    requested = []
-    if Array.isArray(permission)
-      requested = permission
-    else if permission?
-      requested = [permission]
-    else
-      requested = ['read']
-
-    for perm in requested
-      normalized = perm?.toString()?.toLowerCase()
-      allowed = switch normalized
-        when 'read' then perms.read
-        when 'change' then perms.edit
-        when 'create' then perms.comment or perms.edit
-        when 'comment' then perms.comment
-        when 'edit' then perms.edit
-        when 'full' then perms.edit
-        else perms.read
-      return true if allowed
+    
+    # If we have share permissions, user has access and gets full permissions
+    if perms
+      return true
 
     false
 
