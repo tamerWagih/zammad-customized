@@ -146,10 +146,11 @@ class TicketPolicy < ApplicationPolicy
     # Check if user is a requester (creator) or approver for this ticket
     is_requester = record.approvals.exists?(requester_id: user.id)
     is_approver = record.approvals.exists?(approver_id: user.id)
+    
     return nil unless is_requester || is_approver
     
     # Map access based on role: requester = full, approver = view + comment
-    case access.to_s
+    result = case access.to_s
     when 'read', 'create'
       # All users (requester and approver) can view and comment
       true
@@ -159,6 +160,8 @@ class TicketPolicy < ApplicationPolicy
     else
       nil
     end
+    
+    result
   end
 
   # Allow access via Ticket::Share for the current user.
@@ -182,7 +185,7 @@ class TicketPolicy < ApplicationPolicy
     return nil unless user_is_sharer || user_is_receiver
 
     # Map access based on role: sharer = full, receiver = view + comment
-    case access.to_s
+    result = case access.to_s
     when 'read', 'create'
       # All users (sharer and receivers) can view and comment
       true
@@ -192,6 +195,8 @@ class TicketPolicy < ApplicationPolicy
     else
       nil
     end
+    
+    result
   end
 
   def customer_access?
