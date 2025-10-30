@@ -1,6 +1,6 @@
 class Note
   @action: (actions, ticket, article, ui) ->
-    return actions if !ticket.editable()
+    return actions if !ticket.editable('create')
     actions
 
   @perform: (articleContainer, type, ticket, article, ui) ->

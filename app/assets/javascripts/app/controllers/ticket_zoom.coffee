@@ -674,7 +674,8 @@ class App.TicketZoom extends App.Controller
 
       @form_id = @taskGet('article').form_id || App.ControllerForm.formId()
 
-      if @ticket.editable()
+      # Check 'create' permission for article form (allows comment-only users to add articles)
+      if @ticket.editable('create')
         @articleNew = new App.TicketZoomArticleNew(
           ticket:                       @ticket
           ticket_id:                    @ticket_id
@@ -820,7 +821,8 @@ class App.TicketZoom extends App.Controller
     if !@autosaveLast
       @autosaveLast = @taskGet()
     return if !@ticket
-    return if !@ticket.editable()
+    # Allow autosave for users with create permission (comment-only)
+    return if !@ticket.editable('create')
     currentParams = @formCurrent()
 
     # check changed between last autosave
