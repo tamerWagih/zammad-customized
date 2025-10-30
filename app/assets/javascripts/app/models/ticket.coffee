@@ -324,7 +324,9 @@ class App.Ticket extends App.Model
     shares = App.TicketShare?.findAllByAttribute && App.TicketShare.findAllByAttribute('ticket_id', @id) || []
     return null unless shares?.length
 
-    groupIds = user.allGroupIds?('read') || []
+    # Get ALL groups user belongs to (any access level)
+    # CRITICAL: Don't filter by 'read' - user only needs membership in the shared group
+    groupIds = user.allGroupIds?() || []
     return null unless groupIds.length
 
     now = new Date()
