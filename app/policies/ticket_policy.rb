@@ -156,8 +156,7 @@ class TicketPolicy < ApplicationPolicy
 
   # Allow access via Ticket::Share for the current user.
   # Sharer gets full access. Receivers get access according to Ticket::Share.permissions:
-  # - read:    can read
-  # - comment: can create (add articles/notes) but not change ticket attributes
+  # - comment: can view + add articles (same as approval: grant read/change/create, fields disabled by form validation)
   # - full:    can read/change/create/full
   def share_access?(access)
     return nil unless user
@@ -179,18 +178,16 @@ class TicketPolicy < ApplicationPolicy
     return true if user_is_sharer && %w[read change create full].include?(access.to_s)
 
     # Map receiver access based on share permissions (aggregate across matching shares)
-    can_read    = receiver_shares.any?(&:read_access?)
     can_comment = receiver_shares.any?(&:comment_access?)
     can_full    = receiver_shares.any?(&:full_access?)
 
+    # CRITICAL: Grant 'read', 'change', 'create' for comment-only (like approval)
+    # Ticket fields will be disabled by form validation if user lacks group access
+    # This allows Update button to show and article submission to work
     case access.to_s
-    when 'read'
-      can_read
-    when 'create'
-      # allow adding articles/notes if comment or full
+    when 'read', 'change', 'create'
       can_comment || can_full
-    when 'change', 'full'
-      # only if full
+    when 'full'
       can_full
     else
       nil

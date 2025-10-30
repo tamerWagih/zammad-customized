@@ -312,6 +312,9 @@ class App.TicketZoom extends App.Controller
               @ticket._shares_cache = @shares if @ticket
               @ticket._ccs_cache = @ccs if @ticket
               
+              # CRITICAL: Update share_permissions for real-time permission changes
+              if ticketData.share_permissions && @ticket
+                @ticket.share_permissions = ticketData.share_permissions
               
               # Trigger sidebar rerender for approval/share widgets
               App.Event.trigger('ui::ticket::sidebarRerender')
@@ -674,8 +677,7 @@ class App.TicketZoom extends App.Controller
 
       @form_id = @taskGet('article').form_id || App.ControllerForm.formId()
 
-      # Check 'create' permission for article form (allows comment-only users to add articles)
-      if @ticket.editable('create')
+      if @ticket.editable()
         @articleNew = new App.TicketZoomArticleNew(
           ticket:                       @ticket
           ticket_id:                    @ticket_id
@@ -821,8 +823,7 @@ class App.TicketZoom extends App.Controller
     if !@autosaveLast
       @autosaveLast = @taskGet()
     return if !@ticket
-    # Allow autosave for users with create permission (comment-only)
-    return if !@ticket.editable('create')
+    return if !@ticket.editable()
     currentParams = @formCurrent()
 
     # check changed between last autosave
