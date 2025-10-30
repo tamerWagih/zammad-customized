@@ -256,12 +256,20 @@ class App.Ticket extends App.Model
     # 2. Check standard group access
     return true if @isAccessibleByGroup(user, permission)
     
-    # 3. Check if user is an approver (approvers get full access)
+    # 3. Check approval permissions (requester gets full, approver gets view + comment)
     if @_approvals_cache or @approvals
       approvals = @_approvals_cache or @approvals or []
       for approval in approvals
-        if parseInt(approval.approver_id) is parseInt(user.id)
+        is_requester = parseInt(approval.requester_id) is parseInt(user.id)
+        is_approver = parseInt(approval.approver_id) is parseInt(user.id)
+        
+        if is_requester
+          # Requester always gets full access
           return true
+        else if is_approver
+          # Approver gets view + comment only (not change/full)
+          if permission in ['read', 'create']
+            return true
     
     # 4. Check share permissions (uses share_permissions from backend)
     return true if @hasSharePermission(permission)

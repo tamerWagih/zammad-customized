@@ -134,7 +134,11 @@ class TicketPolicy < ApplicationPolicy
 
   # Allow access via Ticket::Approval.
   # Only agents and admins can be approvers or requesters (standard Zammad requirement).
-  # Follow same pattern as share: creator gets full access, approver gets full access (for approval actions)
+  # Requester gets full access, approver gets view + comment only
+  # - 'read'  -> view ticket (all)
+  # - 'create'-> add notes/comments (all)
+  # - 'change'-> edit ticket fields (requester only)
+  # - 'full'  -> full access (requester only)
   def approval_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can be approvers/requesters
@@ -144,26 +148,30 @@ class TicketPolicy < ApplicationPolicy
     is_approver = record.approvals.exists?(approver_id: user.id)
     return nil unless is_requester || is_approver
     
-    # Both requester and approver get full access (read, comment, edit)
+    # Map access based on role: requester = full, approver = view + comment
     case access.to_s
-    when 'read', 'change', 'create', 'full'
+    when 'read', 'create'
+      # All users (requester and approver) can view and comment
       true
+    when 'change', 'full'
+      # Only requester can edit ticket fields and has full access
+      is_requester
     else
       nil
     end
   end
 
   # Allow access via Ticket::Share for the current user.
-  # Follow the same pattern as approval_access?: creator gets full access, receivers get comment-only
-  # - 'read'  -> view ticket
-  # - 'create'-> add notes/comments
+  # Sharer gets full access, receivers get view + comment only
+  # - 'read'  -> view ticket (all)
+  # - 'create'-> add notes/comments (all)
   # - 'change'-> edit ticket fields (sharer only)
   # - 'full'  -> full access (sharer only)
   def share_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
 
-    # Check if user is the sharer (creator gets full access like approval creator)
+    # Check if user is the sharer (creator gets full access)
     user_is_sharer = record.shares.active_current.exists?(shared_by_id: user.id)
     
     # Check if user is a receiver (member of shared group)
@@ -171,23 +179,19 @@ class TicketPolicy < ApplicationPolicy
     user_group_ids = Array(user.group_ids_access('read'))
     user_is_receiver = share_group_ids.present? && (share_group_ids & user_group_ids).present?
 
-    Rails.logger.info "[SHARE_ACCESS] User #{user.id} - Sharer: #{user_is_sharer}, Receiver: #{user_is_receiver}, Access: #{access}"
-    Rails.logger.info "[SHARE_ACCESS] Share group IDs: #{share_group_ids}, User group IDs: #{user_group_ids}"
-
     return nil unless user_is_sharer || user_is_receiver
 
-    # Map access based on role (like approval: creator = full, receiver = comment)
-    result = case access.to_s
-    when 'read', 'create'  # read = view, create = add notes/comments
-      true  # Both sharer and receivers can view and comment
-    when 'change', 'full'  # change = edit fields, full = full access
-      user_is_sharer  # Only sharer can edit ticket fields
+    # Map access based on role: sharer = full, receiver = view + comment
+    case access.to_s
+    when 'read', 'create'
+      # All users (sharer and receivers) can view and comment
+      true
+    when 'change', 'full'
+      # Only sharer can edit ticket fields and has full access
+      user_is_sharer
     else
       nil
     end
-    
-    Rails.logger.info "[SHARE_ACCESS] Result: #{result}"
-    result
   end
 
   def customer_access?

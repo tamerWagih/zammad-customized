@@ -757,12 +757,10 @@ returns a hex color code
       user_group_ids = Array(user.group_ids_access('read'))
       user_is_receiver = share_group_ids.present? && (share_group_ids & user_group_ids).present?
       
-      Rails.logger.info "[SHARE_PERMISSIONS] User #{user.id} (#{user.email}) - Sharer: #{user_is_sharer}, Receiver: #{user_is_receiver}"
-      
       return default unless user_is_sharer || user_is_receiver
       
       # Map permissions based on role (like approval: creator = full, receiver = comment)
-      result = if user_is_sharer
+      if user_is_sharer
         # Creator gets full access (can do everything)
         {
           read: true,
@@ -777,9 +775,6 @@ returns a hex color code
           edit: false
         }
       end
-      
-      Rails.logger.info "[SHARE_PERMISSIONS] Final permissions: #{result.inspect}"
-      result
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
       default
