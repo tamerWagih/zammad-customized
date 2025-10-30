@@ -278,13 +278,16 @@ class App.Ticket extends App.Model
     return false unless perms
 
     # Map requested permission to share permissions
+    # CRITICAL: Grant 'read', 'change', 'create' for comment-only (like approval)
+    # Actual field editability is controlled by form validation/CoreWorkflow
     requested = permission?.toString()?.toLowerCase() || 'read'
     switch requested
       when 'read'
-        !!perms.read
+        !!perms.read or !!perms.comment or !!perms.edit
       when 'change', 'edit'
-        # Only allow editing if share grants edit/full
-        !!perms.edit
+        # Grant change permission if comment or full (like approval)
+        # Backend policy allows it, form validation disables fields
+        !!perms.comment or !!perms.edit
       when 'create'
         # Allow creating articles/comments if share grants comment or edit
         !!perms.comment or !!perms.edit
