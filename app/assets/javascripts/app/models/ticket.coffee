@@ -244,27 +244,27 @@ class App.Ticket extends App.Model
 
   userGroupAccess: (permission) ->
     # Check all access methods: standard group access, approvals, shares, and CC
-    # Backend TicketPolicy checks these too, so frontend should match
+    # Backend TicketPolicy checks CC -> Approval -> Share -> Group, so frontend should match
     
     user = App.User.current()
     return false unless user
     return false unless user.permission('ticket.agent')
     
-    # 1. Check CC permissions FIRST (highest priority after group access)
+    # 1. Check CC permissions FIRST
     return true if @hasCcPermission(permission)
     
-    # 2. Check standard group access
-    return true if @isAccessibleByGroup(user, permission)
-    
-    # 3. Check if user is an approver (approvers get full access)
+    # 2. Check if user is an approver (approvers get full access)
     if @_approvals_cache or @approvals
       approvals = @_approvals_cache or @approvals or []
       for approval in approvals
         if parseInt(approval.approver_id) is parseInt(user.id)
           return true
     
-    # 4. Check share permissions (uses share_permissions from backend)
+    # 3. Check share permissions (BEFORE standard group access!)
     return true if @hasSharePermission(permission)
+    
+    # 4. Check standard group access (fallback)
+    return true if @isAccessibleByGroup(user, permission)
     
     false
 
