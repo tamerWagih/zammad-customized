@@ -155,9 +155,9 @@ class TicketPolicy < ApplicationPolicy
   end
 
   # Allow access via Ticket::Share for the current user.
-  # Sharer gets full access. Receivers get access according to Ticket::Share.permissions:
-  # - comment: can view + add articles (same as approval: grant read/change/create, fields disabled by form validation)
-  # - full:    can read/change/create/full
+  # Sharer: full access
+  # Receiver from SAME group as ticket: full access (regardless of share permissions)
+  # Receiver from DIFFERENT group: comment-only access
   def share_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
@@ -166,7 +166,6 @@ class TicketPolicy < ApplicationPolicy
     user_is_sharer = record.shares.active_current.exists?(shared_by_id: user.id)
     
     # Check if user is a receiver (member of shared group)
-    # Get ALL groups user belongs to, not just those with 'read' access
     active_shares = Ticket::Share.active_current.where(ticket_id: record.id)
     user_group_ids = user.groups.pluck(:id)  # All groups, any access level
     receiver_shares = active_shares.select { |s| user_group_ids.include?(s.group_id) }
@@ -174,39 +173,41 @@ class TicketPolicy < ApplicationPolicy
 
     # DEBUG logging
     Rails.logger.info "[SHARE_ACCESS] Ticket ##{record.id}, User ##{user.id} (#{user.login}), Access: #{access}"
-    Rails.logger.info "[SHARE_ACCESS] Active shares count: #{active_shares.count}"
-    Rails.logger.info "[SHARE_ACCESS] User groups: #{user_group_ids.inspect}"
-    Rails.logger.info "[SHARE_ACCESS] Receiver shares: #{receiver_shares.map { |s| "Share##{s.id} group=#{s.group_id} perms=#{s.permissions.inspect}" }.inspect}"
+    Rails.logger.info "[SHARE_ACCESS] Ticket group: #{record.group_id}, User has group access: #{user_group_ids.include?(record.group_id)}"
+    Rails.logger.info "[SHARE_ACCESS] Active shares: #{active_shares.count}, Receiver shares: #{receiver_shares.count}"
     Rails.logger.info "[SHARE_ACCESS] User is sharer: #{user_is_sharer}, User is receiver: #{user_is_receiver}"
 
     return nil unless user_is_sharer || user_is_receiver
 
     # Sharer has full access
-    if user_is_sharer && %w[read change create full].include?(access.to_s)
-      Rails.logger.info "[SHARE_ACCESS] ✓ Granted (sharer)"
-      return true
+    if user_is_sharer
+      Rails.logger.info "[SHARE_ACCESS] ✓ Granted (sharer - full access)"
+      return true if %w[read change create full].include?(access.to_s)
     end
 
-    # Map receiver access based on share permissions (aggregate across matching shares)
-    can_comment = receiver_shares.any?(&:comment_access?)
-    can_full    = receiver_shares.any?(&:full_access?)
-
-    Rails.logger.info "[SHARE_ACCESS] Receiver permissions: comment=#{can_comment}, full=#{can_full}"
-
-    # CRITICAL: Grant 'read', 'change', 'create' for comment-only (like approval)
-    # Ticket fields will be disabled by form validation if user lacks group access
-    # This allows Update button to show and article submission to work
-    result = case access.to_s
-    when 'read', 'change', 'create'
-      can_comment || can_full
-    when 'full'
-      can_full
+    # Receiver: check if they have group access to the ticket's group
+    # If YES: full access (they're in same group)
+    # If NO: comment-only (they're in different group)
+    user_has_ticket_group_access = user_group_ids.include?(record.group_id)
+    
+    if user_has_ticket_group_access
+      # Receiver from SAME group gets full access
+      Rails.logger.info "[SHARE_ACCESS] ✓ Granted (receiver from SAME group - full access)"
+      return true if %w[read change create full].include?(access.to_s)
     else
-      nil
+      # Receiver from DIFFERENT group gets comment-only
+      Rails.logger.info "[SHARE_ACCESS] Receiver from DIFFERENT group - comment only"
+      case access.to_s
+      when 'read', 'change', 'create'
+        Rails.logger.info "[SHARE_ACCESS] ✓ Granted (comment-only)"
+        return true
+      when 'full'
+        Rails.logger.info "[SHARE_ACCESS] ✗ Denied (no full access)"
+        return false
+      end
     end
 
-    Rails.logger.info "[SHARE_ACCESS] Result: #{result ? '✓ Granted' : '✗ Denied'}"
-    result
+    nil
   end
 
   def customer_access?

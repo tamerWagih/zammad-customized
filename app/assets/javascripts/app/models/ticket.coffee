@@ -250,6 +250,8 @@ class App.Ticket extends App.Model
     return false unless user
     return false unless user.permission('ticket.agent')
     
+    console.log "[FRONTEND_SHARE_DEBUG] Ticket ##{@id}, Permission: #{permission}, checking order: CC->Approval->Share->Group"
+    
     # 1. Check CC permissions FIRST
     return true if @hasCcPermission(permission)
     
@@ -277,27 +279,31 @@ class App.Ticket extends App.Model
     
     return false unless perms
 
-    # Map requested permission to share permissions
-    # CRITICAL: Grant 'read', 'change', 'create' for comment-only (like approval)
-    # Actual field editability is controlled by form validation/CoreWorkflow
+    console.log "[FRONTEND_SHARE] Ticket ##{@id}, perms:", perms
+
+    # Map requested permission to share permissions  
+    # Backend decides based on group membership - frontend just uses provided perms
     requested = permission?.toString()?.toLowerCase() || 'read'
-    switch requested
+    result = switch requested
       when 'read'
         !!perms.read or !!perms.comment or !!perms.edit
       when 'change', 'edit'
-        # Grant change permission if comment or full (like approval)
-        # Backend policy allows it, form validation disables fields
+        # Backend grants 'change' for comment-only (fields disabled by form validation)
+        # Full access gets 'edit' = true
         !!perms.comment or !!perms.edit
       when 'create'
-        # Allow creating articles/comments if share grants comment or edit
+        # Allow creating articles if comment or edit
         !!perms.comment or !!perms.edit
       when 'full'
-        # Only when full/edit explicitly allowed
+        # Only when edit explicitly allowed
         !!perms.edit
       when 'comment'
         !!perms.comment or !!perms.edit
       else
         false
+    
+    console.log "[FRONTEND_SHARE] Ticket ##{@id}, permission #{requested}, result: #{result}"
+    result
 
   sharePermissions: ->
     perms = @share_permissions ? @preferences?.share_permissions

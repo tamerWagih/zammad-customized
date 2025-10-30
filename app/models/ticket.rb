@@ -739,7 +739,9 @@ returns a hex color code
   end
 
   # Check share permissions for a given user
-  # Sharer: full access. Receivers: derive from Ticket::Share.permissions
+  # Sharer: full access
+  # Receiver from SAME group as ticket: full access
+  # Receiver from DIFFERENT group: comment-only
   def share_permissions_for(user)
     default = { read: false, comment: false, edit: false }
     return default unless user
@@ -753,7 +755,6 @@ returns a hex color code
       user_is_sharer = shares.active_current.exists?(shared_by_id: user.id)
       
       # Check if user is a receiver (member of shared group)
-      # Get ALL groups user belongs to, not just those with 'read' access
       active = shares.active_current
       user_group_ids = user.groups.pluck(:id)  # All groups, any access level
       receiver_shares = active.select { |s| user_group_ids.include?(s.group_id) }
@@ -764,15 +765,17 @@ returns a hex color code
       # Sharer: full access
       return { read: true, comment: true, edit: true } if user_is_sharer
 
-      # Aggregate receiver permissions across all matching shares
-      can_full    = receiver_shares.any?(&:full_access?)
-      can_comment = receiver_shares.any?(&:comment_access?)
+      # Receiver: check if they have group access to the ticket's group
+      # Same group = full access, Different group = comment only
+      user_has_ticket_group = user_group_ids.include?(group_id)
 
-      {
-        read:    can_comment || can_full,
-        comment: can_comment || can_full,
-        edit:    can_full,
-      }
+      if user_has_ticket_group
+        # Receiver from SAME group gets full access
+        { read: true, comment: true, edit: true }
+      else
+        # Receiver from DIFFERENT group gets comment-only
+        { read: true, comment: true, edit: false }
+      end
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
       default
