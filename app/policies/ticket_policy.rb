@@ -166,7 +166,7 @@ class TicketPolicy < ApplicationPolicy
     # Check if user is a receiver (member of shared group)
     # Get ALL groups user belongs to, not just those with 'read' access
     share_group_ids = Ticket::Share.active_current.where(ticket_id: record.id).pluck(:group_id)
-    user_group_ids = user.group_ids  # All groups, any access level
+    user_group_ids = user.groups.pluck(:id)  # All groups, any access level
     user_is_receiver = share_group_ids.present? && (share_group_ids & user_group_ids).present?
 
     return nil unless user_is_sharer || user_is_receiver

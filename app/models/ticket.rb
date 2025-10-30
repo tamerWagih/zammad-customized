@@ -755,7 +755,7 @@ returns a hex color code
       # Check if user is a receiver (member of shared group)
       # Get ALL groups user belongs to, not just those with 'read' access
       share_group_ids = shares.active_current.pluck(:group_id)
-      user_group_ids = user.group_ids  # All groups, any access level
+      user_group_ids = user.groups.pluck(:id)  # All groups, any access level
       user_is_receiver = share_group_ids.present? && (share_group_ids & user_group_ids).present?
       
       return default unless user_is_sharer || user_is_receiver
