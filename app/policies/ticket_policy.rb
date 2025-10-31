@@ -190,15 +190,19 @@ class TicketPolicy < ApplicationPolicy
     is_direct_member = user_group_ids.include?(record.group_id)
     
     # If creator IS a direct member, check if they have the requested permission
-    # If they do, let agent_access? handle it (for full access)
-    # If they DON'T (e.g., have 'create' but not 'read'), still grant creator access
+    # If they do, let agent_access? handle it (for full access via group)
+    # If they DON'T (e.g., have 'create' but not 'read'), grant creator access
     if is_direct_member
       has_permission = user.group_access?(record.group_id, access.to_s)
       return nil if has_permission  # User has permission via group, let agent_access handle it
-      # User is direct member but lacks this permission → grant creator access (read+create)
+      # User is direct member but lacks this permission → fall through to grant creator access
     end
     
-    # Creator either NOT direct member OR lacks requested permission: grant ONLY view + comment (NOT change/full)
+    # Creator either:
+    # 1. NOT direct member of ticket's group, OR
+    # 2. IS direct member but lacks the requested permission
+    # → Grant ONLY view + comment (NOT change/full)
+    # This allows agents to create tickets for any department and still view/comment on them
     case access.to_s
     when 'read', 'create'
       true
