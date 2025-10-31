@@ -289,13 +289,11 @@ class App.Ticket extends App.Model
       
       # Apply creator access if determined above
       if shouldGrantCreatorAccess
-        # Grant ONLY view + comment (NOT change/full)
+        # Grant view + comment, but let other checks handle change/full
         if requested in ['read', 'create']
           console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CREATOR (true)"
           return true
-        else if requested in ['change', 'full']
-          console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CREATOR (false)"
-          return false
+        # For 'change' or 'full', return nothing (continue to next check)
     
     # 4. Check share permissions
     shareResult = @hasSharePermission(permission)

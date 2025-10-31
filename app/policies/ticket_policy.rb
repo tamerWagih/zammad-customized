@@ -201,15 +201,12 @@ class TicketPolicy < ApplicationPolicy
     # Creator either:
     # 1. NOT direct member of ticket's group, OR
     # 2. IS direct member but lacks the requested permission
-    # → Grant ONLY view + comment (NOT change/full)
-    # This allows agents to create tickets for any department and still view/comment on them
+    # → Grant view + comment, but let other checks handle change/full
     case access.to_s
     when 'read', 'create'
-      true
-    when 'change', 'full'
-      false
+      true  # Grant read and create (view + comment)
     else
-      nil
+      nil   # Don't handle change/full - let group/other access handle it
     end
   end
 
