@@ -185,11 +185,11 @@ class TicketPolicy < ApplicationPolicy
     # Check if user created this ticket
     return nil unless record.created_by_id == user.id
     
-    # Check if creator is a member of the ticket's group
+    # Check if creator is a member of the ticket's group (simple membership, not role-based)
     user_group_ids = user.groups.pluck(:id)
     is_member_of_ticket_group = user_group_ids.include?(record.group_id)
     
-    # If creator IS in ticket's group, let agent_access? handle it (full access via group)
+    # If creator IS a member of ticket's group, skip (let agent_access? handle it)
     return nil if is_member_of_ticket_group
     
     # Creator NOT in ticket's group: grant ONLY view + comment (NOT change/full)

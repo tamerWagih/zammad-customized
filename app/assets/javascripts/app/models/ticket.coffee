@@ -328,13 +328,13 @@ class App.Ticket extends App.Model
     return null unless hasShare
     
     # IMPORTANT: Check group membership FIRST (for both sharer and receiver)
-    # Match backend logic: if user IS in ticket's group, let group access handle it
+    # Match backend logic: check SIMPLE membership (not role-based access)
     ticketGroupId = @group_id?.toString?()
-    userReadGroupIds = user.allGroupIds?('read') || []
-    hasGroupAccess = userReadGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+    userGroupIds = user.allGroupIds?() || []  # All groups (simple membership, no permission filter)
+    isMemberOfTicketGroup = userGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
     
-    # If user HAS access to ticket's group, skip (let group access handle it)
-    return null if hasGroupAccess
+    # If user IS a member of ticket's group, skip (let group access handle it)
+    return null if isMemberOfTicketGroup
     
     requested = permission?.toString()?.toLowerCase() || 'read'
     
