@@ -778,20 +778,14 @@ returns a hex color code
         return result
       end
 
-      # Receiver: check if they have group access to the ticket's group
-      # Same group = full access, Different group = comment only
-      user_has_ticket_group = user_group_ids.include?(group_id)
+      # Receiver: check if they have ANY access to ticket's group
+      has_group_access = user.group_access?(group_id, 'read')
 
-      result = if user_has_ticket_group
-        # Receiver from SAME group gets full access
+      if has_group_access
         { read: true, comment: true, edit: true }
       else
-        # Receiver from DIFFERENT group gets comment-only
         { read: true, comment: true, edit: false }
       end
-      
-      Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Receiver (same_group=#{user_has_ticket_group}), returning #{result.inspect}"
-      result
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
       Rails.logger.warn e.backtrace.first(5).join("\n")

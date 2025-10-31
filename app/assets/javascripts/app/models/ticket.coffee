@@ -253,21 +253,49 @@ class App.Ticket extends App.Model
     console.log "[FRONTEND_SHARE_DEBUG] Ticket ##{@id}, Permission: #{permission}, checking order: CC->Approval->Share->Group"
     
     # 1. Check CC permissions FIRST
-    return true if @hasCcPermission(permission)
+    if @hasCcPermission(permission)
+      console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CC (true)"
+      return true
     
-    # 2. Check if user is an approver (approvers get full access)
+    # 2. Check if user is an approver
     if @_approvals_cache or @approvals
       approvals = @_approvals_cache or @approvals or []
       for approval in approvals
         if parseInt(approval.approver_id) is parseInt(user.id)
+          console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at APPROVAL (true)"
           return true
     
-    # 3. Check share permissions (BEFORE standard group access!)
-    return true if @hasSharePermission(permission)
+    # 3. Check creator access
+    if parseInt(@created_by_id) is parseInt(user.id)
+      userReadGroupIds = user.allGroupIds?('read') || []
+      ticketGroupId = @group_id?.toString?()
+      hasGroupAccess = userReadGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+      
+      # If creator HAS access, skip (let group access handle it)
+      if !hasGroupAccess
+        requested = permission?.toString()?.toLowerCase() || 'read'
+        if requested in ['read', 'create']
+          console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CREATOR (true)"
+          return true
+        else if requested in ['change', 'full']
+          console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CREATOR (false)"
+          return false
     
-    # 4. Check standard group access (fallback)
-    return true if @isAccessibleByGroup(user, permission)
+    # 4. Check share permissions
+    shareResult = @hasSharePermission(permission)
+    if shareResult is true
+      console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at SHARE (true)"
+      return true
+    else if shareResult is false
+      console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at SHARE (false)"
+      return false
     
+    # 5. Check standard group access
+    if @isAccessibleByGroup(user, permission)
+      console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at GROUP (true)"
+      return true
+    
+    console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at END (false)"
     false
 
   hasSharePermission: (permission) ->
