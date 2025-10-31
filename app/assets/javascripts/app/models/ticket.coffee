@@ -266,11 +266,13 @@ class App.Ticket extends App.Model
     # 3. Check creator access
     if parseInt(@created_by_id) is parseInt(user.id)
       requested = permission?.toString()?.toLowerCase() || 'read'
+      console.log "[ACCESS] Ticket ##{@id}, #{permission}: Checking CREATOR (created_by: #{@created_by_id}, user: #{user.id})"
       
       # CRITICAL: Check if creator is a DIRECT MEMBER of ticket's group (not via role)
       ticketGroupId = @group_id?.toString?()
       userDirectGroupIds = Object.keys(user.group_ids || {})  # Direct membership only
       isDirectMember = ticketGroupId in userDirectGroupIds
+      console.log "[ACCESS] Ticket ##{@id}, #{permission}: isDirectMember=#{isDirectMember}, ticketGroup=#{ticketGroupId}"
       
       # Check if user should get creator access
       shouldGrantCreatorAccess = false
