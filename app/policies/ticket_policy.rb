@@ -185,13 +185,14 @@ class TicketPolicy < ApplicationPolicy
     # Check if user created this ticket
     return nil unless record.created_by_id == user.id
     
-    # Check if creator has ANY access to ticket's group (direct or via role)
-    has_group_access = user.group_access?(record.group_id, 'read')
+    # Check if creator is a member of the ticket's group
+    user_group_ids = user.groups.pluck(:id)
+    is_member_of_ticket_group = user_group_ids.include?(record.group_id)
     
-    # If creator HAS access, let agent_access? handle it (full access based on their level)
-    return nil if has_group_access
+    # If creator IS in ticket's group, let agent_access? handle it (full access via group)
+    return nil if is_member_of_ticket_group
     
-    # Creator has NO access: grant ONLY view + comment (NOT change/full)
+    # Creator NOT in ticket's group: grant ONLY view + comment (NOT change/full)
     case access.to_s
     when 'read', 'create'
       true
@@ -203,16 +204,17 @@ class TicketPolicy < ApplicationPolicy
   end
 
   # Allow access via Ticket::Share for the current user.
-  # Both sharer and receiver check group access:
-  # - If user HAS group access → return nil (let agent_access handle based on their level)
-  # - If user has NO group access → grant ONLY view + comment (NOT change/full)
+  # Sharer: full access (person who creates share manages it)
+  # Receiver from SAME group as ticket: full access via agent_access?
+  # Receiver from DIFFERENT group: comment-only access
   def share_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
 
-    # Check if user is the sharer or receiver
+    # Check if user is the sharer (person who created the share)
     user_is_sharer = record.shares.active_current.exists?(shared_by_id: user.id)
     
+    # Check if user is a receiver (member of a group that ticket is shared with)
     active_shares = Ticket::Share.active_current.where(ticket_id: record.id)
     user_group_ids = user.groups.pluck(:id)
     receiver_shares = active_shares.select { |s| user_group_ids.include?(s.group_id) }
@@ -220,13 +222,18 @@ class TicketPolicy < ApplicationPolicy
 
     return nil unless user_is_sharer || user_is_receiver
 
-    # Check if user has ANY access to ticket's group (direct or via role)
-    has_group_access = user.group_access?(record.group_id, 'read')
+    # Sharer has FULL access (standard Zammad behavior)
+    if user_is_sharer
+      return true if %w[read change create full].include?(access.to_s)
+    end
+
+    # Receiver: check if they are a member of the ticket's group
+    is_member_of_ticket_group = user_group_ids.include?(record.group_id)
     
-    # If user HAS access, let agent_access? handle it (full access based on their level)
-    return nil if has_group_access
+    # If receiver IS in ticket's group, let agent_access? handle it (full access via group)
+    return nil if is_member_of_ticket_group
     
-    # User has NO access: grant ONLY view + comment (NOT change/full)
+    # Receiver NOT in ticket's group: grant ONLY view + comment (NOT change/full)
     case access.to_s
     when 'read', 'create'
       true
