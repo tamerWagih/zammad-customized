@@ -299,19 +299,16 @@ class App.Ticket extends App.Model
     false
 
   hasSharePermission: (permission) ->
-    # SIMPLE PATTERN: Check if user is in a shared group, but DON'T grant 'full' for different groups
-    return false unless App.User.current()?.permission('ticket.agent')
+    return null unless App.User.current()?.permission('ticket.agent')
     
     user = App.User.current()
-    return false unless user
+    return null unless user
     
-    # Get shares for this ticket (use cache if available)
     shares = @_shares_cache or @shares or []
-    return false unless shares?.length
+    return null unless shares?.length
     
-    # Get ALL user's groups (any access level)
     userGroupIds = user.allGroupIds?() || []
-    return false unless userGroupIds.length
+    return null unless userGroupIds.length
     
     # Check if user is sharer OR receiver (member of shared group)
     now = new Date()
