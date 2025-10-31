@@ -307,10 +307,22 @@ class App.Ticket extends App.Model
     shares = @_shares_cache or @shares or []
     return null unless shares?.length
     
-    # Get SIMPLE membership (not role-based) - just the group IDs
-    # Backend uses: user.groups.pluck(:id) - just membership, no permission check
-    userGroupIds = Object.keys(user.group_ids || {})
-    return null unless userGroupIds.length
+    # CRITICAL: Get ALL group IDs user belongs to (any permission level) to match backend
+    # Backend uses user.groups.pluck(:id) which doesn't filter by permission
+    userAllGroupIds = []
+    if user.group_ids
+      for groupId, permissions of user.group_ids
+        userAllGroupIds.push groupId
+    # Also include groups from roles
+    if user.role_ids
+      for roleId in user.role_ids
+        if App.Role.exists(roleId)
+          role = App.Role.findNative(roleId)
+          if role.group_ids
+            for groupId, permissions of role.group_ids
+              userAllGroupIds.push groupId
+    userAllGroupIds = _.uniq(userAllGroupIds)
+    return null unless userAllGroupIds.length
     
     # Check if user is sharer OR receiver (member of shared group)
     now = new Date()
@@ -321,7 +333,7 @@ class App.Ticket extends App.Model
     isReceiver = shares.some (share) ->
       return false unless share?.status is 'active'
       return false unless share.group_id?
-      groupMatch = share.group_id?.toString?() in userGroupIds
+      groupMatch = userAllGroupIds.some (gid) -> gid?.toString?() is share.group_id?.toString?()
       return false unless groupMatch
       # Check expiry
       return false if share.expires_at and new Date(share.expires_at) <= now
@@ -331,13 +343,14 @@ class App.Ticket extends App.Model
     hasShare = isSharer or isReceiver
     return null unless hasShare
     
-    # IMPORTANT: Check group membership FIRST (for both sharer and receiver)
-    # Match backend logic: check SIMPLE membership (not role-based access)
+    # CRITICAL: Check if user has READ access to ticket's group (not just membership)
+    # This matches backend logic which uses user.group_access?(group_id, 'read')
     ticketGroupId = @group_id?.toString?()
-    isMemberOfTicketGroup = ticketGroupId in userGroupIds
+    userReadGroupIds = user.allGroupIds?('read') || []
+    hasGroupAccess = userReadGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
     
-    # If user IS a member of ticket's group, skip (let group access handle it)
-    return null if isMemberOfTicketGroup
+    # If user HAS read access to ticket's group, skip (let group access handle it)
+    return null if hasGroupAccess
     
     requested = permission?.toString()?.toLowerCase() || 'read'
     
@@ -381,9 +394,21 @@ class App.Ticket extends App.Model
     shares = App.TicketShare?.findAllByAttribute && App.TicketShare.findAllByAttribute('ticket_id', @id) || []
     return null unless shares?.length
 
-    # Get ALL groups user belongs to (any access level)
-    # CRITICAL: Don't filter by 'read' - user only needs membership in the shared group
-    groupIds = user.allGroupIds?() || []
+    # CRITICAL: Get ALL group IDs user belongs to (any permission level) to match backend
+    # Backend uses user.groups.pluck(:id) which doesn't filter by permission
+    groupIds = []
+    if user.group_ids
+      for groupId, permissions of user.group_ids
+        groupIds.push groupId
+    # Also include groups from roles
+    if user.role_ids
+      for roleId in user.role_ids
+        if App.Role.exists(roleId)
+          role = App.Role.findNative(roleId)
+          if role.group_ids
+            for groupId, permissions of role.group_ids
+              groupIds.push groupId
+    groupIds = _.uniq(groupIds)
     return null unless groupIds.length
 
     now = new Date()

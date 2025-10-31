@@ -185,12 +185,12 @@ class TicketPolicy < ApplicationPolicy
     # Check if user created this ticket
     return nil unless record.created_by_id == user.id
     
-    # Check if creator is a member of the ticket's group (simple membership, not role-based)
-    user_group_ids = user.groups.pluck(:id)
-    is_member_of_ticket_group = user_group_ids.include?(record.group_id)
+    # CRITICAL: Check if creator has READ access to ticket's group (not just membership)
+    # This matches frontend logic which filters by 'read' permission
+    has_group_read_access = user.group_access?(record.group_id, 'read')
     
-    # If creator IS a member of ticket's group, skip (let agent_access? handle it)
-    return nil if is_member_of_ticket_group
+    # If creator HAS read access to ticket's group, let agent_access? handle it (full access via group)
+    return nil if has_group_read_access
     
     # Creator NOT in ticket's group: grant ONLY view + comment (NOT change/full)
     case access.to_s
@@ -223,10 +223,11 @@ class TicketPolicy < ApplicationPolicy
 
     return nil unless user_is_sharer || user_is_receiver
 
-    # IMPORTANT: Check group membership FIRST (for both sharer and receiver)
-    # If user IS in ticket's group, let agent_access? handle it (standard group permissions)
-    is_member_of_ticket_group = user_group_ids.include?(record.group_id)
-    return nil if is_member_of_ticket_group
+    # CRITICAL: Check if user has READ access to ticket's group (not just membership)
+    # This matches frontend logic which filters by 'read' permission
+    # If user HAS read access to ticket's group, let agent_access? handle it
+    has_group_read_access = user.group_access?(record.group_id, 'read')
+    return nil if has_group_read_access
     
     # User is NOT in ticket's group: handle via share logic
     # Sharer (not in ticket's group) → Full access
