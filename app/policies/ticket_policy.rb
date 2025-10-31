@@ -186,16 +186,19 @@ class TicketPolicy < ApplicationPolicy
     return nil unless record.created_by_id == user.id
     
     # CRITICAL: Check if creator is a DIRECT MEMBER of ticket's group (not via role)
-    # If user IS a direct member, let agent_access? handle it (standard group permissions)
-    # If user is NOT a direct member → use creator-only permissions (read+comment)
-    # This prevents role-based permissions from overriding creator restrictions
     user_group_ids = user.groups.pluck(:id)
     is_direct_member = user_group_ids.include?(record.group_id)
     
-    # If creator IS a direct member of ticket's group, let agent_access? handle it
-    return nil if is_direct_member
+    # If creator IS a direct member, check if they have the requested permission
+    # If they do, let agent_access? handle it (for full access)
+    # If they DON'T (e.g., have 'create' but not 'read'), still grant creator access
+    if is_direct_member
+      has_permission = user.group_access?(record.group_id, access.to_s)
+      return nil if has_permission  # User has permission via group, let agent_access handle it
+      # User is direct member but lacks this permission → grant creator access (read+create)
+    end
     
-    # Creator does NOT have requested access to ticket's group: grant ONLY view + comment (NOT change/full)
+    # Creator either NOT direct member OR lacks requested permission: grant ONLY view + comment (NOT change/full)
     case access.to_s
     when 'read', 'create'
       true

@@ -268,16 +268,28 @@ class App.Ticket extends App.Model
       requested = permission?.toString()?.toLowerCase() || 'read'
       
       # CRITICAL: Check if creator is a DIRECT MEMBER of ticket's group (not via role)
-      # If user IS a direct member, let group access handle it (standard group permissions)
-      # If user is NOT a direct member → use creator-only permissions (read+comment)
-      # This prevents role-based permissions from overriding creator restrictions
       ticketGroupId = @group_id?.toString?()
       userDirectGroupIds = Object.keys(user.group_ids || {})  # Direct membership only
       isDirectMember = ticketGroupId in userDirectGroupIds
       
-      # If creator is NOT a direct member of ticket's group, apply creator restrictions
-      if !isDirectMember
-        # Creator does NOT have requested access: grant ONLY view + comment (NOT change/full)
+      # Check if user should get creator access
+      shouldGrantCreatorAccess = false
+      
+      if isDirectMember
+        # If creator IS a direct member, check if they have the requested permission
+        # If they do, skip (let group access handle it for full access)
+        # If they DON'T (e.g., have 'create' but not 'read'), still grant creator access
+        userRequestedGroupIds = user.allGroupIds?(requested) || []
+        hasPermission = userRequestedGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+        # Grant creator access if user lacks this permission
+        shouldGrantCreatorAccess = !hasPermission
+      else
+        # Creator is NOT a direct member → grant creator access
+        shouldGrantCreatorAccess = true
+      
+      # Apply creator access if determined above
+      if shouldGrantCreatorAccess
+        # Grant ONLY view + comment (NOT change/full)
         if requested in ['read', 'create']
           console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CREATOR (true)"
           return true
