@@ -327,25 +327,26 @@ class App.Ticket extends App.Model
       true
     
     hasShare = isSharer or isReceiver
-    return false unless hasShare
+    return null unless hasShare
     
-    # CRITICAL: For 'full' permission, check if user is in the ticket's group
-    # This ensures DIFFERENT group receivers only get comment access
     requested = permission?.toString()?.toLowerCase() || 'read'
     
-    if requested is 'full'
-      # Sharer always gets full
-      return true if isSharer
-      
-      # Receiver: only if they're in the SAME group as the ticket
-      ticketGroupId = @group_id?.toString?()
-      userInTicketGroup = userGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
-      
-      console.log "[FRONTEND_SHARE] Ticket ##{@id}, permission full, userInTicketGroup=#{userInTicketGroup}"
-      return userInTicketGroup
+    # Sharer always gets full access
+    return true if isSharer
     
-    # For read/change/create, just return true - backend grants these for all shares
-    console.log "[FRONTEND_SHARE] Ticket ##{@id}, permission #{requested}, hasShare=#{hasShare}"
+    # Receiver: check if they have ANY access to ticket's group
+    ticketGroupId = @group_id?.toString?()
+    userReadGroupIds = user.allGroupIds?('read') || []
+    hasGroupAccess = userReadGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+    
+    # If receiver HAS access, skip (let group access handle it)
+    return null if hasGroupAccess
+    
+    # Receiver has NO access: grant ONLY read + create (NOT change/full)
+    if requested in ['change', 'full']
+      return false
+    
+    # For read/create
     true
 
   sharePermissions: ->
