@@ -21,32 +21,32 @@ class TicketPolicy < ApplicationPolicy
       sql  = []
       bind = []
 
-    if user.permissions?('ticket.agent')
-      # Include tickets from groups user has access to
-      group_ids = user.group_ids_access(self.class::ACCESS_TYPE)
-      if group_ids.present?
-        sql.push('group_id IN (?)')
-        bind.push(group_ids)
-      end
+      if user.permissions?('ticket.agent')
+        # Include tickets from groups user has access to
+        group_ids = user.group_ids_access(self.class::ACCESS_TYPE)
+        if group_ids.present?
+          sql.push('group_id IN (?)')
+          bind.push(group_ids)
+        end
 
-      # Include shared tickets
-      shared_ids = shared_ticket_ids(self.class::ACCESS_TYPE)
-      if shared_ids.present?
-        sql.push('tickets.id IN (?)')
-        bind.push(shared_ids)
-      end
+        # Include shared tickets
+        shared_ids = shared_ticket_ids(self.class::ACCESS_TYPE)
+        if shared_ids.present?
+          sql.push('tickets.id IN (?)')
+          bind.push(shared_ids)
+        end
 
-      # Include approval tickets (approvers can see tickets they need to approve)
-      approval_ids = approval_ticket_ids
-      if approval_ids.present?
-        sql.push('tickets.id IN (?)')
-        bind.push(approval_ids)
-      end
+        # Include approval tickets (approvers can see tickets they need to approve)
+        approval_ids = approval_ticket_ids
+        if approval_ids.present?
+          sql.push('tickets.id IN (?)')
+          bind.push(approval_ids)
+        end
 
-      # Include tickets created by user (for creator_access? to work)
-      sql.push('tickets.created_by_id = ?')
-      bind.push(user.id)
-    end
+        # Include tickets created by user (for creator_access? to work)
+        sql.push('tickets.created_by_id = ?')
+        bind.push(user.id)
+      end
 
       if user.permissions?('ticket.customer')
         sql.push('tickets.customer_id = ?')

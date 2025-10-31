@@ -265,15 +265,18 @@ class App.Ticket extends App.Model
     
     # 3. Check creator access
     if parseInt(@created_by_id) is parseInt(user.id)
-      # Check SIMPLE membership (not role-based) to match backend
-      # Backend uses: user.groups.pluck(:id) - just membership, no permission check
-      ticketGroupId = @group_id?.toString?()
-      userGroupIds = Object.keys(user.group_ids || {})  # Simple membership only
-      isMemberOfTicketGroup = ticketGroupId in userGroupIds
+      requested = permission?.toString()?.toLowerCase() || 'read'
       
-      # If creator IS a member of ticket's group, skip (let group access handle it)
-      if !isMemberOfTicketGroup
-        requested = permission?.toString()?.toLowerCase() || 'read'
+      # CRITICAL: Check if creator has the REQUESTED permission level to ticket's group
+      # If user has that permission level, let group access handle it (standard group access)
+      # Only apply special creator rules if user LACKS the requested permission
+      ticketGroupId = @group_id?.toString?()
+      userRequestedGroupIds = user.allGroupIds?(requested) || []
+      hasRequestedAccess = userRequestedGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+      
+      # If creator HAS requested access to ticket's group, skip (let group access handle it)
+      if !hasRequestedAccess
+        # Creator does NOT have requested access: grant ONLY view + comment (NOT change/full)
         if requested in ['read', 'create']
           console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CREATOR (true)"
           return true
@@ -343,23 +346,24 @@ class App.Ticket extends App.Model
     hasShare = isSharer or isReceiver
     return null unless hasShare
     
-    # CRITICAL: Check if user has READ access to ticket's group (not just membership)
-    # This matches backend logic which uses user.group_access?(group_id, 'read')
-    ticketGroupId = @group_id?.toString?()
-    userReadGroupIds = user.allGroupIds?('read') || []
-    hasGroupAccess = userReadGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
-    
-    # If user HAS read access to ticket's group, skip (let group access handle it)
-    return null if hasGroupAccess
-    
     requested = permission?.toString()?.toLowerCase() || 'read'
     
-    # User is NOT in ticket's group: handle via share logic
-    # Sharer (not in ticket's group) → Full access
+    # CRITICAL: Check if user has the REQUESTED permission level to ticket's group
+    # If user has that permission level, let group access handle it (standard group access)
+    # Only apply special share rules if user LACKS the requested permission
+    ticketGroupId = @group_id?.toString?()
+    userRequestedGroupIds = user.allGroupIds?(requested) || []
+    hasRequestedAccess = userRequestedGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+    
+    # If user HAS requested access to ticket's group, skip (let group access handle it)
+    return null if hasRequestedAccess
+    
+    # User does NOT have requested access to ticket's group: handle via share logic
+    # Sharer (no access to ticket's group) → Full access
     if isSharer
       return true
     
-    # Receiver (not in ticket's group) → Comment-only access
+    # Receiver (no access to ticket's group) → Comment-only access
     if requested in ['change', 'full']
       return false
     

@@ -185,14 +185,15 @@ class TicketPolicy < ApplicationPolicy
     # Check if user created this ticket
     return nil unless record.created_by_id == user.id
     
-    # CRITICAL: Check if creator has READ access to ticket's group (not just membership)
-    # This matches frontend logic which filters by 'read' permission
-    has_group_read_access = user.group_access?(record.group_id, 'read')
+    # CRITICAL: Check if creator has the REQUESTED permission level to ticket's group
+    # If user has that permission level, let agent_access? handle it (standard group access)
+    # Only apply special creator rules if user LACKS the requested permission
+    has_requested_access = user.group_access?(record.group_id, access.to_s)
     
-    # If creator HAS read access to ticket's group, let agent_access? handle it (full access via group)
-    return nil if has_group_read_access
+    # If creator HAS requested access to ticket's group, let agent_access? handle it
+    return nil if has_requested_access
     
-    # Creator NOT in ticket's group: grant ONLY view + comment (NOT change/full)
+    # Creator does NOT have requested access to ticket's group: grant ONLY view + comment (NOT change/full)
     case access.to_s
     when 'read', 'create'
       true
@@ -223,19 +224,19 @@ class TicketPolicy < ApplicationPolicy
 
     return nil unless user_is_sharer || user_is_receiver
 
-    # CRITICAL: Check if user has READ access to ticket's group (not just membership)
-    # This matches frontend logic which filters by 'read' permission
-    # If user HAS read access to ticket's group, let agent_access? handle it
-    has_group_read_access = user.group_access?(record.group_id, 'read')
-    return nil if has_group_read_access
+    # CRITICAL: Check if user has the REQUESTED permission level to ticket's group
+    # If user has that permission level, let agent_access? handle it (standard group access)
+    # Only apply special share rules if user LACKS the requested permission
+    has_requested_access = user.group_access?(record.group_id, access.to_s)
+    return nil if has_requested_access
     
-    # User is NOT in ticket's group: handle via share logic
-    # Sharer (not in ticket's group) → Full access
+    # User does NOT have requested access to ticket's group: handle via share logic
+    # Sharer (no access to ticket's group) → Full access
     if user_is_sharer
       return true if %w[read change create full].include?(access.to_s)
     end
     
-    # Receiver (not in ticket's group) → Comment-only access
+    # Receiver (no access to ticket's group) → Comment-only access
     case access.to_s
     when 'read', 'create'
       true
