@@ -703,7 +703,8 @@ class App.TicketZoom extends App.Controller
 
       @form_id = @taskGet('article').form_id || App.ControllerForm.formId()
 
-      if @ticket.editable()
+      # Check 'create' permission for article form (allows comment-only users)
+      if @ticket.editable('create')
         @articleNew = new App.TicketZoomArticleNew(
           ticket:                       @ticket
           ticket_id:                    @ticket_id

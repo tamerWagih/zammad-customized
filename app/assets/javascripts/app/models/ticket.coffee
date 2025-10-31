@@ -250,8 +250,6 @@ class App.Ticket extends App.Model
     return false unless user
     return false unless user.permission('ticket.agent')
     
-    console.log "[FRONTEND_SHARE_DEBUG] Ticket ##{@id}, Permission: #{permission}, checking order: CC->Approval->Share->Group"
-    
     # 1. Check CC permissions FIRST
     if @hasCcPermission(permission)
       console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CC (true)"

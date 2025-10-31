@@ -38,6 +38,10 @@ class TicketPolicy < ApplicationPolicy
           sql.push('tickets.id IN (?)')
           bind.push(approval_ids)
         end
+
+        # Include tickets created by user (for creator_access? to work)
+        sql.push('tickets.created_by_id = ?')
+        bind.push(user.id)
       end
 
       if user.permissions?('ticket.customer')
