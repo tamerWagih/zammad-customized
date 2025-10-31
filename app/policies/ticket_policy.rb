@@ -204,8 +204,9 @@ class TicketPolicy < ApplicationPolicy
   end
 
   # Allow access via Ticket::Share for the current user.
-  # Sharer: full access (person who creates share manages it)
-  # Receiver from SAME group as ticket: full access via agent_access?
+  # Sharer from different group: full access
+  # Sharer from SAME group: full access via agent_access?
+  # Receiver from SAME group: full access via agent_access?
   # Receiver from DIFFERENT group: comment-only access
   def share_access?(access)
     return nil unless user
@@ -222,18 +223,18 @@ class TicketPolicy < ApplicationPolicy
 
     return nil unless user_is_sharer || user_is_receiver
 
-    # Sharer has FULL access (standard Zammad behavior)
+    # IMPORTANT: Check group membership FIRST (for both sharer and receiver)
+    # If user IS in ticket's group, let agent_access? handle it (standard group permissions)
+    is_member_of_ticket_group = user_group_ids.include?(record.group_id)
+    return nil if is_member_of_ticket_group
+    
+    # User is NOT in ticket's group: handle via share logic
+    # Sharer (not in ticket's group) → Full access
     if user_is_sharer
       return true if %w[read change create full].include?(access.to_s)
     end
-
-    # Receiver: check if they are a member of the ticket's group
-    is_member_of_ticket_group = user_group_ids.include?(record.group_id)
     
-    # If receiver IS in ticket's group, let agent_access? handle it (full access via group)
-    return nil if is_member_of_ticket_group
-    
-    # Receiver NOT in ticket's group: grant ONLY view + comment (NOT change/full)
+    # Receiver (not in ticket's group) → Comment-only access
     case access.to_s
     when 'read', 'create'
       true
