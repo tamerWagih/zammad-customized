@@ -167,14 +167,17 @@ class TicketPolicy < ApplicationPolicy
     # Check if user created this ticket
     return nil unless record.created_by_id == user.id
     
-    # Creator gets view + comment access (but not full edit)
+    # Check if creator has ANY access to ticket's group (direct or via role)
+    has_group_access = user.group_access?(record.group_id, 'read')
+    
+    # If creator HAS access, let agent_access? handle it (full access based on their level)
+    return nil if has_group_access
+    
+    # Creator has NO access: grant ONLY view + comment (NOT change/full)
     case access.to_s
-    when 'read', 'change', 'create'
-      Rails.logger.info "[CREATOR_ACCESS] Ticket ##{record.id}: Creator gets view+comment access"
+    when 'read', 'create'
       true
-    when 'full'
-      # Creator doesn't get full access (can't edit fields in different group)
-      Rails.logger.info "[CREATOR_ACCESS] Ticket ##{record.id}: Creator denied full access (different group)"
+    when 'change', 'full'
       false
     else
       nil
@@ -212,29 +215,21 @@ class TicketPolicy < ApplicationPolicy
       return true if %w[read change create full].include?(access.to_s)
     end
 
-    # Receiver: check if they have group access to the ticket's group
-    # If YES: full access (they're in same group)
-    # If NO: comment-only (they're in different group)
-    user_has_ticket_group_access = user_group_ids.include?(record.group_id)
+    # Receiver: check if they have ANY access to ticket's group (direct or via role)
+    has_group_access = user.group_access?(record.group_id, 'read')
     
-    if user_has_ticket_group_access
-      # Receiver from SAME group gets full access
-      Rails.logger.info "[SHARE_ACCESS] ✓ Granted (receiver from SAME group - full access)"
-      return true if %w[read change create full].include?(access.to_s)
+    # If receiver HAS access, let agent_access? handle it (full access based on their level)
+    return nil if has_group_access
+    
+    # Receiver has NO access: grant ONLY view + comment (NOT change/full)
+    case access.to_s
+    when 'read', 'create'
+      true
+    when 'change', 'full'
+      false
     else
-      # Receiver from DIFFERENT group gets comment-only
-      Rails.logger.info "[SHARE_ACCESS] Receiver from DIFFERENT group - comment only"
-      case access.to_s
-      when 'read', 'change', 'create'
-        Rails.logger.info "[SHARE_ACCESS] ✓ Granted (comment-only)"
-        return true
-      when 'full'
-        Rails.logger.info "[SHARE_ACCESS] ✗ Denied (no full access)"
-        return false
-      end
+      nil
     end
-
-    nil
   end
 
   def customer_access?
