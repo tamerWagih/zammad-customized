@@ -327,20 +327,23 @@ class App.Ticket extends App.Model
     hasShare = isSharer or isReceiver
     return null unless hasShare
     
-    requested = permission?.toString()?.toLowerCase() || 'read'
-    
-    # Sharer always gets full access
-    return true if isSharer
-    
-    # Receiver: check if they have ANY access to ticket's group
+    # IMPORTANT: Check group membership FIRST (for both sharer and receiver)
+    # Match backend logic: if user IS in ticket's group, let group access handle it
     ticketGroupId = @group_id?.toString?()
     userReadGroupIds = user.allGroupIds?('read') || []
     hasGroupAccess = userReadGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
     
-    # If receiver HAS access, skip (let group access handle it)
+    # If user HAS access to ticket's group, skip (let group access handle it)
     return null if hasGroupAccess
     
-    # Receiver has NO access: grant ONLY read + create (NOT change/full)
+    requested = permission?.toString()?.toLowerCase() || 'read'
+    
+    # User is NOT in ticket's group: handle via share logic
+    # Sharer (not in ticket's group) → Full access
+    if isSharer
+      return true
+    
+    # Receiver (not in ticket's group) → Comment-only access
     if requested in ['change', 'full']
       return false
     
