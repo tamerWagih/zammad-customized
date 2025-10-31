@@ -267,15 +267,16 @@ class App.Ticket extends App.Model
     if parseInt(@created_by_id) is parseInt(user.id)
       requested = permission?.toString()?.toLowerCase() || 'read'
       
-      # CRITICAL: Check if creator has the REQUESTED permission level to ticket's group
-      # If user has that permission level, let group access handle it (standard group access)
-      # Only apply special creator rules if user LACKS the requested permission
+      # CRITICAL: Check if creator is a DIRECT MEMBER of ticket's group (not via role)
+      # If user IS a direct member, let group access handle it (standard group permissions)
+      # If user is NOT a direct member → use creator-only permissions (read+comment)
+      # This prevents role-based permissions from overriding creator restrictions
       ticketGroupId = @group_id?.toString?()
-      userRequestedGroupIds = user.allGroupIds?(requested) || []
-      hasRequestedAccess = userRequestedGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+      userDirectGroupIds = Object.keys(user.group_ids || {})  # Direct membership only
+      isDirectMember = ticketGroupId in userDirectGroupIds
       
-      # If creator HAS requested access to ticket's group, skip (let group access handle it)
-      if !hasRequestedAccess
+      # If creator is NOT a direct member of ticket's group, apply creator restrictions
+      if !isDirectMember
         # Creator does NOT have requested access: grant ONLY view + comment (NOT change/full)
         if requested in ['read', 'create']
           console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CREATOR (true)"
@@ -348,15 +349,16 @@ class App.Ticket extends App.Model
     
     requested = permission?.toString()?.toLowerCase() || 'read'
     
-    # CRITICAL: Check if user has the REQUESTED permission level to ticket's group
-    # If user has that permission level, let group access handle it (standard group access)
-    # Only apply special share rules if user LACKS the requested permission
+    # CRITICAL: Check if user is a DIRECT MEMBER of ticket's group (not via role)
+    # If user IS a direct member, let group access handle it (standard group permissions)
+    # If user is NOT a direct member but has share → use share-only permissions
+    # This prevents role-based permissions from overriding share restrictions
     ticketGroupId = @group_id?.toString?()
-    userRequestedGroupIds = user.allGroupIds?(requested) || []
-    hasRequestedAccess = userRequestedGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+    userDirectGroupIds = Object.keys(user.group_ids || {})  # Direct membership only
+    isDirectMember = ticketGroupId in userDirectGroupIds
     
-    # If user HAS requested access to ticket's group, skip (let group access handle it)
-    return null if hasRequestedAccess
+    # If user IS a direct member of ticket's group, skip (let group access handle it)
+    return null if isDirectMember
     
     # User does NOT have requested access to ticket's group: handle via share logic
     # Sharer (no access to ticket's group) → Full access

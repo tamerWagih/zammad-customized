@@ -185,13 +185,15 @@ class TicketPolicy < ApplicationPolicy
     # Check if user created this ticket
     return nil unless record.created_by_id == user.id
     
-    # CRITICAL: Check if creator has the REQUESTED permission level to ticket's group
-    # If user has that permission level, let agent_access? handle it (standard group access)
-    # Only apply special creator rules if user LACKS the requested permission
-    has_requested_access = user.group_access?(record.group_id, access.to_s)
+    # CRITICAL: Check if creator is a DIRECT MEMBER of ticket's group (not via role)
+    # If user IS a direct member, let agent_access? handle it (standard group permissions)
+    # If user is NOT a direct member → use creator-only permissions (read+comment)
+    # This prevents role-based permissions from overriding creator restrictions
+    user_group_ids = user.groups.pluck(:id)
+    is_direct_member = user_group_ids.include?(record.group_id)
     
-    # If creator HAS requested access to ticket's group, let agent_access? handle it
-    return nil if has_requested_access
+    # If creator IS a direct member of ticket's group, let agent_access? handle it
+    return nil if is_direct_member
     
     # Creator does NOT have requested access to ticket's group: grant ONLY view + comment (NOT change/full)
     case access.to_s
@@ -224,11 +226,12 @@ class TicketPolicy < ApplicationPolicy
 
     return nil unless user_is_sharer || user_is_receiver
 
-    # CRITICAL: Check if user has the REQUESTED permission level to ticket's group
-    # If user has that permission level, let agent_access? handle it (standard group access)
-    # Only apply special share rules if user LACKS the requested permission
-    has_requested_access = user.group_access?(record.group_id, access.to_s)
-    return nil if has_requested_access
+    # CRITICAL: Check if user is a DIRECT MEMBER of ticket's group (not via role)
+    # If user IS a direct member, let agent_access? handle it (standard group permissions)
+    # If user is NOT a direct member but has share → use share-only permissions
+    # This prevents role-based permissions from overriding share restrictions
+    is_direct_member = user_group_ids.include?(record.group_id)
+    return nil if is_direct_member
     
     # User does NOT have requested access to ticket's group: handle via share logic
     # Sharer (no access to ticket's group) → Full access
