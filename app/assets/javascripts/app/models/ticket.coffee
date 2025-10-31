@@ -266,9 +266,10 @@ class App.Ticket extends App.Model
     # 3. Check creator access
     if parseInt(@created_by_id) is parseInt(user.id)
       # Check SIMPLE membership (not role-based) to match backend
+      # Backend uses: user.groups.pluck(:id) - just membership, no permission check
       ticketGroupId = @group_id?.toString?()
-      userGroupIds = user.allGroupIds?() || []  # All groups (simple membership)
-      isMemberOfTicketGroup = userGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+      userGroupIds = Object.keys(user.group_ids || {})  # Simple membership only
+      isMemberOfTicketGroup = ticketGroupId in userGroupIds
       
       # If creator IS a member of ticket's group, skip (let group access handle it)
       if !isMemberOfTicketGroup
@@ -306,7 +307,9 @@ class App.Ticket extends App.Model
     shares = @_shares_cache or @shares or []
     return null unless shares?.length
     
-    userGroupIds = user.allGroupIds?() || []
+    # Get SIMPLE membership (not role-based) - just the group IDs
+    # Backend uses: user.groups.pluck(:id) - just membership, no permission check
+    userGroupIds = Object.keys(user.group_ids || {})
     return null unless userGroupIds.length
     
     # Check if user is sharer OR receiver (member of shared group)
@@ -318,7 +321,7 @@ class App.Ticket extends App.Model
     isReceiver = shares.some (share) ->
       return false unless share?.status is 'active'
       return false unless share.group_id?
-      groupMatch = userGroupIds.some (gid) -> gid?.toString?() is share.group_id?.toString?()
+      groupMatch = share.group_id?.toString?() in userGroupIds
       return false unless groupMatch
       # Check expiry
       return false if share.expires_at and new Date(share.expires_at) <= now
@@ -331,8 +334,7 @@ class App.Ticket extends App.Model
     # IMPORTANT: Check group membership FIRST (for both sharer and receiver)
     # Match backend logic: check SIMPLE membership (not role-based access)
     ticketGroupId = @group_id?.toString?()
-    userGroupIds = user.allGroupIds?() || []  # All groups (simple membership, no permission filter)
-    isMemberOfTicketGroup = userGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+    isMemberOfTicketGroup = ticketGroupId in userGroupIds
     
     # If user IS a member of ticket's group, skip (let group access handle it)
     return null if isMemberOfTicketGroup
