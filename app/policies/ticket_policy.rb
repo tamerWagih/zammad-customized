@@ -88,22 +88,40 @@ class TicketPolicy < ApplicationPolicy
   def access?(access)
     # Check CC access FIRST (CC'd users get access)
     cc_decision = cc_access?(access)
-    return cc_decision unless cc_decision.nil?
+    unless cc_decision.nil?
+      Rails.logger.info "[ACCESS] Ticket ##{record.id}, User ##{user&.id}, #{access}: STOPPED at CC (#{cc_decision})"
+      return cc_decision
+    end
 
     # Check approval access (approvers get full access)
     approval_decision = approval_access?(access)
-    return approval_decision unless approval_decision.nil?
+    unless approval_decision.nil?
+      Rails.logger.info "[ACCESS] Ticket ##{record.id}, User ##{user&.id}, #{access}: STOPPED at APPROVAL (#{approval_decision})"
+      return approval_decision
+    end
 
     # Check if user is the ticket creator (view + comment access)
     creator_decision = creator_access?(access)
-    return creator_decision unless creator_decision.nil?
+    unless creator_decision.nil?
+      Rails.logger.info "[ACCESS] Ticket ##{record.id}, User ##{user&.id}, #{access}: STOPPED at CREATOR (#{creator_decision})"
+      return creator_decision
+    end
 
     share_decision = share_access?(access)
-    return share_decision unless share_decision.nil?
+    unless share_decision.nil?
+      Rails.logger.info "[ACCESS] Ticket ##{record.id}, User ##{user&.id}, #{access}: STOPPED at SHARE (#{share_decision})"
+      return share_decision
+    end
 
-    return true if agent_access?(access)
+    group_decision = agent_access?(access)
+    if group_decision
+      Rails.logger.info "[ACCESS] Ticket ##{record.id}, User ##{user&.id}, #{access}: STOPPED at GROUP (true)"
+      return true
+    end
 
-    customer_access?
+    customer_decision = customer_access?
+    Rails.logger.info "[ACCESS] Ticket ##{record.id}, User ##{user&.id}, #{access}: STOPPED at CUSTOMER (#{customer_decision})"
+    customer_decision
   end
 
   def agent_access?(access)
@@ -185,43 +203,30 @@ class TicketPolicy < ApplicationPolicy
   end
 
   # Allow access via Ticket::Share for the current user.
-  # Sharer: full access
-  # Receiver from SAME group as ticket: full access (regardless of share permissions)
-  # Receiver from DIFFERENT group: comment-only access
+  # Both sharer and receiver check group access:
+  # - If user HAS group access → return nil (let agent_access handle based on their level)
+  # - If user has NO group access → grant ONLY view + comment (NOT change/full)
   def share_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
 
-    # Check if user is the sharer (creator gets full access)
+    # Check if user is the sharer or receiver
     user_is_sharer = record.shares.active_current.exists?(shared_by_id: user.id)
     
-    # Check if user is a receiver (member of shared group)
     active_shares = Ticket::Share.active_current.where(ticket_id: record.id)
-    user_group_ids = user.groups.pluck(:id)  # All groups, any access level
+    user_group_ids = user.groups.pluck(:id)
     receiver_shares = active_shares.select { |s| user_group_ids.include?(s.group_id) }
     user_is_receiver = receiver_shares.present?
 
-    # DEBUG logging
-    Rails.logger.info "[SHARE_ACCESS] Ticket ##{record.id}, User ##{user.id} (#{user.login}), Access: #{access}"
-    Rails.logger.info "[SHARE_ACCESS] Ticket group: #{record.group_id}, User has group access: #{user_group_ids.include?(record.group_id)}"
-    Rails.logger.info "[SHARE_ACCESS] Active shares: #{active_shares.count}, Receiver shares: #{receiver_shares.count}"
-    Rails.logger.info "[SHARE_ACCESS] User is sharer: #{user_is_sharer}, User is receiver: #{user_is_receiver}"
-
     return nil unless user_is_sharer || user_is_receiver
 
-    # Sharer has full access
-    if user_is_sharer
-      Rails.logger.info "[SHARE_ACCESS] ✓ Granted (sharer - full access)"
-      return true if %w[read change create full].include?(access.to_s)
-    end
-
-    # Receiver: check if they have ANY access to ticket's group (direct or via role)
+    # Check if user has ANY access to ticket's group (direct or via role)
     has_group_access = user.group_access?(record.group_id, 'read')
     
-    # If receiver HAS access, let agent_access? handle it (full access based on their level)
+    # If user HAS access, let agent_access? handle it (full access based on their level)
     return nil if has_group_access
     
-    # Receiver has NO access: grant ONLY view + comment (NOT change/full)
+    # User has NO access: grant ONLY view + comment (NOT change/full)
     case access.to_s
     when 'read', 'create'
       true
