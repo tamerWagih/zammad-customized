@@ -265,12 +265,13 @@ class App.Ticket extends App.Model
     
     # 3. Check creator access
     if parseInt(@created_by_id) is parseInt(user.id)
-      userReadGroupIds = user.allGroupIds?('read') || []
+      # Check SIMPLE membership (not role-based) to match backend
       ticketGroupId = @group_id?.toString?()
-      hasGroupAccess = userReadGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+      userGroupIds = user.allGroupIds?() || []  # All groups (simple membership)
+      isMemberOfTicketGroup = userGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
       
-      # If creator HAS access, skip (let group access handle it)
-      if !hasGroupAccess
+      # If creator IS a member of ticket's group, skip (let group access handle it)
+      if !isMemberOfTicketGroup
         requested = permission?.toString()?.toLowerCase() || 'read'
         if requested in ['read', 'create']
           console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CREATOR (true)"
