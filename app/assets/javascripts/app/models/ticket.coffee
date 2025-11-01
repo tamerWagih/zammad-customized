@@ -296,6 +296,9 @@ class App.Ticket extends App.Model
           console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CREATOR (true)"
           return true
         # For 'change' or 'full', return nothing (continue to next check)
+        console.log "[ACCESS] Ticket ##{@id}, #{permission}: CREATOR skipped for #{requested} (continuing to other checks)"
+      else
+        console.log "[ACCESS] Ticket ##{@id}, #{permission}: NOT granting creator access (shouldGrantCreatorAccess=false)"
     
     # 4. Check share permissions
     shareResult = @hasSharePermission(permission)
