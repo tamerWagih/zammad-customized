@@ -291,12 +291,14 @@ class App.Ticket extends App.Model
       
       # Apply creator access if determined above
       if shouldGrantCreatorAccess
-        # Grant view + comment, but let other checks handle change/full
+        console.log "[ACCESS] Ticket ##{@id}, #{permission}: shouldGrantCreatorAccess=true, requested=#{requested}"
+        # ALWAYS grant read and create for creators (regardless of what's being requested)
         if requested in ['read', 'create']
           console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CREATOR (true)"
           return true
-        # For 'change' or 'full', return nothing (continue to next check)
+        # For 'change' or 'full', don't grant (return nothing to continue to next check)
         console.log "[ACCESS] Ticket ##{@id}, #{permission}: CREATOR skipped for #{requested} (continuing to other checks)"
+        # Explicitly continue (no return value)
       else
         console.log "[ACCESS] Ticket ##{@id}, #{permission}: NOT granting creator access (shouldGrantCreatorAccess=false)"
     
