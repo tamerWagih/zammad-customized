@@ -101,6 +101,7 @@ class App.ControllerTable extends App.Controller
   events:
     'click .js-sort': 'sortByColumn'
     'click .js-page': 'paginate'
+    'click .js-groupToggle': 'toggleGroup'
 
   overviewAttributes: undefined
   #model:             App.TicketPriority,
@@ -358,6 +359,9 @@ class App.ControllerTable extends App.Controller
     @frontendTimeUpdateElement(container) if @frontendTimeUpdateExecute is true
 
     @renderPager(container)
+    
+    # Apply saved collapse states for groups
+    @applyGroupCollapseStates() if @groupBy
 
     cursorMap =
       click:    'pointer'
@@ -806,6 +810,56 @@ class App.ControllerTable extends App.Controller
         @renderTableFull()
       App.QueueManager.add('tableRender', render)
       App.QueueManager.run('tableRender')
+
+  toggleGroup: (e) =>
+    e.preventDefault()
+    e.stopPropagation()
+    
+    $header = $(e.currentTarget).closest('tr.js-groupHeader')
+    groupName = $header.data('group-name')
+    return if !groupName
+    
+    # Toggle collapsed state
+    isCollapsed = $header.hasClass('is-collapsed')
+    $header.toggleClass('is-collapsed')
+    
+    # Find all rows belonging to this group and toggle visibility
+    $rows = $header.nextUntil('.js-groupHeader')
+    $rows.toggle()
+    
+    # Save collapsed state to localStorage
+    @saveGroupCollapseState(groupName, !isCollapsed)
+    
+  saveGroupCollapseState: (groupName, isCollapsed) =>
+    return if !@tableId
+    storageKey = "table_group_collapsed_#{@tableId}"
+    collapsedGroups = App.LocalStorage.get(storageKey) || {}
+    if isCollapsed
+      collapsedGroups[groupName] = true
+    else
+      delete collapsedGroups[groupName]
+    App.LocalStorage.set(storageKey, collapsedGroups)
+  
+  loadGroupCollapseStates: =>
+    return {} if !@tableId
+    storageKey = "table_group_collapsed_#{@tableId}"
+    App.LocalStorage.get(storageKey) || {}
+  
+  applyGroupCollapseStates: =>
+    collapsedGroups = @loadGroupCollapseStates()
+    return if _.isEmpty(collapsedGroups)
+    
+    # Apply collapsed state to each group
+    for groupName, isCollapsed of collapsedGroups
+      continue if !isCollapsed
+      $header = @el.find("tr.js-groupHeader[data-group-name='#{groupName}']")
+      continue if $header.length is 0
+      
+      # Add collapsed class to header
+      $header.addClass('is-collapsed')
+      
+      # Hide rows in this group
+      $header.nextUntil('.js-groupHeader').hide()
 
   sortList: =>
     return if _.isEmpty(@objects)

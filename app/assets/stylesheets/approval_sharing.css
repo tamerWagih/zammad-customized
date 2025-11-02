@@ -256,3 +256,49 @@
   color: #666;
   font-size: 12px;
 }
+
+/* ============================================ */
+/* Table Group Collapse/Expand Functionality   */
+/* ============================================ */
+
+/* Group header row styling */
+.table-group-header {
+  background-color: #f5f5f5 !important;
+  font-weight: bold;
+}
+
+.table-group-header:hover {
+  background-color: #ebebeb !important;
+}
+
+/* Group toggle button styling */
+.table-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.table-group-toggle:hover {
+  color: #0070c9;
+}
+
+/* Collapse icon - default (expanded) shows down arrow */
+.table-group-icon {
+  display: inline-block;
+  transition: transform 0.2s ease-in-out;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* When collapsed, rotate the icon to point right */
+tr.js-groupHeader.is-collapsed .table-group-icon {
+  transform: rotate(-90deg);
+}
+
+/* Optional: Add subtle animation when toggling */
+.table-group-header,
+.table-group-icon {
+  transition: all 0.2s ease-in-out;
+}
