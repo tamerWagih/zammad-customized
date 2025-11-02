@@ -319,8 +319,6 @@ class App.ControllerTable extends App.Controller
           @log 'debug', 'table.fullRender.contentRemoved', removePositions, addPositions
           @renderPager(@el, true)
           @frontendTimeUpdateElement(@el) if @frontendTimeUpdateExecute is true
-          # Re-bind group events after partial update
-          @bindGroupToggleEvents() if @groupBy
           return ['fullRender.contentRemoved', removePositions, addPositions]
 
       if newRows.length isnt @currentRows.length
@@ -360,12 +358,6 @@ class App.ControllerTable extends App.Controller
     @frontendTimeUpdateElement(container) if @frontendTimeUpdateExecute is true
 
     @renderPager(container)
-    
-    # Apply saved collapse states for groups
-    if @groupBy
-      @applyGroupCollapseStates()
-      # Re-bind group toggle events after render
-      @bindGroupToggleEvents()
 
     cursorMap =
       click:    'pointer'
@@ -528,6 +520,11 @@ class App.ControllerTable extends App.Controller
 
     @el.html(container)
     @setBulkSelected(bulkIds)
+    
+    # NOW bind group toggle events - AFTER container is in DOM
+    if @groupBy
+      @applyGroupCollapseStates()
+      @bindGroupToggleEvents()
 
   renderTableContainer: =>
     $(App.view('generic/table')(
