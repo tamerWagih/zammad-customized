@@ -324,7 +324,6 @@ class Transaction::ShareNotification
       shared_by:     shared_by_user,
       shared_by_name: shared_by_user&.fullname || shared_by_user&.email || 'Unknown User',
       group_name:    share_obj.group&.name || 'Unknown Group',
-      expires_at_formatted: share_obj.expires_at&.strftime('%Y-%m-%d') || 'No expiry',
       recipient:     user,
       current_user:  current_user,
       changes:       human_changes(@item[:changes], ticket, user),

@@ -20,8 +20,7 @@ class TicketSharesController < ApplicationController
       .execute(
         ticket:     @ticket,
         group_id:   share_create_params[:group_id],
-        message:    share_create_params[:message],
-        expires_at: share_create_params[:expires_at]
+        message:    share_create_params[:message]
       )
 
     notify_shared_group(share, __('Ticket shared with your group'))
@@ -92,11 +91,11 @@ class TicketSharesController < ApplicationController
   end
 
   def share_create_params
-    params.permit(:group_id, :message, :expires_at)
+    params.permit(:group_id, :message)
   end
 
   def share_update_params
-    params.permit(:message, :expires_at)
+    params.permit(:message)
   end
 
   def serialize_share(share)
@@ -115,8 +114,7 @@ class TicketSharesController < ApplicationController
       message:          extract_attribute(share, :message),
       status:           extract_attribute(share, :status),
       created_at:       extract_attribute(share, :created_at),
-      updated_at:       extract_attribute(share, :updated_at),
-      expires_at:       extract_attribute(share, :expires_at)
+      updated_at:       extract_attribute(share, :updated_at)
     }
   end
 

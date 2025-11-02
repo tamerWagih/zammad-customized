@@ -21,9 +21,6 @@
         <div class="share-meta">
           <div class="share-date" style="font-size: 0.9em; color: #666;">
             <%- @T('Shared') %> <%- new Date(share.created_at).toLocaleDateString() %>
-            <% if share.expires_at: %>
-              (<%- @T('Expires') %> <%- new Date(share.expires_at).toLocaleDateString() %>)
-            <% end %>
           </div>
         </div>
         <div class="share-message" style="margin-top: 0.5rem;">

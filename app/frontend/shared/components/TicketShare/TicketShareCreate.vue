@@ -30,18 +30,6 @@
           </div>
           
           <div class="form-group">
-            <label for="expiresAt">{{ $t('Expire on (optional)') }}</label>
-            <input 
-              id="expiresAt"
-              type="date"
-              v-model="form.expiresAt"
-              class="form-control"
-              :disabled="loading"
-            >
-            <small class="form-text text-muted">{{ $t('Access ends at the end of the selected day') }}</small>
-          </div>
-          
-          <div class="form-group">
             <label for="message">{{ $t('Message (optional)') }}</label>
             <textarea 
               id="message"
@@ -102,7 +90,6 @@ const groups = ref<GroupOption[]>([])
 
 const form = reactive({
   groupId: '',
-  expiresAt: '',
   message: ''
 })
 
@@ -128,7 +115,7 @@ const loadGroups = async () => {
       .map((group: any) => ({
         id: String(group.id),
         name: group.name,
-        fullname: group.fullname || (group.name ? group.name.replace(/::/g, " › ") : undefined),
+        fullname: group.fullname || (group.name ? group.name.replace(/::/g, " ï¿½ ") : undefined),
       }))
       .sort((a, b) => (a.fullname || a.name || '').localeCompare(b.fullname || b.name || ''))
   } catch (error) {
@@ -149,7 +136,6 @@ const submitShare = async () => {
   try {
     const body = new URLSearchParams()
     body.set('group_id', form.groupId)
-    if (form.expiresAt) body.set('expires_at', form.expiresAt)
     if (form.message) body.set('message', form.message)
 
     const response = await fetch(`/api/v1/tickets/${props.ticketId}/shares`, {
@@ -168,7 +154,6 @@ const submitShare = async () => {
     }
 
     form.groupId = ''
-    form.expiresAt = ''
     form.message = ''
 
     emit('created')

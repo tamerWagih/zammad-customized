@@ -814,27 +814,6 @@ returns a hex color code
     perms[:read] || perms[:comment] || perms[:edit]
   end
 
-  # Revoke expired shares
-  def revoke_expired_shares!
-    return unless respond_to?(:shares)
-    
-    begin
-      # Find expired shares that are still active
-      expired_shares = shares.where(status: 'active')
-                             .where('expires_at < ?', Time.current)
-      
-      # Revoke each individually to trigger callbacks (notifications, WebSocket events)
-      # Don't use update_all as it bypasses ActiveRecord callbacks
-      expired_shares.find_each do |share|
-        # Set user_id for notification system
-        UserInfo.current_user_id = 1 # System user
-        share.update!(status: 'revoked')
-      end
-    rescue StandardError => e
-      Rails.logger.warn "Failed to revoke expired shares for ticket #{id}: #{e.message}"
-    end
-  end
-
   # Create CC records after ticket creation if cc_user_ids is provided
   def create_cc_records
     Rails.logger.info "[CC] ===== CREATE_CC_RECORDS START ====="

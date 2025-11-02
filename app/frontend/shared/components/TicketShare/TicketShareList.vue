@@ -47,10 +47,6 @@
           {{ share.message }}
         </div>
         
-        <div v-if="share.expiresAt" class="text-xs text-gray-500 dark:text-gray-400 mb-2">
-          {{ $t('Expires') }}: <CommonDateTime :date-time="share.expiresAt" />
-        </div>
-        
         <div v-if="canManage && share.status === 'active'" class="flex gap-2">
           <CommonButton
             size="small"

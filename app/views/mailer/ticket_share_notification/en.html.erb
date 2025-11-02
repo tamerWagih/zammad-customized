@@ -49,9 +49,6 @@ Shared by: #{share.shared_by_name}<br>
 <% if @objects[:share].message.present? %>
 Message: #{share.message}<br>
 <% end %>
-<% if @objects[:share].expires_at.present? %>
-Expires: #{share.expires_at}<br>
-<% end %>
 </div>
 <br>
 <% unless ['revoke', 'delete'].include?(@objects[:action]) %>

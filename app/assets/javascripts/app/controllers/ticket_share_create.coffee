@@ -71,12 +71,6 @@ class App.TicketShareCreate extends App.ControllerModal
     
     form_data = @formParam(e.currentTarget)
     
-    if form_data.expires_at
-      try
-        form_data.expires_at = new Date(form_data.expires_at).toISOString().slice(0, 10)
-      catch
-        form_data.expires_at = ''
-    
     @ajax(
       id: 'create_ticket_share'
       type: 'POST'

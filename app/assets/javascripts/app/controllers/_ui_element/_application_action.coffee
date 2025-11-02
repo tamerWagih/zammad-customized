@@ -888,14 +888,6 @@ class App.UiElement.ApplicationAction
       nulloption: false
     )
     
-    # Build expiry date selection (optional - date only, no time)
-    expirySelection = App.UiElement.date.render(
-      name: "#{name}::expires_at"
-      null: true
-      nulloption: true
-      value: meta.expires_at
-    )
-    
     # Create container element
     shareElement = $('<div class="js-share-' + shareType + '"></div>')
     
@@ -905,11 +897,5 @@ class App.UiElement.ApplicationAction
     groupGroup.append('<div class="help-text">' + App.i18n.translateInline('Select one or more departments') + '</div>')
     groupGroup.append(groupSelection)
     shareElement.append(groupGroup)
-    
-    # Create form group for expiry date
-    expiryGroup = $('<div class="form-group"></div>')
-    expiryGroup.append('<label>' + App.i18n.translateInline('Expires At (optional)') + '</label>')
-    expiryGroup.append(expirySelection)
-    shareElement.append(expiryGroup)
     
     elementRow.find('.js-setShare').html(shareElement).removeClass('hide')

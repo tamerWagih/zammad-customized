@@ -17,18 +17,6 @@
           </div>
           
           <div class="form-group">
-            <label for="expiresAt">{{ $t('Expire on (optional)') }}</label>
-            <input 
-              id="expiresAt"
-              type="date"
-              v-model="form.expiresAt"
-              class="form-control"
-              :disabled="loading"
-            >
-            <small class="form-text">{{ $t('Access ends at the end of the selected day') }}</small>
-          </div>
-          
-          <div class="form-group">
             <label for="message">{{ $t('Message (optional)') }}</label>
             <textarea 
               id="message"
@@ -81,17 +69,11 @@ const emit = defineEmits<{
 const loading = ref(false)
 
 const form = reactive({
-  expiresAt: '',
   message: ''
 })
 
 onMounted(() => {
   // Initialize form with existing values
-  if (props.share?.expiresAt) {
-    // Convert to YYYY-MM-DD format for date input
-    const date = new Date(props.share.expiresAt)
-    form.expiresAt = date.toISOString().split('T')[0]
-  }
   form.message = props.share?.message || ''
 })
 
@@ -109,7 +91,6 @@ const submitUpdate = async () => {
   
   try {
     const body = new URLSearchParams()
-    if (form.expiresAt) body.set('expires_at', form.expiresAt)
     if (form.message) body.set('message', form.message)
 
     const response = await fetch(

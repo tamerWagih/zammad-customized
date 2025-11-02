@@ -24,7 +24,7 @@ class Ticket::Share < ApplicationModel
   validates :permissions, presence: true
   validate :valid_permissions
 
-  scope :active_current, -> { where(status: 'active').where('expires_at IS NULL OR expires_at > ?', Time.current) }
+  scope :active_current, -> { where(status: 'active') }
 
   def full_access?
     Array(permissions).include?('full')
@@ -64,7 +64,6 @@ class Ticket::Share < ApplicationModel
         status
         created_at
         updated_at
-        expires_at
       ],
       methods: %i[group_name shared_by_name]
     }.merge(options))
