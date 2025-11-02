@@ -517,14 +517,49 @@ class App.ControllerTable extends App.Controller
           return helper
         update: @dndCallback
       table.find('tbody').sortable(dndOptions)
+    
+    # Bind group collapse events BEFORE inserting into DOM (Zammad pattern)
+    if @groupBy
+      console.log 'Binding group toggle on table object, headers:', table.find('tr.js-groupHeader').length
+      table.on 'click', 'tbody > tr.js-groupHeader', (e) =>
+        console.log 'Group header clicked (table.on)!', e.currentTarget
+        
+        # Don't toggle if clicking on checkbox or other interactive elements
+        if $(e.target).is('input, a, button, .js-checkbox')
+          console.log 'Ignoring click on interactive element'
+          return
+        
+        $header = $(e.currentTarget)
+        groupName = $header.data('group-name')
+        
+        console.log 'toggleGroup: Group name=', groupName
+        if !groupName
+          console.log 'toggleGroup: No group name!'
+          return
+        
+        # Toggle collapsed state
+        isCollapsed = $header.hasClass('is-collapsed')
+        $header.toggleClass('is-collapsed')
+        
+        console.log 'toggleGroup: Toggling', groupName, 'from', (if isCollapsed then 'collapsed' else 'expanded')
+        
+        # Find all rows belonging to this group and toggle visibility
+        $rows = $header.nextUntil('tr.js-groupHeader')
+        console.log 'toggleGroup: Found', $rows.length, 'rows to toggle'
+        
+        if $rows.length > 0
+          $rows.toggle()
+          console.log 'toggleGroup: Rows toggled!'
+        
+        # Save collapsed state to localStorage
+        @saveGroupCollapseState(groupName, !isCollapsed)
 
     @el.html(container)
     @setBulkSelected(bulkIds)
     
-    # NOW bind group toggle events - AFTER container is in DOM
+    # Apply saved collapse states AFTER DOM insertion
     if @groupBy
       @applyGroupCollapseStates()
-      @bindGroupToggleEvents()
 
   renderTableContainer: =>
     $(App.view('generic/table')(
@@ -842,52 +877,6 @@ class App.ControllerTable extends App.Controller
       
       # Hide rows in this group
       $header.nextUntil('.js-groupHeader').hide()
-  
-  bindGroupToggleEvents: =>
-    console.log 'bindGroupToggleEvents: Binding events, groupBy=', @groupBy
-    
-    # Unbind first to prevent duplicate bindings
-    @el.off('click.groupToggle')
-    
-    # Count group headers
-    headerCount = @el.find('tr.js-groupHeader').length
-    console.log 'bindGroupToggleEvents: Found', headerCount, 'group headers'
-    
-    # Bind click event directly to group header rows (simpler approach)
-    @el.on 'click.groupToggle', 'tr.js-groupHeader', (e) =>
-      console.log 'Group header clicked!', e.currentTarget
-      
-      # Don't toggle if clicking on checkbox or other interactive elements
-      if $(e.target).is('input, a, button, .js-checkbox')
-        console.log 'Ignoring click on interactive element'
-        return
-      
-      $header = $(e.currentTarget)
-      groupName = $header.data('group-name')
-      
-      console.log 'toggleGroup: Group name=', groupName
-      if !groupName
-        console.log 'toggleGroup: No group name!'
-        return
-      
-      # Toggle collapsed state
-      isCollapsed = $header.hasClass('is-collapsed')
-      $header.toggleClass('is-collapsed')
-      
-      console.log 'toggleGroup: Toggling from', (if isCollapsed then 'collapsed' else 'expanded'), 'to', (if isCollapsed then 'expanded' else 'collapsed')
-      
-      # Find all rows belonging to this group and toggle visibility
-      $rows = $header.nextUntil('tr.js-groupHeader')
-      console.log 'toggleGroup: Found', $rows.length, 'rows to toggle'
-      
-      if $rows.length > 0
-        $rows.toggle()
-        console.log 'toggleGroup: Rows toggled!'
-      else
-        console.log 'toggleGroup: WARNING - No rows found to toggle!'
-      
-      # Save collapsed state to localStorage
-      @saveGroupCollapseState(groupName, !isCollapsed)
 
   sortList: =>
     return if _.isEmpty(@objects)
