@@ -523,31 +523,21 @@ class App.ControllerTable extends App.Controller
     
     # Bind group collapse events AFTER DOM insertion with direct binding
     if @groupBy
-      console.log 'Setting up group toggle, headers found:', @el.find('tr.js-groupHeader').length
-      
       # Direct binding approach - bind to each header individually
       @el.find('tr.js-groupHeader').each (index, element) =>
         $header = $(element)
         groupName = $header.data('group-name')
-        console.log "Binding click to group header #{index}: #{groupName}"
         
         $header.off('click.groupToggle').on 'click.groupToggle', (e) =>
-          console.log 'Group header CLICKED!', groupName
-          
           # Don't toggle if clicking on checkbox
-          if $(e.target).is('input[type="checkbox"]')
-            console.log 'Ignoring checkbox click'
-            return
+          return if $(e.target).is('input[type="checkbox"]')
           
           # Toggle collapsed state
           isCollapsed = $header.hasClass('is-collapsed')
           $header.toggleClass('is-collapsed')
           
-          console.log 'Toggling', groupName, '- was collapsed:', isCollapsed
-          
           # Find all rows belonging to this group and toggle visibility
           $rows = $header.nextUntil('tr.js-groupHeader')
-          console.log 'Found', $rows.length, 'rows to toggle'
           $rows.toggle()
           
           # Save collapsed state to localStorage
