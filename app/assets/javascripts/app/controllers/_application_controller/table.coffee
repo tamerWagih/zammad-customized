@@ -536,6 +536,13 @@ class App.ControllerTable extends App.Controller
           isCollapsed = $header.hasClass('is-collapsed')
           $header.toggleClass('is-collapsed')
           
+          # Rotate the icon using inline style (works immediately without asset recompilation)
+          $icon = $header.find('.table-group-icon')
+          if isCollapsed
+            $icon.css('transform', 'rotate(0deg)')  # Expand - arrow down
+          else
+            $icon.css('transform', 'rotate(-90deg)')  # Collapse - arrow right
+          
           # Find all rows belonging to this group and toggle visibility
           $rows = $header.nextUntil('tr.js-groupHeader')
           $rows.toggle()
