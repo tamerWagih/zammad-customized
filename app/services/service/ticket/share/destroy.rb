@@ -49,8 +49,7 @@ class Service::Ticket::Share::Destroy < Service::BaseWithCurrentUser
       message:          share.message,
       status:           share.status,
       created_at:       share.created_at,
-      updated_at:       share.updated_at,
-      expires_at:       share.expires_at
+      updated_at:       share.updated_at
     }
   end
 end
