@@ -847,24 +847,28 @@ class App.ControllerTable extends App.Controller
     console.log 'bindGroupToggleEvents: Binding events, groupBy=', @groupBy
     
     # Unbind first to prevent duplicate bindings
-    @el.off('click.groupToggle', 'tr.js-groupHeader td')
+    @el.off('click.groupToggle')
     
     # Count group headers
     headerCount = @el.find('tr.js-groupHeader').length
     console.log 'bindGroupToggleEvents: Found', headerCount, 'group headers'
     
-    # Bind click event for group headers
-    @el.on 'click.groupToggle', 'tr.js-groupHeader td', (e) =>
+    # Bind click event directly to group header rows (simpler approach)
+    @el.on 'click.groupToggle', 'tr.js-groupHeader', (e) =>
       console.log 'Group header clicked!', e.currentTarget
       
       # Don't toggle if clicking on checkbox or other interactive elements
-      return if $(e.target).is('input, a, button, .js-checkbox')
+      if $(e.target).is('input, a, button, .js-checkbox')
+        console.log 'Ignoring click on interactive element'
+        return
       
-      $header = $(e.currentTarget).closest('tr.js-groupHeader')
+      $header = $(e.currentTarget)
       groupName = $header.data('group-name')
       
       console.log 'toggleGroup: Group name=', groupName
-      return if !groupName
+      if !groupName
+        console.log 'toggleGroup: No group name!'
+        return
       
       # Toggle collapsed state
       isCollapsed = $header.hasClass('is-collapsed')
@@ -873,9 +877,14 @@ class App.ControllerTable extends App.Controller
       console.log 'toggleGroup: Toggling from', (if isCollapsed then 'collapsed' else 'expanded'), 'to', (if isCollapsed then 'expanded' else 'collapsed')
       
       # Find all rows belonging to this group and toggle visibility
-      $rows = $header.nextUntil('.js-groupHeader')
+      $rows = $header.nextUntil('tr.js-groupHeader')
       console.log 'toggleGroup: Found', $rows.length, 'rows to toggle'
-      $rows.toggle()
+      
+      if $rows.length > 0
+        $rows.toggle()
+        console.log 'toggleGroup: Rows toggled!'
+      else
+        console.log 'toggleGroup: WARNING - No rows found to toggle!'
       
       # Save collapsed state to localStorage
       @saveGroupCollapseState(groupName, !isCollapsed)
