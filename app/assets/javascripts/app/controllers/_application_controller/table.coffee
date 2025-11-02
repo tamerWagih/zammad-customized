@@ -421,7 +421,7 @@ class App.ControllerTable extends App.Controller
               callback          = callback.callback
 
             if cursorMap[event]
-              table.find('tbody > tr').each (i, elem) ->
+              table.find('tbody > tr:not(.js-groupHeader)').each (i, elem) ->
                 dom = $(elem)
 
                 if availabilityCheck
@@ -430,7 +430,7 @@ class App.ControllerTable extends App.Controller
                   return if !availabilityCheck(id)
 
                 dom.css( 'cursor', cursorMap[event] )
-            table.on(event, 'tbody > tr',
+            table.on(event, 'tbody > tr:not(.js-groupHeader)',
               (e) ->
                 id = $(e.target).parents('tr').data('id')
 
