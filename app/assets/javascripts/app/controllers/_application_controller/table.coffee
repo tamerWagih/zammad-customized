@@ -319,6 +319,8 @@ class App.ControllerTable extends App.Controller
           @log 'debug', 'table.fullRender.contentRemoved', removePositions, addPositions
           @renderPager(@el, true)
           @frontendTimeUpdateElement(@el) if @frontendTimeUpdateExecute is true
+          # Re-bind group events after partial update
+          @bindGroupToggleEvents() if @groupBy
           return ['fullRender.contentRemoved', removePositions, addPositions]
 
       if newRows.length isnt @currentRows.length
@@ -845,25 +847,37 @@ class App.ControllerTable extends App.Controller
       $header.nextUntil('.js-groupHeader').hide()
   
   bindGroupToggleEvents: =>
+    console.log 'bindGroupToggleEvents: Binding events, groupBy=', @groupBy
+    
     # Unbind first to prevent duplicate bindings
     @el.off('click.groupToggle', 'tr.js-groupHeader td')
     
+    # Count group headers
+    headerCount = @el.find('tr.js-groupHeader').length
+    console.log 'bindGroupToggleEvents: Found', headerCount, 'group headers'
+    
     # Bind click event for group headers
     @el.on 'click.groupToggle', 'tr.js-groupHeader td', (e) =>
+      console.log 'Group header clicked!', e.currentTarget
+      
       # Don't toggle if clicking on checkbox or other interactive elements
       return if $(e.target).is('input, a, button, .js-checkbox')
       
       $header = $(e.currentTarget).closest('tr.js-groupHeader')
       groupName = $header.data('group-name')
       
+      console.log 'toggleGroup: Group name=', groupName
       return if !groupName
       
       # Toggle collapsed state
       isCollapsed = $header.hasClass('is-collapsed')
       $header.toggleClass('is-collapsed')
       
+      console.log 'toggleGroup: Toggling from', (if isCollapsed then 'collapsed' else 'expanded'), 'to', (if isCollapsed then 'expanded' else 'collapsed')
+      
       # Find all rows belonging to this group and toggle visibility
       $rows = $header.nextUntil('.js-groupHeader')
+      console.log 'toggleGroup: Found', $rows.length, 'rows to toggle'
       $rows.toggle()
       
       # Save collapsed state to localStorage
