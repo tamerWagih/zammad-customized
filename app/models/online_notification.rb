@@ -177,7 +177,6 @@ return online notifications of an user.
       LEFT JOIN tickets ON online_notifications.object_lookup_id = #{ActiveRecord::Base.connection.quote(object_id)} AND tickets.id = online_notifications.o_id
       LEFT JOIN ticket_shares ON ticket_shares.ticket_id = online_notifications.o_id
         AND ticket_shares.status = 'active'
-        AND (ticket_shares.expires_at IS NULL OR ticket_shares.expires_at > CURRENT_TIMESTAMP)
       LEFT JOIN ticket_ccs ON ticket_ccs.ticket_id = online_notifications.o_id
         AND ticket_ccs.user_id = #{ActiveRecord::Base.connection.quote(user.id)}
     SQL
