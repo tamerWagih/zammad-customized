@@ -159,7 +159,6 @@ class Ticket::AssetsAll
                       status:          share.status,
                       permissions:     Array(share.permissions),
                       message:         share.message,
-                      expires_at:      share.expires_at,
                       created_at:      share.created_at,
                       updated_at:      share.updated_at,
                     }
