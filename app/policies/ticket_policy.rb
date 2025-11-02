@@ -89,38 +89,32 @@ class TicketPolicy < ApplicationPolicy
     # Check CC access FIRST (CC'd users get access)
     cc_decision = cc_access?(access)
     unless cc_decision.nil?
-      Rails.logger.info "[ACCESS] Ticket ##{record.id}, User ##{user&.id}, #{access}: STOPPED at CC (#{cc_decision})"
       return cc_decision
     end
 
     # Check approval access (approvers get full access)
     approval_decision = approval_access?(access)
     unless approval_decision.nil?
-      Rails.logger.info "[ACCESS] Ticket ##{record.id}, User ##{user&.id}, #{access}: STOPPED at APPROVAL (#{approval_decision})"
       return approval_decision
     end
 
     # Check if user is the ticket creator (view + comment access)
     creator_decision = creator_access?(access)
     unless creator_decision.nil?
-      Rails.logger.info "[ACCESS] Ticket ##{record.id}, User ##{user&.id}, #{access}: STOPPED at CREATOR (#{creator_decision})"
       return creator_decision
     end
 
     share_decision = share_access?(access)
     unless share_decision.nil?
-      Rails.logger.info "[ACCESS] Ticket ##{record.id}, User ##{user&.id}, #{access}: STOPPED at SHARE (#{share_decision})"
       return share_decision
     end
 
     group_decision = agent_access?(access)
     if group_decision
-      Rails.logger.info "[ACCESS] Ticket ##{record.id}, User ##{user&.id}, #{access}: STOPPED at GROUP (true)"
       return true
     end
 
     customer_decision = customer_access?
-    Rails.logger.info "[ACCESS] Ticket ##{record.id}, User ##{user&.id}, #{access}: STOPPED at CUSTOMER (#{customer_decision})"
     customer_decision
   end
 

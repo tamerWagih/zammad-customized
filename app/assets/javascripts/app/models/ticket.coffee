@@ -252,7 +252,6 @@ class App.Ticket extends App.Model
     
     # 1. Check CC permissions FIRST
     if @hasCcPermission(permission)
-      console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CC (true)"
       return true
     
     # 2. Check if user is an approver
@@ -260,19 +259,16 @@ class App.Ticket extends App.Model
       approvals = @_approvals_cache or @approvals or []
       for approval in approvals
         if parseInt(approval.approver_id) is parseInt(user.id)
-          console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at APPROVAL (true)"
           return true
     
     # 3. Check creator access
     if parseInt(@created_by_id) is parseInt(user.id)
       requested = permission?.toString()?.toLowerCase() || 'read'
-      console.log "[ACCESS] Ticket ##{@id}, #{permission}: Checking CREATOR (created_by: #{@created_by_id}, user: #{user.id})"
       
       # CRITICAL: Check if creator is a DIRECT MEMBER of ticket's group (not via role)
       ticketGroupId = @group_id?.toString?()
       userDirectGroupIds = Object.keys(user.group_ids || {})  # Direct membership only
       isDirectMember = ticketGroupId in userDirectGroupIds
-      console.log "[ACCESS] Ticket ##{@id}, #{permission}: isDirectMember=#{isDirectMember}, ticketGroup=#{ticketGroupId}"
       
       # Check if user should get creator access
       shouldGrantCreatorAccess = false
@@ -291,32 +287,23 @@ class App.Ticket extends App.Model
       
       # Apply creator access if determined above
       if shouldGrantCreatorAccess
-        console.log "[ACCESS] Ticket ##{@id}, #{permission}: shouldGrantCreatorAccess=true, requested=#{requested}"
         # ALWAYS grant read and create for creators (regardless of what's being requested)
         if requested in ['read', 'create']
-          console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at CREATOR (true)"
           return true
         # For 'change' or 'full', don't grant (return nothing to continue to next check)
-        console.log "[ACCESS] Ticket ##{@id}, #{permission}: CREATOR skipped for #{requested} (continuing to other checks)"
         # Explicitly continue (no return value)
-      else
-        console.log "[ACCESS] Ticket ##{@id}, #{permission}: NOT granting creator access (shouldGrantCreatorAccess=false)"
     
     # 4. Check share permissions
     shareResult = @hasSharePermission(permission)
     if shareResult is true
-      console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at SHARE (true)"
       return true
     else if shareResult is false
-      console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at SHARE (false)"
       return false
     
     # 5. Check standard group access
     if @isAccessibleByGroup(user, permission)
-      console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at GROUP (true)"
       return true
     
-    console.log "[ACCESS] Ticket ##{@id}, #{permission}: STOPPED at END (false)"
     false
 
   hasSharePermission: (permission) ->

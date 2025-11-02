@@ -1,6 +1,6 @@
-<tr class="js-groupHeader table-group-header" data-group-name="<%= @groupByName %>">
-  <td colspan="<%= @columnsLength %>">
-    <span class="js-groupToggle table-group-toggle" style="cursor: pointer; user-select: none;">
+<tr class="js-groupHeader table-group-header" data-group-name="<%= @groupByName %>" style="cursor: pointer;">
+  <td colspan="<%= @columnsLength %>" style="cursor: pointer;">
+    <span class="table-group-toggle" style="cursor: pointer; user-select: none;">
       <svg class="table-group-icon" width="12" height="12" style="display: inline-block; transition: transform 0.2s; margin-right: 6px;">
         <path d="M 2 4 L 6 8 L 10 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>

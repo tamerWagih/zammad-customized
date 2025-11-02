@@ -101,7 +101,7 @@ class App.ControllerTable extends App.Controller
   events:
     'click .js-sort': 'sortByColumn'
     'click .js-page': 'paginate'
-    'click .js-groupToggle': 'toggleGroup'
+    'click .js-groupHeader td': 'toggleGroup'
 
   overviewAttributes: undefined
   #model:             App.TicketPriority,
@@ -812,12 +812,20 @@ class App.ControllerTable extends App.Controller
       App.QueueManager.run('tableRender')
 
   toggleGroup: (e) =>
+    # Don't toggle if clicking on checkbox or other interactive elements
+    return if $(e.target).is('input, a, button')
+    
     e.preventDefault()
     e.stopPropagation()
     
     $header = $(e.currentTarget).closest('tr.js-groupHeader')
     groupName = $header.data('group-name')
-    return if !groupName
+    
+    if !groupName
+      console.log('toggleGroup: No group name found')
+      return
+    
+    console.log('toggleGroup: Toggling group', groupName)
     
     # Toggle collapsed state
     isCollapsed = $header.hasClass('is-collapsed')
@@ -825,6 +833,7 @@ class App.ControllerTable extends App.Controller
     
     # Find all rows belonging to this group and toggle visibility
     $rows = $header.nextUntil('.js-groupHeader')
+    console.log('toggleGroup: Found', $rows.length, 'rows to toggle')
     $rows.toggle()
     
     # Save collapsed state to localStorage

@@ -32,8 +32,6 @@ returns
 
     data[ app_model ][ id ] = attributes_with_association_ids
     
-    Rails.logger.info "[TICKET_ASSETS] Ticket ##{id}, UserInfo.current_user=#{UserInfo.current_user&.id}, respond_to share_permissions_for? #{respond_to?(:share_permissions_for)}"
-    
     if UserInfo.current_user && respond_to?(:share_permissions_for)
       begin
         perms = share_permissions_for(UserInfo.current_user)
