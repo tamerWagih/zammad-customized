@@ -1,5 +1,5 @@
 class App.Ticket extends App.Model
-  @configure 'Ticket', 'number', 'title', 'group_id', 'owner_id', 'customer_id', 'state_id', 'priority_id', 'article', 'tags', 'links', 'cc_user_ids', 'updated_at', 'preferences', 'share_permissions', 'share_expires_at'
+  @configure 'Ticket', 'number', 'title', 'group_id', 'owner_id', 'customer_id', 'state_id', 'priority_id', 'article', 'tags', 'links', 'cc_user_ids', 'updated_at', 'preferences', 'share_permissions'
   @extend Spine.Model.Ajax
   @url: @apiPath + '/tickets'
   @configure_attributes = [
@@ -356,8 +356,6 @@ class App.Ticket extends App.Model
       return false unless share.group_id?
       groupMatch = userAllGroupIds.some (gid) -> gid?.toString?() is share.group_id?.toString?()
       return false unless groupMatch
-      # Check expiry
-      return false if share.expires_at and new Date(share.expires_at) <= now
       matchingShare = share  # Remember the matching share
       true
     
@@ -440,9 +438,7 @@ class App.Ticket extends App.Model
       return false unless share.group_id?
       groupMatch = groupIds.some (gid) -> gid?.toString?() is share.group_id?.toString?()
       return false unless groupMatch
-      return true unless share.expires_at
-      expiresAt = new Date(share.expires_at)
-      expiresAt > now
+      true
 
     return null unless matchingShare
 

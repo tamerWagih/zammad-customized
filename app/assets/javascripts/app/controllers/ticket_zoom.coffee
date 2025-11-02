@@ -1498,7 +1498,7 @@ class App.TicketZoom extends App.Controller
     return if !@tooltipCopied
     @tooltipCopied.tooltip('hide')
 
-  # Disable editing capabilities when user has only read permission or share expired
+  # Disable editing capabilities when user has only read permission
 
 class TicketZoomRouter extends App.ControllerPermanent
   @requiredPermission: ['ticket.agent', 'ticket.customer']

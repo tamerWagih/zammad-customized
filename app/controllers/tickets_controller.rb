@@ -47,28 +47,14 @@ class TicketsController < ApplicationController
     authorize!(ticket)
 
     auto_assign_ticket(ticket)
-    
-    # Revoke expired shares before rendering (with error handling)
-    begin
-      ticket.revoke_expired_shares! if ticket.respond_to?(:revoke_expired_shares!)
-    rescue StandardError => e
-      Rails.logger.warn "Failed to revoke expired shares for ticket #{ticket.id}: #{e.message}"
-    end
 
     if response_expand?
       result = ticket.attributes_with_association_names
       begin
         result[:share_permissions] = ticket.share_permissions_for(current_user) if ticket.respond_to?(:share_permissions_for)
-        
-        # Add share expiry date if user has a share
-        if ticket.respond_to?(:shares) && current_user
-          user_share = current_user_share(ticket)
-          result[:share_expires_at] = user_share&.expires_at
-        end
       rescue StandardError => e
         Rails.logger.warn "Failed to get share permissions for ticket #{ticket.id}: #{e.message}"
         result[:share_permissions] = { read: false, comment: false, edit: false }
-        result[:share_expires_at] = nil
       end
       render json: result, status: :ok
       return
@@ -85,17 +71,9 @@ class TicketsController < ApplicationController
       return
     end
 
-    # Add share_permissions and share_expires_at to the ticket JSON (with error handling)
+    # Add share_permissions to the ticket JSON (with error handling)
     ticket_json = ticket.as_json
     begin
-      # Check all shares for this ticket
-      if ticket.respond_to?(:shares)
-        if current_user
-          user_share = current_user_share(ticket)
-          ticket_json[:share_expires_at] = user_share&.expires_at
-        end
-      end
-      
       if ticket.respond_to?(:share_permissions_for)
         share_perms = ticket.share_permissions_for(current_user)
         ticket_json[:share_permissions] = share_perms
@@ -107,7 +85,6 @@ class TicketsController < ApplicationController
       Rails.logger.warn "Failed to get share permissions for ticket #{ticket.id}: #{e.message}"
       Rails.logger.warn "Error backtrace: #{e.backtrace.join('\n')}"
       ticket_json[:share_permissions] = { read: false, comment: false, edit: false }
-      ticket_json[:share_expires_at] = nil
     end
     render json: ticket_json
   end

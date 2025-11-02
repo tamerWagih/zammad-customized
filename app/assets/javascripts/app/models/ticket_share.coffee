@@ -1,7 +1,7 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
 class App.TicketShare extends App.Model
-  @configure 'TicketShare', 'id', 'ticket_id', 'group_id', 'group_name', 'group', 'shared_by_id', 'shared_by_name', 'permissions', 'message', 'status', 'created_at', 'updated_at', 'expires_at'
+  @configure 'TicketShare', 'id', 'ticket_id', 'group_id', 'group_name', 'group', 'shared_by_id', 'shared_by_name', 'permissions', 'message', 'status', 'created_at', 'updated_at'
   @extend Spine.Model.Ajax
   @url: @apiPath + '/tickets'
   @configure_attributes = [
