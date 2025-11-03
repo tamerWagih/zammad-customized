@@ -17,7 +17,6 @@ interface Share {
   permissions: string[]
   message?: string
   status: 'active' | 'revoked'
-  expiresAt?: string
   createdAt: string
   updatedAt: string
 }
