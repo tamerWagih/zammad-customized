@@ -49,7 +49,6 @@ module Ticket::Share::TriggersSubscriptions
         message: message,
         status: status,
         created_at: created_at,
-        expires_at: expires_at,
         updated_at: updated_at
       }
     }
