@@ -984,14 +984,5 @@ When bugs are found, report using this format:
 
 ---
 
-## Sign-Off
-
-**Tester Name:** ___________________  
-**Date:** ___________________  
-**Result:** ☐ Pass  ☐ Pass with Minor Issues  ☐ Fail  
-**Comments:** ___________________
-
----
-
 **End of Test Plan**
 
