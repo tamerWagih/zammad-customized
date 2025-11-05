@@ -626,24 +626,26 @@
 
 ### 6.2 Use Custom Filters
 
-**Test Case:** Apply filters for shared tickets, approvals, CC
+**Test Case:** Apply filters for shared tickets and approvals
 
 **Setup Custom Overview with:**
 - [ ] **Filter:** "Tickets Shared with Me"
 - [ ] **Filter:** "Tickets Pending My Approval"
-- [ ] **Filter:** "Tickets I'm CC'd on"
 
 **Steps:**
 1. Create overview with "Shared with Me" filter
 2. Check if shared tickets appear
-3. Create overview with "Pending My Approval" filter
-4. Verify approval requests show up
+3. Verify count badge shows correct number
+4. Create overview with "Pending My Approval" filter
+5. Verify approval requests show up
+6. Verify count badge shows correct number
 
 **Expected Results:**
 - [ ] Custom filters work correctly
 - [ ] Only matching tickets appear
 - [ ] Counts are accurate
 - [ ] Real-time updates work
+- [ ] Filters can be combined with other conditions (e.g., State, Priority)
 
 ---
 
