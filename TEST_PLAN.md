@@ -868,25 +868,7 @@
 
 ## UI/UX Testing
 
-### 11.1 Responsive Design
-
-**Test Case:** Features work on mobile
-
-**Devices to Test:**
-- [ ] Desktop (1920x1080)
-- [ ] Tablet (768x1024)
-- [ ] Mobile (375x667)
-
-**Verify:**
-- [ ] Widgets are accessible
-- [ ] Buttons are clickable
-- [ ] Forms are usable
-- [ ] No horizontal scrolling
-- [ ] Text is readable
-
----
-
-### 11.2 Loading States
+### 11.1 Loading States
 
 **Test Case:** Loading indicators appear
 
@@ -903,7 +885,7 @@
 
 ---
 
-### 11.3 Error Messages
+### 11.2 Error Messages
 
 **Test Case:** Clear error messages
 
