@@ -549,46 +549,50 @@
 
 ---
 
-## Feature 5: Agent Creates Ticket for Customer
+## Feature 5: Agent Creates Ticket for Another Department (Self as Customer)
 
-### 5.1 Create Ticket on Behalf of Customer
+### 5.1 Create Ticket for Different Department
 
-**Test Case:** Agent creates ticket for customer in different department
+**Test Case:** Agent creates ticket for different department and adds themselves as customer
 
 **Steps:**
 1. Log in as **Agent A** (from Group A)
 2. Click "New Ticket"
 3. Fill in form:
-   - **Customer:** **Customer 1**
-   - **Group:** Group C (different from agent's group)
-   - **Subject:** "Customer needs technical support"
-   - **Article:** "Customer called requesting help"
+   - **Customer:** **Agent A** (themselves)
+   - **Group:** Group C (different from agent's own group)
+   - **Subject:** "Need technical support from another department"
+   - **Article:** "I need assistance from the technical team"
 4. Click "Submit"
 
 **Expected Results:**
 - [ ] Ticket created successfully
-- [ ] Ticket belongs to Group C
-- [ ] Customer is set as ticket customer
+- [ ] Ticket belongs to Group C (target department)
+- [ ] **Agent A is set as the customer** on the ticket
 - [ ] Ticket appears in Group C's overview
-- [ ] Customer receives notification
-- [ ] Agent (creator) can still access ticket
-- [ ] History shows agent created it on behalf of customer
+- [ ] Agent A can still access the ticket (as customer)
+- [ ] History shows Agent A created the ticket
 
 ---
 
-### 5.2 Permissions After Creation
+### 5.2 Access and Permissions as Customer
 
-**Test Case:** Verify creator maintains access
+**Test Case:** Verify agent maintains access when listed as customer
 
 **Steps:**
-1. As **Agent A**, create ticket for Group C
-2. Verify ticket access
-3. Try to edit ticket
+1. As **Agent A**, after creating ticket for Group C (with self as customer)
+2. Navigate away and return to ticket list
+3. Find and open the ticket
+4. Try to add comment/article
+5. Try to edit ticket properties
 
 **Expected Results:**
-- [ ] Agent can view ticket (as creator)
-- [ ] Agent can add comments
-- [ ] Agent may have limited edit rights (depending on group settings)
+- [ ] Agent A can view the ticket (listed as customer)
+- [ ] Agent A can add comments/articles
+- [ ] Agent A can see all ticket activity
+- [ ] Agent A has customer-level permissions (not full agent permissions for Group C)
+- [ ] Agent A CANNOT change ticket owner or close ticket (unless they have Group C access)
+- [ ] Ticket remains visible in their overview
 
 ---
 
