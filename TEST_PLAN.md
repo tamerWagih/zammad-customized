@@ -3,19 +3,19 @@
 **Version:** 1.0  
 **Date:** November 2025  
 **Test Environment:** Production-like staging environment  
-**Testers:** QA Team / Product Owner
+**Testers:** QA Team 
 
 ---
 
 ## 📋 Table of Contents
 1. [Test Environment Setup](#test-environment-setup)
-2. [User Roles & Test Accounts](#user-roles--test-accounts)
-3. [Feature 1: Ticket Approval System](#feature-1-ticket-approval-system)
-4. [Feature 2: Ticket Sharing System](#feature-2-ticket-sharing-system)
-5. [Feature 3: CC (Carbon Copy) System](#feature-3-cc-carbon-copy-system)
-6. [Feature 4: Agent Creates Ticket for Customer](#feature-4-agent-creates-ticket-for-customer)
-7. [Feature 5: Custom Ticket Views](#feature-5-custom-ticket-views)
-8. [Feature 6: Grouped Overview Collapse/Expand](#feature-6-grouped-overview-collapseexpand)
+2. [Feature 1: Ticket Approval System](#feature-1-ticket-approval-system)
+3. [Feature 2: Ticket Sharing System](#feature-2-ticket-sharing-system)
+4. [Feature 3: CC (Carbon Copy) System](#feature-3-cc-carbon-copy-system)
+5. [Feature 4: Trigger-Based Share and Approval Creation](#feature-4-trigger-based-share-and-approval-creation)
+6. [Feature 5: Agent Creates Ticket for Customer](#feature-5-agent-creates-ticket-for-customer)
+7. [Feature 6: Custom Ticket Views](#feature-6-custom-ticket-views)
+8. [Feature 7: Grouped Overview Collapse/Expand](#feature-7-grouped-overview-collapseexpand)
 9. [Cross-Feature Integration Tests](#cross-feature-integration-tests)
 10. [Notifications Testing](#notifications-testing)
 11. [Permissions & Security Testing](#permissions--security-testing)
@@ -35,30 +35,23 @@
 - [ ] WebSocket connections are functioning
 
 ### Required Test Groups
-- [ ] **Group A** (Sales Department)
-- [ ] **Group B** (Support Department)
-- [ ] **Group C** (Technical Department)
+- [ ] **Group A** - Primary department (e.g., Sales)
+- [ ] **Group B** - Secondary department (e.g., Support)  
+- [ ] **Group C** - Third department (e.g., Technical)
 
----
+### Required Test Users
+- [ ] **Admin** - Full system access
+- [ ] **Agent A** - Agent in Group A
+- [ ] **Agent B** - Agent in Group B
+- [ ] **Agent C** - Agent in Group C
+- [ ] **Customer 1** - Primary customer account
+- [ ] **Customer 2** - Secondary customer account
 
-## User Roles & Test Accounts
-
-### Test Users to Create
-
-| Username | Email | Role | Groups | Purpose |
-|----------|-------|------|--------|---------|
-| admin_test | admin@test.com | Admin | All | Full system access |
-| agent_sales | agent.sales@test.com | Agent | Sales | Primary test agent |
-| agent_support | agent.support@test.com | Agent | Support | Secondary test agent |
-| agent_tech | agent.tech@test.com | Agent | Technical | Third test agent |
-| customer1 | customer1@test.com | Customer | None | Customer testing |
-| customer2 | customer2@test.com | Customer | None | Secondary customer |
-
-**Setup Checklist:**
-- [ ] All test users created
-- [ ] Email addresses are valid and accessible
-- [ ] Notification preferences are enabled (Email + Online)
-- [ ] Users can log in successfully
+**Note:** Throughout this test plan:
+- **Requester** = User who creates approval/share
+- **Approver/Receiver** = User who receives approval/share
+- **Sender** = User who initiates action
+- **Agent A/B/C** = Agents from different groups
 
 ---
 
@@ -69,12 +62,12 @@
 **Test Case:** Agent requests approval from another agent
 
 **Steps:**
-1. Log in as `agent_sales`
-2. Open any ticket in Group A (Sales)
+1. Log in as **Requester** (Agent A from Group A)
+2. Open any ticket in Group A
 3. Click on "Approvals" widget in the right sidebar
 4. Click "Request Approval" button
 5. Fill in the approval form:
-   - **Approver:** Select `agent_support`
+   - **Approver:** Select **Approver** (Agent B from Group B)
    - **Message:** "Please approve this customer discount request"
    - **Priority:** Select "High"
 6. Click "Request Approval"
@@ -83,8 +76,8 @@
 - [ ] Approval request appears in the sidebar immediately
 - [ ] Status shows "Pending"
 - [ ] Priority badge shows "High" in red/orange
-- [ ] Online notification appears for `agent_support`
-- [ ] Email notification sent to `agent_support`
+- [ ] Online notification appears for **Approver**
+- [ ] Email notification sent to **Approver**
 - [ ] Email subject includes "Approval Request"
 - [ ] Email body contains the message
 - [ ] Requester name shows correctly
@@ -102,7 +95,7 @@
 **Test Case:** Approver can see the request
 
 **Steps:**
-1. Log in as `agent_support` (the approver)
+1. Log in as **Approver** (Agent B)
 2. Check online notifications (bell icon)
 3. Click on the approval notification
 4. Navigate to the ticket
@@ -110,7 +103,7 @@
 
 **Expected Results:**
 - [ ] Approval card is displayed
-- [ ] Shows "Request from [agent_sales name]"
+- [ ] Shows "Request from [Requester name]"
 - [ ] Message is visible
 - [ ] Priority is shown
 - [ ] "Approve" and "Reject" buttons are visible
@@ -124,15 +117,15 @@
 **Test Case:** Approver approves the request
 
 **Steps:**
-1. As `agent_support`, click "Approve" button
+1. As **Approver**, click "Approve" button
 2. Confirm the action if prompted
 
 **Expected Results:**
 - [ ] Status changes to "Approved" immediately
 - [ ] Status badge turns green
 - [ ] Approve/Reject buttons disappear
-- [ ] Online notification sent to `agent_sales` (requester)
-- [ ] Email notification sent to `agent_sales`
+- [ ] Online notification sent to **Requester**
+- [ ] Email notification sent to **Requester**
 - [ ] Email subject includes "Approved"
 - [ ] History entry added to ticket
 - [ ] Real-time update on requester's screen (if they have ticket open)
@@ -144,10 +137,10 @@
 **Test Case:** Approver rejects the request
 
 **Setup:**
-1. Create another approval request (agent_sales → agent_tech)
+1. Create another approval request (Agent A → Agent C)
 
 **Steps:**
-1. Log in as `agent_tech`
+1. Log in as **Approver** (Agent C)
 2. Open the ticket with pending approval
 3. Click "Reject" button
 
@@ -155,8 +148,8 @@
 - [ ] Status changes to "Rejected" immediately
 - [ ] Status badge turns red
 - [ ] Approve/Reject buttons disappear
-- [ ] Online notification sent to requester
-- [ ] Email notification sent to requester
+- [ ] Online notification sent to **Requester**
+- [ ] Email notification sent to **Requester**
 - [ ] Email subject includes "Rejected"
 - [ ] History entry added to ticket
 
@@ -167,10 +160,10 @@
 **Test Case:** Requester can edit their pending request
 
 **Setup:**
-1. Create a new approval request (agent_sales → agent_support)
+1. Create a new approval request (Agent A → Agent B)
 
 **Steps:**
-1. As `agent_sales` (requester), open the ticket
+1. As **Requester**, open the ticket
 2. In Approvals widget, click "Edit" button
 3. Change message to "Updated: Please review urgently"
 4. Change priority to "Urgent"
@@ -179,8 +172,8 @@
 **Expected Results:**
 - [ ] Message updates immediately
 - [ ] Priority badge changes to "Urgent"
-- [ ] Online notification sent to approver about update
-- [ ] Email sent to approver
+- [ ] Online notification sent to **Approver** about update
+- [ ] Email sent to **Approver**
 - [ ] History entry shows "Approval request updated"
 
 ---
@@ -192,22 +185,22 @@
 **Part A: Delete Pending Approval**
 
 **Steps:**
-1. Create approval request (agent_sales → agent_support)
-2. As `agent_sales`, click "Delete" button
+1. Create approval request (Agent A → Agent B)
+2. As **Requester**, click "Delete" button
 3. Confirm deletion
 
 **Expected Results:**
 - [ ] Approval card disappears immediately
 - [ ] Confirmation modal shows before deletion
-- [ ] Online notification sent to approver
-- [ ] Email sent to approver about cancellation
+- [ ] Online notification sent to **Approver**
+- [ ] Email sent to **Approver** about cancellation
 - [ ] History entry added
 
 **Part B: Cannot Delete Approved/Rejected** ⚠️ **CRITICAL**
 
 **Steps:**
-1. Create approval and have it approved by approver
-2. As requester, check the Approvals widget
+1. Create approval and have it approved by **Approver**
+2. As **Requester**, check the Approvals widget
 
 **Expected Results:**
 - [ ] **Delete button is HIDDEN** for approved requests
@@ -221,8 +214,8 @@
 **Test Case:** Only authorized users can approve
 
 **Steps:**
-1. Create approval (agent_sales → agent_support)
-2. Log in as `agent_tech` (NOT the approver)
+1. Create approval (Agent A → Agent B)
+2. Log in as Agent C (NOT the approver)
 3. Try to access the ticket
 4. Check if Approve/Reject buttons appear
 
@@ -238,8 +231,8 @@
 **Test Case:** Multiple approval requests can exist
 
 **Steps:**
-1. As `agent_sales`, create approval request to `agent_support`
-2. Create another approval request to `agent_tech`
+1. As **Requester** (Agent A), create approval request to Agent B
+2. Create another approval request to Agent C
 
 **Expected Results:**
 - [ ] Both approval cards appear in the sidebar
@@ -256,22 +249,22 @@
 **Test Case:** Agent shares ticket with another department
 
 **Steps:**
-1. Log in as `agent_sales`
-2. Create or open a ticket in Group A (Sales)
+1. Log in as **Sender** (Agent from Group A)
+2. Create or open a ticket in Group A
 3. Click on "Share" widget in sidebar
 4. Click "Share Ticket" button
-5. Select "Support Department" (Group B)
+5. Select Group B (target department)
 6. Add optional message: "Please assist with technical details"
 7. Click "Share"
 
 **Expected Results:**
 - [ ] Share appears in the sidebar immediately
 - [ ] Shows shared group name
-- [ ] Shows "Shared by [name]"
+- [ ] Shows "Shared by [Sender name]"
 - [ ] Status shows "Active"
-- [ ] Online notifications sent to all agents in Support group
-- [ ] Email notifications sent to all Support agents
-- [ ] Shared ticket appears in Support group's ticket list
+- [ ] Online notifications sent to all agents in Group B
+- [ ] Email notifications sent to all agents in Group B
+- [ ] Shared ticket appears in Group B's ticket list
 
 ---
 
@@ -280,7 +273,7 @@
 **Test Case:** Agents in shared group can access ticket
 
 **Steps:**
-1. Log in as `agent_support` (member of Support group)
+1. Log in as **Receiver** (Agent from Group B)
 2. Check ticket overviews
 3. Verify the shared ticket appears
 4. Open the ticket
@@ -302,9 +295,9 @@
 **Scenario A: Receiver from SAME group as ticket**
 
 **Steps:**
-1. Create ticket in Sales group (owner: Sales)
-2. Share with Sales group
-3. Have another Sales agent access it
+1. Create ticket in Group A (owner: Group A)
+2. Share with Group A
+3. Have another agent from Group A access it
 
 **Expected Results:**
 - [ ] Full access (read, comment, edit, close)
@@ -312,9 +305,9 @@
 **Scenario B: Receiver from DIFFERENT group**
 
 **Steps:**
-1. Create ticket in Sales group
-2. Share with Support group
-3. Have Support agent access it
+1. Create ticket in Group A
+2. Share with Group B  
+3. Have agent from Group B access it
 
 **Expected Results:**
 - [ ] Read access: ✅
@@ -328,7 +321,7 @@
 **Test Case:** Share creator can edit share details
 
 **Steps:**
-1. As `agent_sales`, open a ticket with active share
+1. As **Sender**, open a ticket with active share
 2. Click "Edit" on the share card
 3. Update message to "Updated: Please prioritize"
 4. Click "Update"
@@ -346,7 +339,7 @@
 **Test Case:** Share creator can revoke access
 
 **Steps:**
-1. As `agent_sales`, click "Revoke" on active share
+1. As **Sender**, click "Revoke" on active share
 2. Confirm revocation
 
 **Expected Results:**
@@ -380,8 +373,8 @@
 **Test Case:** Share same ticket with multiple groups
 
 **Steps:**
-1. Share ticket with Support group
-2. Share same ticket with Technical group
+1. Share ticket with Group B
+2. Share same ticket with Group C
 
 **Expected Results:**
 - [ ] Both shares appear in sidebar
@@ -398,15 +391,15 @@
 **Test Case:** Add CC users when creating ticket
 
 **Steps:**
-1. Log in as `agent_sales`
+1. Log in as **Agent A**
 2. Click "New Ticket"
 3. Fill in ticket details:
-   - Customer: `customer1@test.com`
-   - Group: Sales
+   - Customer: **Customer 1**
+   - Group: Group A
    - Subject: "Test CC functionality"
 4. In CC field, add:
-   - `agent_support@test.com`
-   - `agent_tech@test.com`
+   - Agent B
+   - Agent C
 5. Click "Submit"
 
 **Expected Results:**
@@ -419,70 +412,36 @@
 
 ---
 
-### 3.2 Add CC to Existing Ticket
-
-**Test Case:** Add CC after ticket creation
-
-**Steps:**
-1. Open existing ticket
-2. Click on "CC" widget
-3. Click "Add CC"
-4. Select or type `agent_tech@test.com`
-5. Click "Add"
-
-**Expected Results:**
-- [ ] User appears in CC list immediately
-- [ ] Online notification sent to CC'd user
-- [ ] Email sent to CC'd user
-- [ ] User can access the ticket
-- [ ] History entry added
-
----
-
-### 3.3 CC User Access & Permissions
+### 3.2 CC User Access & Permissions
 
 **Test Case:** Verify CC users have appropriate access
 
 **Steps:**
-1. Create ticket in Sales group
-2. CC `agent_support` (from Support group)
-3. Log in as `agent_support`
+1. Create ticket in Group A
+2. CC **Agent B** (from Group B)
+3. Log in as **Agent B**
 4. Find and open the ticket
 
 **Expected Results:**
 - [ ] Ticket is visible in overview
 - [ ] Can read all ticket details
-- [ ] Can add comments/articles
-- [ ] **Permissions based on user role:**
-  - **Agent:** Full access (read, comment, edit)
+- [ ] **Permissions based on user's group access to ticket's group:**
+  - **Agent with full access to Group A:** Can read, comment, and edit ticket
+  - **Agent with read access to Group A:** Can read and comment only
+  - **Agent with no access to Group A:** Can read and comment only (CC access)
   - **Customer:** Read + comment only
 
----
-
-### 3.4 Remove CC
-
-**Test Case:** Remove CC from ticket
-
-**Steps:**
-1. In CC widget, click "Remove" (X icon) next to a CC user
-2. Confirm removal
-
-**Expected Results:**
-- [ ] User removed from CC list
-- [ ] User loses access to ticket (if not in ticket's group)
-- [ ] Online notification sent to removed user
-- [ ] Email sent to removed user
-- [ ] History entry added
+**Note:** CC does NOT automatically grant full access. Agent permissions are determined by their group membership and access level to the ticket's group.
 
 ---
 
-### 3.5 CC with Customer Role
+### 3.3 CC with Customer Role
 
 **Test Case:** Add customer as CC
 
 **Steps:**
 1. Create ticket
-2. Add `customer2@test.com` as CC
+2. Add **Customer 2** as CC
 
 **Expected Results:**
 - [ ] Customer appears in CC list
@@ -494,39 +453,135 @@
 
 ---
 
-## Feature 4: Agent Creates Ticket for Customer
+---
 
-### 4.1 Create Ticket on Behalf of Customer
+## Feature 4: Trigger-Based Share and Approval Creation
+
+### 4.1 Create Share via Trigger
+
+**Test Case:** Automatically share ticket with group via trigger
+
+**Prerequisites:**
+- Create a trigger with condition and action to share ticket
+  - **Condition:** e.g., "Priority is High" and "Group is Group A"
+  - **Action:** "Share with Group" → Select Group B
+
+**Steps:**
+1. Create or update a ticket matching trigger conditions
+   - Set Priority to "High"
+   - Set Group to Group A
+2. Submit the ticket
+
+**Expected Results:**
+- [ ] Trigger executes automatically
+- [ ] Ticket is automatically shared with Group B
+- [ ] Share appears in Share widget
+- [ ] Status shows "Active"
+- [ ] Online notifications sent to Group B agents
+- [ ] Email notifications sent to Group B agents
+- [ ] History entry shows "Shared via trigger"
+- [ ] Shared group agents can access ticket
+
+---
+
+### 4.2 Create Approval via Trigger
+
+**Test Case:** Automatically create approval request via trigger
+
+**Prerequisites:**
+- Create a trigger with condition and action to request approval
+  - **Condition:** e.g., "State is Open" and "Priority is Urgent"
+  - **Action:** "Request Approval" → Select **Agent B** as approver
+
+**Steps:**
+1. Create or update a ticket matching trigger conditions
+   - Set State to "Open"
+   - Set Priority to "Urgent"
+2. Submit the ticket
+
+**Expected Results:**
+- [ ] Trigger executes automatically
+- [ ] Approval request is automatically created
+- [ ] Approval appears in Approvals widget
+- [ ] Status shows "Pending"
+- [ ] Approver (Agent B) receives online notification
+- [ ] Approver (Agent B) receives email notification
+- [ ] History entry shows "Approval requested via trigger"
+- [ ] Approver can approve/reject normally
+
+---
+
+### 4.3 Multiple Shares via Trigger
+
+**Test Case:** Share with multiple groups via trigger
+
+**Prerequisites:**
+- Create trigger that shares with multiple groups
+  - **Condition:** "Group is Group A"
+  - **Action:** "Share with Group" → Select Group B AND Group C
+
+**Steps:**
+1. Create ticket in Group A matching trigger conditions
+2. Submit the ticket
+
+**Expected Results:**
+- [ ] Ticket shared with both Group B and Group C
+- [ ] Both share cards appear in Share widget
+- [ ] Each share is independent
+- [ ] All agents from both groups receive notifications
+- [ ] All agents from both groups can access ticket
+
+---
+
+### 4.4 Trigger Share + Manual Approval
+
+**Test Case:** Combine trigger-based share with manual approval
+
+**Steps:**
+1. Create ticket that triggers auto-share with Group B
+2. Manually create approval request to Agent C
+
+**Expected Results:**
+- [ ] Automatic share works via trigger
+- [ ] Manual approval works normally
+- [ ] Both features coexist without conflicts
+- [ ] All notifications sent correctly
+
+---
+
+## Feature 5: Agent Creates Ticket for Customer
+
+### 5.1 Create Ticket on Behalf of Customer
 
 **Test Case:** Agent creates ticket for customer in different department
 
 **Steps:**
-1. Log in as `agent_sales` (Sales department)
+1. Log in as **Agent A** (from Group A)
 2. Click "New Ticket"
 3. Fill in form:
-   - **Customer:** `customer1@test.com`
-   - **Group:** Technical (different from agent's group)
+   - **Customer:** **Customer 1**
+   - **Group:** Group C (different from agent's group)
    - **Subject:** "Customer needs technical support"
    - **Article:** "Customer called requesting help"
 4. Click "Submit"
 
 **Expected Results:**
 - [ ] Ticket created successfully
-- [ ] Ticket belongs to Technical group
+- [ ] Ticket belongs to Group C
 - [ ] Customer is set as ticket customer
-- [ ] Ticket appears in Technical group's overview
+- [ ] Ticket appears in Group C's overview
 - [ ] Customer receives notification
 - [ ] Agent (creator) can still access ticket
 - [ ] History shows agent created it on behalf of customer
 
 ---
 
-### 4.2 Permissions After Creation
+### 5.2 Permissions After Creation
 
 **Test Case:** Verify creator maintains access
 
 **Steps:**
-1. As `agent_sales`, create ticket for Technical group
+1. As **Agent A**, create ticket for Group C
 2. Verify ticket access
 3. Try to edit ticket
 
@@ -537,14 +592,14 @@
 
 ---
 
-## Feature 5: Custom Ticket Views
+## Feature 6: Custom Ticket Views
 
-### 5.1 Create Custom Overview
+### 6.1 Create Custom Overview
 
 **Test Case:** Create personal ticket overview
 
 **Steps:**
-1. Log in as `agent_sales`
+1. Log in as **Agent A**
 2. Go to "Manage" → "Overviews"
 3. Click "New Overview"
 4. Configure:
@@ -565,7 +620,7 @@
 
 ---
 
-### 5.2 Use Custom Filters
+### 6.2 Use Custom Filters
 
 **Test Case:** Apply filters for shared tickets, approvals, CC
 
@@ -588,9 +643,9 @@
 
 ---
 
-## Feature 6: Grouped Overview Collapse/Expand
+## Feature 7: Grouped Overview Collapse/Expand
 
-### 6.1 Collapse/Expand Groups
+### 7.1 Collapse/Expand Groups
 
 **Test Case:** Group tickets by priority and collapse
 
@@ -613,7 +668,7 @@
 
 ---
 
-### 6.2 Multiple Group Collapse
+### 7.2 Multiple Group Collapse
 
 **Test Case:** Collapse multiple groups independently
 
@@ -632,7 +687,7 @@
 
 ## Cross-Feature Integration Tests
 
-### 7.1 Approval + Share
+### 8.1 Approval + Share
 
 **Test Case:** Share ticket that has approval request
 
@@ -648,7 +703,7 @@
 
 ---
 
-### 7.2 Approval + CC
+### 8.2 Approval + CC
 
 **Test Case:** CC'd user sees approval
 
@@ -665,7 +720,7 @@
 
 ---
 
-### 7.3 Share + CC
+### 8.3 Share + CC
 
 **Test Case:** Add CC to shared ticket
 
@@ -680,15 +735,15 @@
 
 ---
 
-### 7.4 All Three Features
+### 8.4 All Three Features
 
 **Test Case:** Ticket with approval, share, and CC
 
 **Steps:**
-1. Create ticket in Sales
-2. Add CC: `agent_tech`
-3. Request approval from `agent_support`
-4. Share with Technical group
+1. Create ticket in Group A
+2. Add CC: **Agent C**
+3. Request approval from **Agent B**
+4. Share with Group C
 
 **Expected Results:**
 - [ ] All three widgets show correct data
@@ -700,7 +755,7 @@
 
 ## Notifications Testing
 
-### 8.1 Online Notifications
+### 9.1 Online Notifications
 
 **Test Case:** Real-time notifications appear
 
@@ -724,7 +779,7 @@
 
 ---
 
-### 8.2 Email Notifications
+### 9.2 Email Notifications
 
 **Test Case:** Email notifications sent correctly
 
@@ -739,7 +794,7 @@
 
 ---
 
-### 8.3 Notification Preferences
+### 9.3 Notification Preferences
 
 **Test Case:** Respect user notification settings
 
@@ -756,14 +811,14 @@
 
 ## Permissions & Security Testing
 
-### 9.1 Unauthorized Access
+### 10.1 Unauthorized Access
 
 **Test Case:** Users cannot access without permission
 
 **Steps:**
-1. Create ticket in Sales group
+1. Create ticket in Group A
 2. Don't share, don't CC
-3. Log in as `agent_tech` (Technical group)
+3. Log in as **Agent C** (from Group C)
 4. Try to access ticket directly via URL
 
 **Expected Results:**
@@ -773,12 +828,12 @@
 
 ---
 
-### 9.2 Customer Access
+### 10.2 Customer Access
 
 **Test Case:** Customers see only their tickets
 
 **Steps:**
-1. Log in as `customer1`
+1. Log in as **Customer 1**
 2. Check ticket overview
 
 **Expected Results:**
@@ -789,13 +844,13 @@
 
 ---
 
-### 9.3 Approval Permission
+### 10.3 Approval Permission
 
 **Test Case:** Only approver can approve
 
 **Steps:**
-1. Create approval (A → B)
-2. Log in as agent C
+1. Create approval (Agent A → Agent B)
+2. Log in as Agent C
 3. Try to approve via API or UI manipulation
 
 **Expected Results:**
@@ -807,7 +862,7 @@
 
 ## UI/UX Testing
 
-### 10.1 Responsive Design
+### 11.1 Responsive Design
 
 **Test Case:** Features work on mobile
 
@@ -825,7 +880,7 @@
 
 ---
 
-### 10.2 Loading States
+### 11.2 Loading States
 
 **Test Case:** Loading indicators appear
 
@@ -842,7 +897,7 @@
 
 ---
 
-### 10.3 Error Messages
+### 11.3 Error Messages
 
 **Test Case:** Clear error messages
 
@@ -862,7 +917,7 @@
 
 ## Performance & Error Handling
 
-### 11.1 Large Data Sets
+### 12.1 Large Data Sets
 
 **Test Case:** Performance with many items
 
@@ -879,7 +934,7 @@
 
 ---
 
-### 11.2 Concurrent Actions
+### 12.2 Concurrent Actions
 
 **Test Case:** Multiple users acting simultaneously
 
@@ -895,7 +950,7 @@
 
 ---
 
-### 11.3 Network Errors
+### 12.3 Network Errors
 
 **Test Case:** Handle network failures
 
