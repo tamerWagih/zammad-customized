@@ -133,6 +133,10 @@ class TicketOverviewsController < ApplicationController
       end
     end
     
+    # Get pagination parameters (same as default overviews)
+    limit = Ticket::Overviews.limit_per_overview
+    offset = params[:offset]&.to_i || 0
+    
     # Build the overview object first (so it's always available even on error)
     overview_data = {
       id:    filter['id'],
@@ -152,6 +156,7 @@ class TicketOverviewsController < ApplicationController
     
     tickets = []
     assets = {}
+    total_count = 0
     
     begin
       # Get tickets based on condition with custom filter context
@@ -178,7 +183,13 @@ class TicketOverviewsController < ApplicationController
         scoped_tickets = base_scope.where(query, *bind_params)
         scoped_tickets = scoped_tickets.joins(tables) if tables.present?
         
-        ticket_list = scoped_tickets.order("#{order_by} #{order_direction}").limit(2000)
+        # Get total count for pagination
+        total_count = scoped_tickets.distinct.count
+        
+        # Apply pagination (limit and offset)
+        ticket_list = scoped_tickets.order("#{order_by} #{order_direction}")
+                                     .offset(offset)
+                                     .limit(limit)
         
         ticket_list.each do |ticket|
           ticket_meta = {
@@ -201,7 +212,7 @@ class TicketOverviewsController < ApplicationController
       overview: overview_data,
       tickets: tickets,
       tickets_count: tickets.length,
-      count:   tickets.length,
+      count:   total_count,
     }
     
     render json: {

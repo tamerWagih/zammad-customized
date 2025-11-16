@@ -408,8 +408,8 @@ class App.TicketZoom extends App.Controller
     # set icon and title based on ticket
     if @ticket_id && App.Ticket.exists(@ticket_id)
       ticket         = App.Ticket.findNative(@ticket_id)
-      meta.head      = ticket.title
-      meta.title     = "##{ticket.number} - #{ticket.title}"
+      meta.head      = "#{App.Config.get('ticket_hook')}#{ticket.number} - #{ticket.title}"
+      meta.title     = "#{App.Config.get('ticket_hook')}#{ticket.number} - #{ticket.title}"
       meta.class     = "task-state-#{ ticket.getState() }"
       meta.type      = 'task'
       meta.iconTitle = ticket.iconTitle()

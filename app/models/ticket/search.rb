@@ -84,6 +84,12 @@ returns if user has no permissions to search
           }
           query_or.push(access_condition)
         end
+
+        # Include tickets created by user (for creator_access? to work)
+        access_condition = {
+          'query_string' => { 'default_field' => 'created_by_id', 'query' => params[:current_user].id }
+        }
+        query_or.push(access_condition)
       end
       if params[:current_user].permissions?('ticket.customer')
         organizations_query = params[:current_user].all_organizations.where(shared: true).map { |row| "organization_id:#{row.id}" }.join(' OR ')
