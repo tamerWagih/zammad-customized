@@ -103,9 +103,9 @@ class Selector::Sql < Selector::Base
     like                            = Rails.application.config.db_like
     attribute_table, attribute_name = block_condition[:name].split('.')
     
-    # Log if it's a custom filter attribute
-    if options[:custom_filter_context] && ['shared_with_me', 'not_shared_with_me', 'is_approved', 'is_rejected', 'requested_for_approval', 'not_requested_for_approval', 'approval_status'].include?(attribute_name)
-      Rails.logger.info "SQL: Processing custom filter - table=#{attribute_table}, attr=#{attribute_name}, value=#{block_condition[:value].inspect}"
+    # Log if it's a custom filter attribute (now also available in default overviews)
+    if ['shared_with_me', 'not_shared_with_me', 'is_approved', 'is_rejected', 'requested_for_approval', 'not_requested_for_approval', 'approval_status', 'ccd_to_me', 'not_ccd_to_me'].include?(attribute_name)
+      Rails.logger.info "SQL: Processing filter - table=#{attribute_table}, attr=#{attribute_name}, value=#{block_condition[:value].inspect}"
     end
 
     # get tables to join
@@ -276,7 +276,7 @@ class Selector::Sql < Selector::Base
           bind_params.push block_condition[:value]
         end
       end
-    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'shared_with_me'
+    elsif attribute_table == 'ticket' && attribute_name == 'shared_with_me'
       # SIMPLIFIED: Show only tickets shared with me
       # If filter is present in condition, apply it (even if value is empty/default)
       raise "shared_with_me requires current_user" unless current_user
@@ -290,7 +290,7 @@ class Selector::Sql < Selector::Base
       query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
       bind_params.push user_groups
     
-    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'not_shared_with_me'
+    elsif attribute_table == 'ticket' && attribute_name == 'not_shared_with_me'
       # SIMPLIFIED: Show only tickets NOT shared with me
       # If filter is present in condition, apply it (even if value is empty/default)
       raise "not_shared_with_me requires current_user" unless current_user
@@ -301,7 +301,7 @@ class Selector::Sql < Selector::Base
       # ticket_shares only has group_id (not individual user sharing)
       query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
       bind_params.push user_groups
-    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'approval_status'
+    elsif attribute_table == 'ticket' && attribute_name == 'approval_status'
       # Handle approval status selector (ONLY in custom filter context)
       # Shows ALL tickets with specific approval status (any approver, not just me)
       raise "approval_status requires current_user" unless current_user
@@ -315,7 +315,7 @@ class Selector::Sql < Selector::Base
         query << "tickets.id NOT IN (SELECT DISTINCT ticket_id FROM ticket_approvals WHERE status = ?)"
         bind_params.push block_condition[:value]
       end
-    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
+    elsif attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
       # SIMPLIFIED: Show only tickets where approval is requested FROM ME (I'm the approver)
       # If filter is present in condition, apply it (even if value is empty/default)
       raise "requested_for_approval requires current_user" unless current_user
@@ -325,24 +325,24 @@ class Selector::Sql < Selector::Base
       query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
       bind_params.push current_user.id
     
-    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'not_requested_for_approval'
+    elsif attribute_table == 'ticket' && attribute_name == 'not_requested_for_approval'
       # SIMPLIFIED: Show only tickets where I'm NOT the approver
       # If filter is present in condition, apply it (even if value is empty/default)
       raise "not_requested_for_approval requires current_user" unless current_user
       
       query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
       bind_params.push current_user.id
-    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'is_approved'
+    elsif attribute_table == 'ticket' && attribute_name == 'is_approved'
       # SIMPLIFIED: Show only tickets with 'approved' tag
       # If filter is present in condition, apply it (even if value is empty/default)
       Rails.logger.info "SQL: is_approved filter added"
       query << "tickets.id IN (SELECT tags.o_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'approved' AND tags.o_type = 'Ticket')"
-    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'is_rejected'
+    elsif attribute_table == 'ticket' && attribute_name == 'is_rejected'
       # SIMPLIFIED: Show only tickets with 'rejected' tag
       # If filter is present in condition, apply it (even if value is empty/default)
       Rails.logger.info "SQL: is_rejected filter added"
       query << "tickets.id IN (SELECT tags.o_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'rejected' AND tags.o_type = 'Ticket')"
-    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'ccd_to_me'
+    elsif attribute_table == 'ticket' && attribute_name == 'ccd_to_me'
       # Show only tickets where I am CC'd
       # If filter is present in condition, apply it (even if value is empty/default)
       raise "ccd_to_me requires current_user" unless current_user
@@ -352,7 +352,7 @@ class Selector::Sql < Selector::Base
       query << "tickets.id IN (SELECT ticket_id FROM ticket_ccs WHERE user_id = ?)"
       bind_params.push current_user.id
     
-    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'not_ccd_to_me'
+    elsif attribute_table == 'ticket' && attribute_name == 'not_ccd_to_me'
       # Show only tickets where I am NOT CC'd
       # If filter is present in condition, apply it (even if value is empty/default)
       raise "not_ccd_to_me requires current_user" unless current_user

@@ -29,6 +29,18 @@ class App.Ticket extends App.Model
       { name: 'created_at',               display: __('Created at'),   tag: 'datetime', width: '110px', readonly: 1 },
       { name: 'updated_by_id',            display: __('Updated by'),   relation: 'User', readonly: 1 },
       { name: 'updated_at',               display: __('Updated at'),   tag: 'datetime', width: '110px', readonly: 1 },
+      # Share Filters (for selector in default overviews)
+      { name: 'shared_with_me',           display: __('Shared with Me'), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      { name: 'not_shared_with_me',       display: __('Not Shared with Me'), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      # Approval Filters (for selector in default overviews)
+      { name: 'approval_status',          display: __('Approval Status'), tag: 'select', searchable: true, operator: ['is', 'is not'], options: [{ value: 'pending', name: __('Pending') }, { value: 'approved', name: __('Approved') }, { value: 'rejected', name: __('Rejected') }] },
+      { name: 'requested_for_approval',   display: __('Requested for Approval'), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      { name: 'not_requested_for_approval', display: __('Not Requested for Approval'), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      { name: 'is_approved',              display: __('Is Approved'), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      { name: 'is_rejected',              display: __('Is Rejected'), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      # CC Filters (for selector in default overviews)
+      { name: 'ccd_to_me',                display: __("CC'd to Me"), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      { name: 'not_ccd_to_me',            display: __("Not CC'd to Me"), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
     ]
 
   uiUrl: ->
