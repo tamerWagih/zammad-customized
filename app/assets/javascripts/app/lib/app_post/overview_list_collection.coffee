@@ -9,10 +9,13 @@ class _Singleton
       if data.assets
         App.Collection.loadAssets(data.assets)
         delete data.assets
-      if !@overview[data.overview.view]
-        @overview[data.overview.view] = {}
-      @overview[data.overview.view] = data
-      @callback(data.overview.view, data)
+      # Use link as the key for OverviewListCollection (works for both standard and custom overviews)
+      # Fallback to view if link is not available (for backwards compatibility)
+      overview_key = data.overview.link || (if typeof data.overview.view is 'string' then data.overview.view else data.overview.link || data.overview.id)
+      if !@overview[overview_key]
+        @overview[overview_key] = {}
+      @overview[overview_key] = data
+      @callback(overview_key, data)
 
     App.Event.bind 'auth:logout', (data) =>
       @clear(data)
@@ -62,7 +65,10 @@ class _Singleton
           App.Collection.loadAssets(data.assets)
           delete data.assets
         if data.index && data.index.overview
-          @overview[data.index.overview.view] = data.index
+          # Use link as the key for OverviewListCollection
+          # Fallback to view if link is not available (for backwards compatibility)
+          overview_key = data.index.overview.link || (if typeof data.index.overview.view is 'string' then data.index.overview.view else data.index.overview.link || data.index.overview.id)
+          @overview[overview_key] = data.index
         @callback(view, data.index)
       error: =>
         @fetchActive[view] = false
