@@ -43,12 +43,26 @@ class TicketPolicy < ApplicationPolicy
           bind.push(approval_ids)
         end
 
+        # Include CC tickets (CC'd users can see tickets they are CC'd on)
+        cc_ids = cc_ticket_ids
+        if cc_ids.present?
+          sql.push('tickets.id IN (?)')
+          bind.push(cc_ids)
+        end
+
         # Include tickets created by user (for creator_access? to work)
         sql.push('tickets.created_by_id = ?')
         bind.push(user.id)
       end
 
       if user.permissions?('ticket.customer')
+        # Include CC tickets for customers too (CC'd customers can see tickets)
+        cc_ids = cc_ticket_ids
+        if cc_ids.present?
+          sql.push('tickets.id IN (?)')
+          bind.push(cc_ids)
+        end
+
         sql.push('tickets.customer_id = ?')
         bind.push(user.id)
 
@@ -98,6 +112,16 @@ class TicketPolicy < ApplicationPolicy
       Ticket::Approval.where(approver_id: user.id).pluck(:ticket_id).uniq
     rescue StandardError => e
       Rails.logger.warn("Failed to resolve approval ticket ids for user #{user.id}: #{e.message}")
+      []
+    end
+
+    def cc_ticket_ids
+      return [] unless user
+
+      # Include tickets where user is CC'd (both agents and customers)
+      Ticket::Cc.where(user_id: user.id).pluck(:ticket_id).uniq
+    rescue StandardError => e
+      Rails.logger.warn("Failed to resolve CC ticket ids for user #{user.id}: #{e.message}")
       []
     end
   end
