@@ -101,11 +101,22 @@ class Selector::Sql < Selector::Base
     tables                          = []
     bind_params                     = []
     like                            = Rails.application.config.db_like
-    attribute_table, attribute_name = block_condition[:name].split('.')
+    
+    # Parse attribute name (handle both 'ticket.ccd_to_me' and 'ccd_to_me')
+    attribute_name_full = block_condition[:name].to_s
+    if attribute_name_full.include?('.')
+      attribute_table, attribute_name = attribute_name_full.split('.', 2)
+    else
+      # If no table prefix, assume it's a ticket attribute
+      attribute_table = 'ticket'
+      attribute_name = attribute_name_full
+    end
+    
+    Rails.logger.info "SQL: Processing condition - name=#{attribute_name_full}, table=#{attribute_table}, attr=#{attribute_name}, operator=#{block_condition[:operator]}, value=#{block_condition[:value].inspect}"
     
     # Log if it's a custom filter attribute (now also available in default overviews)
     if ['shared_with_me', 'not_shared_with_me', 'is_approved', 'is_rejected', 'requested_for_approval', 'not_requested_for_approval', 'approval_status', 'ccd_to_me', 'not_ccd_to_me'].include?(attribute_name)
-      Rails.logger.info "SQL: Processing filter - table=#{attribute_table}, attr=#{attribute_name}, value=#{block_condition[:value].inspect}"
+      Rails.logger.info "SQL: Processing custom filter attribute - table=#{attribute_table}, attr=#{attribute_name}, value=#{block_condition[:value].inspect}, current_user=#{options[:current_user]&.id}"
     end
 
     # get tables to join

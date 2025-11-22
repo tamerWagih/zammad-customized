@@ -159,12 +159,24 @@ class TicketOverviewsController < ApplicationController
     total_count = 0
     
     begin
+      # Debug: Log condition structure
+      Rails.logger.info "Custom filter condition: #{condition.inspect}"
+      Rails.logger.info "Current user: #{current_user.id} (#{current_user.login})"
+      
+      # Check if user has any CC tickets
+      cc_ticket_ids = Ticket::Cc.where(user_id: current_user.id).pluck(:ticket_id).uniq
+      Rails.logger.info "User has #{cc_ticket_ids.length} CC tickets: #{cc_ticket_ids.inspect}"
+      
       # Get tickets based on condition with custom filter context
       query, bind_params, tables = Ticket.selector2sql(
         condition, 
         current_user: current_user,
         custom_filter_context: true  # Enable custom filter attributes
       )
+      
+      Rails.logger.info "Generated SQL query: #{query}"
+      Rails.logger.info "Bind params: #{bind_params.inspect}"
+      Rails.logger.info "Tables: #{tables.inspect}"
       
       if query.present?
         # Apply ordering
@@ -205,6 +217,7 @@ class TicketOverviewsController < ApplicationController
       end
     rescue => e
       Rails.logger.error "Custom filter query error: #{e.message}"
+      Rails.logger.error "Backtrace: #{e.backtrace.first(10).join("\n")}"
       # Continue with empty tickets list
     end
     
