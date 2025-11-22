@@ -203,6 +203,9 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
     end
     
     # Push custom filter overviews (like standard overviews)
+    # CRITICAL: Custom filters depend on ticket relationships (CC, approvals, shares)
+    # When tickets change (CC/approval/share added/removed), we must refresh custom filters
+    # because the ticket list might change even if the filter condition is the same
     custom_filters = @user.preferences[:custom_filters] || []
     custom_filters.each do |filter|
       next unless filter['active']
@@ -214,11 +217,28 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
       # Check if this custom filter has changed (similar to standard overviews)
       filter_link = filter['link'] || filter['id']
       last_filter_state = @last_overview[filter_link]
-      current_filter_state = [filter_data[:tickets].map { |t| { id: t[:id], updated_at: t[:updated_at] } }, filter_data[:overview]]
       
-      # Skip if unchanged (but still send if tickets exist and it's the first time)
-      next if last_filter_state == current_filter_state && last_filter_state
+      # Build current state: ticket IDs, updated_at timestamps, and count for comparison
+      # Sort by ID for consistent comparison
+      current_ticket_state = filter_data[:tickets].map { |t| { id: t[:id].to_i, updated_at: t[:updated_at] } }.sort_by { |t| t[:id] }
+      current_ticket_ids = current_ticket_state.map { |t| t[:id] }.sort
+      current_count = filter_data[:count]
+      current_filter_state = [current_ticket_state, filter_data[:overview], current_count]
       
+      # Check if filter state changed
+      filter_changed = last_filter_state != current_filter_state
+      
+      # Always refresh if:
+      # 1. Filter hasn't been sent before (first time) - !last_filter_state
+      # 2. Filter state changed (different tickets, different count, or different updated_at) - filter_changed
+      # NOTE: We don't check ticket_changed? here because if tickets changed, we're already in push()
+      # The state comparison should catch ticket updated_at changes, but we're more aggressive for custom filters
+      needs_refresh = !last_filter_state || filter_changed
+      
+      # Skip only if filter unchanged (saves bandwidth)
+      next if !needs_refresh && last_filter_state
+      
+      # Update last state
       @last_overview[filter_link] = current_filter_state
       
       # Prepare assets for custom filter
