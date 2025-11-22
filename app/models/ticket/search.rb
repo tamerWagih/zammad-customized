@@ -85,6 +85,15 @@ returns if user has no permissions to search
           query_or.push(access_condition)
         end
 
+        # Include CC tickets (for agents)
+        cc_ticket_ids = get_cc_ticket_ids(params)
+        if cc_ticket_ids.present?
+          access_condition = {
+            'query_string' => { 'default_field' => 'id', 'query' => "\"#{cc_ticket_ids.join('" OR "')}\"" }
+          }
+          query_or.push(access_condition)
+        end
+
         # Include tickets created by user (for creator_access? to work)
         access_condition = {
           'query_string' => { 'default_field' => 'created_by_id', 'query' => params[:current_user].id }
@@ -92,16 +101,21 @@ returns if user has no permissions to search
         query_or.push(access_condition)
       end
       if params[:current_user].permissions?('ticket.customer')
-        organizations_query = params[:current_user].all_organizations.where(shared: true).map { |row| "organization_id:#{row.id}" }.join(' OR ')
-        access_condition    = if organizations_query.present?
-                                {
-                                  'query_string' => { 'query' => "customer_id:#{params[:current_user].id} OR #{organizations_query}" }
-                                }
-                              else
-                                {
-                                  'query_string' => { 'default_field' => 'customer_id', 'query' => params[:current_user].id }
-                                }
-                              end
+        # Build customer query with CC tickets
+        cc_ticket_ids = get_cc_ticket_ids(params)
+        
+        customer_query_parts = ["customer_id:#{params[:current_user].id}"]
+        customer_query_parts.concat(params[:current_user].all_organizations.where(shared: true).map { |row| "organization_id:#{row.id}" })
+        
+        # Add CC tickets to the query
+        if cc_ticket_ids.present?
+          cc_query_parts = cc_ticket_ids.map { |id| "id:#{id}" }
+          customer_query_parts.concat(cc_query_parts)
+        end
+        
+        access_condition = {
+          'query_string' => { 'query' => customer_query_parts.join(' OR ') }
+        }
         query_or.push(access_condition)
       end
 
@@ -150,6 +164,16 @@ returns if user has no permissions to search
       Ticket::Approval.where(approver_id: params[:current_user].id).pluck(:ticket_id).uniq
     rescue StandardError => e
       Rails.logger.warn("Failed to resolve approval ticket ids for search: #{e.message}")
+      []
+    end
+
+    def get_cc_ticket_ids(params)
+      return [] unless params[:current_user]
+
+      # Get tickets where user is CC'd (both agents and customers)
+      Ticket::Cc.where(user_id: params[:current_user].id).pluck(:ticket_id).uniq
+    rescue StandardError => e
+      Rails.logger.warn("Failed to resolve CC ticket ids for search: #{e.message}")
       []
     end
   end

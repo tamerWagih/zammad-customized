@@ -169,6 +169,26 @@ class CustomFilterAttributesController < ApplicationController
           { value: 'rejected', name: 'Rejected' }
         ] 
       },
+      
+      # CC Filters
+      { 
+        name: 'ccd_to_me', 
+        display: "CC'd to Me", 
+        tag: 'select',
+        searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }],
+        default: true
+      },
+      { 
+        name: 'not_ccd_to_me', 
+        display: "Not CC'd to Me", 
+        tag: 'select',
+        searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }],
+        default: true
+      },
     ]
 
     base_attributes + custom_attributes

@@ -342,6 +342,23 @@ class Selector::Sql < Selector::Base
       # If filter is present in condition, apply it (even if value is empty/default)
       Rails.logger.info "SQL: is_rejected filter added"
       query << "tickets.id IN (SELECT tags.o_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'rejected' AND tags.o_type = 'Ticket')"
+    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'ccd_to_me'
+      # Show only tickets where I am CC'd
+      # If filter is present in condition, apply it (even if value is empty/default)
+      raise "ccd_to_me requires current_user" unless current_user
+      
+      Rails.logger.info "SQL: ccd_to_me user_id=#{current_user.id}"
+      
+      query << "tickets.id IN (SELECT ticket_id FROM ticket_ccs WHERE user_id = ?)"
+      bind_params.push current_user.id
+    
+    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'not_ccd_to_me'
+      # Show only tickets where I am NOT CC'd
+      # If filter is present in condition, apply it (even if value is empty/default)
+      raise "not_ccd_to_me requires current_user" unless current_user
+      
+      query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_ccs WHERE user_id = ?)"
+      bind_params.push current_user.id
     elsif attribute_table == 'user' && attribute_name == 'role_ids'
       query << if block_condition[:operator] == 'is'
                  "users.id IN (
