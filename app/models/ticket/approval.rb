@@ -86,7 +86,7 @@ class Ticket::Approval < ApplicationModel
   end
 
   def search_index_attribute_lookup(include_references: true)
-    attributes = super
+    attributes = super(include_references: include_references)
     attributes.merge(
       approver:  approver&.fullname,
       requester: requester&.fullname,

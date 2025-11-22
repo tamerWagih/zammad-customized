@@ -16,12 +16,17 @@ class App.TicketZoomOverviewNavigator extends App.Controller
     # Check if this is a custom filter (UUID format) or standard overview (numeric ID)
     @overview = App.Overview.find(@overview_id)
     
-    # If overview not found, it might be a custom filter - skip navigator
-    if !@overview
-      @html('')
-      return
+    # Determine the link to use for OverviewListCollection
+    # For standard overviews, use overview.link
+    # For custom filters, @overview_id is the link (UUID)
+    if @overview
+      @overview_link = @overview.link
+    else
+      # If overview not found, assume it's a custom filter link (UUID)
+      # Custom filters use their link as the ID
+      @overview_link = @overview_id
     
-    @bindId = App.OverviewListCollection.bind(@overview.link, lateUpdate, false)
+    @bindId = App.OverviewListCollection.bind(@overview_link, lateUpdate, false)
 
     @render()
 
@@ -29,12 +34,12 @@ class App.TicketZoomOverviewNavigator extends App.Controller
     App.OverviewListCollection.unbind(@bindId)
 
   render: =>
-    if !@overview_id || !@overview
+    if !@overview_id || !@overview_link
       @html('')
       return
 
-    # get overview data
-    overview = App.OverviewListCollection.get(@overview.link)
+    # get overview data from OverviewListCollection using the link
+    overview = App.OverviewListCollection.get(@overview_link)
     return if !overview
     current_position = 0
     found            = false
