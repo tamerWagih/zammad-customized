@@ -46,6 +46,7 @@ class App.TicketZoomOverviewNavigator extends App.Controller
     overview = App.OverviewListCollection.get(@overview_link)
     return if !overview
     return if !overview.tickets || overview.tickets.length is 0
+    return if !overview.overview
     
     # Ensure ticket_id is a number for comparison
     ticket_id = parseInt(@ticket_id, 10)

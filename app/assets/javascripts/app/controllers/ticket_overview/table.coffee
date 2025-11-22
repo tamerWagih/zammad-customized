@@ -165,12 +165,16 @@ class App.TicketOverviewTable extends App.Controller
         ticket = App.Ticket.findNative(id)
         return if !ticket
 
+        # For custom filters, use the link (UUID) as overview_id
+        # For standard overviews, use the id
+        overview_id = if @overview.is_custom then @overview.link else @overview.id
+
         App.TaskManager.execute(
           key:        "Ticket-#{ticket.id}"
           controller: 'TicketZoom'
           params:
             ticket_id:   ticket.id
-            overview_id: @overview.id
+            overview_id: overview_id
           show:       true
         )
         @navigate ticket.uiUrl()
