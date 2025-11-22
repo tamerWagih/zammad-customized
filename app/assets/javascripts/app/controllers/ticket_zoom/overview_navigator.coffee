@@ -26,7 +26,11 @@ class App.TicketZoomOverviewNavigator extends App.Controller
       # Custom filters use their link as the ID
       @overview_link = @overview_id
     
-    @bindId = App.OverviewListCollection.bind(@overview_link, lateUpdate, false)
+    @bindId = App.OverviewListCollection.bind(@overview_link, lateUpdate, true)
+
+    # Ensure overview data is fetched (especially important for custom filters)
+    if !App.OverviewListCollection.get(@overview_link)
+      App.OverviewListCollection.fetch(@overview_link)
 
     @render()
 
@@ -41,16 +45,23 @@ class App.TicketZoomOverviewNavigator extends App.Controller
     # get overview data from OverviewListCollection using the link
     overview = App.OverviewListCollection.get(@overview_link)
     return if !overview
+    return if !overview.tickets || overview.tickets.length is 0
+    
+    # Ensure ticket_id is a number for comparison
+    ticket_id = parseInt(@ticket_id, 10)
+    
     current_position = 0
     found            = false
     item_next        = false
     item_previous    = false
     for ticket in overview.tickets
       current_position += 1
-      item_next         = overview.tickets[current_position]
-      item_previous     = overview.tickets[current_position-2]
-      if ticket.id is @ticket_id
+      # Compare ticket IDs (handle both string and number)
+      ticket_id_to_compare = if typeof ticket.id is 'string' then parseInt(ticket.id, 10) else ticket.id
+      if ticket_id_to_compare is ticket_id
         found = true
+        item_next         = overview.tickets[current_position]
+        item_previous     = overview.tickets[current_position-2]
         break
 
     if !found

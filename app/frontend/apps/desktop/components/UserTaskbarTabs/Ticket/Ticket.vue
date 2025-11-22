@@ -95,6 +95,10 @@ const currentTitle = computed(() => {
   return props.taskbarTab.entity?.title || ''
 })
 
+const ticketNumber = computed(() => {
+  return props.taskbarTab.entity?.number || ''
+})
+
 const currentStateColorCode = computed(
   () =>
     props.taskbarTab.entity?.stateColorCode || EnumTicketStateColorCode.Open,
@@ -116,6 +120,10 @@ const activeBackgroundColor = computed(() => {
 
 const currentViewTitle = computed(
   () => `${ticketNumberWithTicketHook.value} - ${currentTitle.value}`,
+)
+
+const displayText = computed(
+  () => `${ticketNumber.value} - ${currentTitle.value}`,
 )
 </script>
 
@@ -149,7 +157,7 @@ const currentViewTitle = computed(
         'text-white!': taskbarTabActive,
       }"
     >
-      {{ currentTitle }}
+      {{ displayText }}
     </CommonLabel>
   </CommonLink>
 </template>
