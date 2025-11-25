@@ -118,7 +118,7 @@ class Transaction::CcNotification
     if channels['email'] && user.email.present?
       template_objects = build_objects(user)
 
-      NotificationFactory::Mailer.notification(
+      result = NotificationFactory::Mailer.notification(
         template:    'ticket_cc_notification',
         user:        user,
         objects:     template_objects,
@@ -130,7 +130,24 @@ class Transaction::CcNotification
     end
     
     add_recipient_list_to_history(ticket, user, used_channels, @item[:type])
-  rescue => e
+  rescue Channel::DeliveryError => e
+    status_code = begin
+      e.original_error.response.status.to_i
+    rescue
+      raise e
+    end
+
+    if SILENCABLE_SMTP_ERROR_CODES.any? { |elem| elem.include? status_code }
+      Rails.logger.info do
+        "could not send CC email notification to user (#{@item[:type]}/#{ticket.id}/#{user.email}) #{e.original_error}"
+      end
+      return
+    end
+
+    Rails.logger.error "CC notification email delivery failed: #{e.message}"
+    raise e
+  rescue StandardError => e
+    Rails.logger.error "CC notification error: #{e.message}"
     raise e
   end
 
@@ -211,7 +228,12 @@ class Transaction::CcNotification
       creator:       creator,
       cc_user_name:  cc_user&.fullname || 'Unknown User',
       creator_name:  creator&.fullname || 'Unknown User',
+      url:           ticket_url
     }
+  end
+
+  def ticket_url
+    "#{Setting.get('http_type')}://#{Setting.get('fqdn')}/#/ticket/zoom/#{ticket.id}"
   end
 end
 

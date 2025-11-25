@@ -22,7 +22,13 @@ Message: #{@objects[:cc][:message]}<br>
 <% end %>
 </div>
 <br>
+<% if @objects[:url] %>
+<div>
+  <a href="#{@objects[:url]}" target="zammad_app">View this in #{config.product_name}</a>
+</div>
+<% else %>
 <div>
   <a href="#{config.http_type}://#{config.fqdn}/#ticket/zoom/#{ticket.id}" target="zammad_app">View this in #{config.product_name}</a>
 </div>
+<% end %>
 
