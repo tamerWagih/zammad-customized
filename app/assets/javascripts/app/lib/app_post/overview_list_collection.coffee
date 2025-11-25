@@ -64,12 +64,17 @@ class _Singleton
         if data.assets
           App.Collection.loadAssets(data.assets)
           delete data.assets
+        # Determine the key to use for storing data and invoking callbacks
+        # Use overview_key from response if available, otherwise use the original view parameter
+        overview_key = view
         if data.index && data.index.overview
           # Use link as the key for OverviewListCollection
           # Fallback to view if link is not available (for backwards compatibility)
           overview_key = data.index.overview.link || (if typeof data.index.overview.view is 'string' then data.index.overview.view else data.index.overview.link || data.index.overview.id)
           @overview[overview_key] = data.index
-        @callback(view, data.index)
+        # CRITICAL: Use overview_key (not view) to invoke callback
+        # This ensures callbacks registered with overview_key will fire when data arrives
+        @callback(overview_key, data.index)
       error: =>
         @fetchActive[view] = false
     )
