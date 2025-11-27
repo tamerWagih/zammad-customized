@@ -112,13 +112,12 @@ class Ticket::Cc < ApplicationModel
     end
   end
 
-  def search_index_attribute_lookup(record)
-    {
-      ticket_id:   record.ticket_id,
-      user:        record.user_name,
-      permissions: Array(record.permissions).join(', '),
-      message:     record.message,
-    }
+  def search_index_attribute_lookup(include_references: true)
+    attributes = super(include_references: include_references)
+    attributes.merge(
+      user:        user_name,
+      permissions: Array(permissions).join(', '),
+    )
   end
 
   def activity_message
