@@ -146,6 +146,7 @@ class App.TicketZoom extends App.Controller
       newTicketRaw = data.assets.Ticket[@ticket_id]
 
     view       = @ticket && @ticket.currentView && @ticket.currentView()
+    # Note: CC permissions checked later after @ticket._ccs_cache is set
     readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || false
     changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || false
     fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || false
@@ -210,11 +211,12 @@ class App.TicketZoom extends App.Controller
     # Evaluate permissions with detailed logging
     @view           = @ticket && @ticket.currentView && @ticket.currentView()
     
-    @readable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || false
+    # Check permissions: userGroupAccess (agents), groupAccess (group members), and CC permissions
+    @readable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('read')) || false
     
-    @changeable     = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || false
+    @changeable     = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('change')) || false
     
-    @fullable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || false
+    @fullable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('full')) || false
     
     @formMeta       = data.form_meta
 
@@ -273,9 +275,9 @@ class App.TicketZoom extends App.Controller
               oldChangeable = @changeable
               oldFullable = @fullable
               
-              @readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || false
-              @changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || false
-              @fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || false
+              @readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('read')) || false
+              @changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('change')) || false
+              @fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('full')) || false
               
               # If ANY permission changed, force re-render
               if oldReadable != @readable || oldChangeable != @changeable || oldFullable != @fullable
@@ -332,9 +334,9 @@ class App.TicketZoom extends App.Controller
               oldChangeable = @changeable
               oldFullable = @fullable
               
-              @readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || false
-              @changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || false
-              @fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || false
+              @readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('read')) || false
+              @changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('change')) || false
+              @fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('full')) || false
               
               # If ANY permission changed, force re-render
               if oldReadable != @readable || oldChangeable != @changeable || oldFullable != @fullable
