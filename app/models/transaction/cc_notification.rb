@@ -233,7 +233,7 @@ class Transaction::CcNotification
   end
 
   def ticket_url
-    "#{Setting.get('http_type')}://#{Setting.get('fqdn')}/#/ticket/zoom/#{ticket.id}"
+    "#{Setting.get('http_type')}://#{Setting.get('fqdn')}/#ticket/zoom/#{ticket.id}"
   end
 end
 
