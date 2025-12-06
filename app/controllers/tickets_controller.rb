@@ -178,8 +178,8 @@ class TicketsController < ApplicationController
         clean_params[:customer_id] = local_customer.id
       end
 
-      # Extract cc_user_ids before param_cleanup strips it out
-      cc_user_ids_raw = clean_params.delete(:cc_user_ids)
+      # Extract cc_user_ids before param_cleanup strips it out (handle both symbol and string keys)
+      cc_user_ids_raw = clean_params.delete(:cc_user_ids) || clean_params.delete('cc_user_ids')
 
       # Normalize cc_user_ids to array
       cc_user_ids = if cc_user_ids_raw.is_a?(Array)
@@ -310,8 +310,8 @@ class TicketsController < ApplicationController
       end
     end
 
-    # Extract cc_user_ids before update (if present)
-    cc_user_ids_raw = clean_params.delete(:cc_user_ids)
+    # Extract cc_user_ids before update (if present) - handle both symbol and string keys
+    cc_user_ids_raw = clean_params.delete(:cc_user_ids) || clean_params.delete('cc_user_ids')
     
     # Normalize cc_user_ids to array
     new_cc_user_ids = if cc_user_ids_raw.is_a?(Array)
