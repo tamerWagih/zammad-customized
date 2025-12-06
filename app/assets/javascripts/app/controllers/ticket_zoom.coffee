@@ -1292,7 +1292,7 @@ class App.TicketZoom extends App.Controller
     # CC changes are now handled by form system (cc_user_ids field)
     # The form automatically includes cc_user_ids in ticketParams()
     # No need for separate widget-based CC submission
-    @submitTicketUpdate(ticket, taskAction, nextTicket, macro, e)
+    @submitTicketUpdate(ticket, taskAction, nextTicket, macro, e, ticketParams)
 
   submitCcChanges: (ticket, ccChanges, callback) =>
     # Remove any users that are in both adds and removes (shouldn't happen, but safety check)
@@ -1358,13 +1358,18 @@ class App.TicketZoom extends App.Controller
           # No CC ID found, skip this remove
           checkComplete()
 
-  submitTicketUpdate: (ticket, taskAction, nextTicket, macro, e) =>
+  submitTicketUpdate: (ticket, taskAction, nextTicket, macro, e, ticketParams = {}) =>
     # submit changes
+    # Ensure cc_user_ids is sent even if model serialization drops it
+    payload = ticket.attributes()
+    if ticketParams.cc_user_ids?
+      payload.cc_user_ids = ticketParams.cc_user_ids
+
     @ajax(
       id: "ticket_update_#{ticket.id}"
       type: 'PUT'
       url: "#{App.Ticket.url}/#{ticket.id}?all=true"
-      data: JSON.stringify(ticket.attributes())
+      data: JSON.stringify(payload)
       processData: true
       success: (data) =>
 
