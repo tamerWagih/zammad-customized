@@ -17,10 +17,11 @@ class App.TicketZoomOverviewNavigator extends App.Controller
     @overview = App.Overview.find(@overview_id)
     
     # Determine the link to use for OverviewListCollection
-    # For standard overviews, use overview.link
+    # For standard overviews, use overview.link (fallback to overview.id if link is missing)
     # For custom filters, @overview_id is the link (UUID)
     if @overview
-      @overview_link = @overview.link
+      # Use link if available, otherwise fallback to id (similar to overview_list_collection.coffee)
+      @overview_link = @overview.link || @overview.id
     else
       # If overview not found, assume it's a custom filter link (UUID)
       # Custom filters use their link as the ID
