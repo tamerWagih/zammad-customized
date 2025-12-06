@@ -12,29 +12,15 @@ class CustomFilterSelectorsController < ApplicationController
       raise Exceptions::UnprocessableEntity, __('Only ticket selectors are supported')
     end
 
-    # Convert ActionController::Parameters to hash
-    condition = params[:condition].to_h rescue {}
-    
-    # Clean up empty values in condition (fix value=[] issue)
-    condition.each do |key, value_hash|
-      if value_hash.is_a?(Hash) && value_hash[:value].is_a?(Array) && value_hash[:value].empty?
-        # Remove this condition entirely if value is empty
-        condition.delete(key)
-      end
-    end
-    
-    # Handle empty or invalid conditions gracefully
-    if condition.blank? || !has_valid_conditions?(condition)
-      return render json: {
-        object_ids:   [],
-        object_count: 0,
-        assets:       {},
-      }
-    end
-    
-    # Use Ticket.selectors (like admin does) with custom filter context
+    # Get condition - Rails automatically parses JSON body into params
+    # Pass condition directly like SelectorsController does
+    condition = params[:condition]
+
+    raise Exceptions::UnprocessableEntity, __('Invalid condition') if condition.blank?
+
+    # Use Ticket.selectors with custom filter context
     # This method handles everything: sql generation, scopes, transactions
-    Rails.logger.info "Preview: condition=#{condition.inspect}, current_user=#{current_user.id}"
+    Rails.logger.info "Custom filter preview: condition=#{condition.inspect}, current_user=#{current_user.id}"
     
     ticket_count, ticket_results = Ticket.selectors(
       condition,
@@ -72,24 +58,6 @@ class CustomFilterSelectorsController < ApplicationController
     }, status: :unprocessable_entity
   end
 
-  private
-
-  def has_valid_conditions?(condition)
-    return false if condition.blank?
-    
-    # Check if at least one condition has valid values
-    condition.any? do |key, value|
-      next false if value.blank?
-      
-      # Check for valid condition structure
-      if value.is_a?(Hash) && value.key?('value')
-        # Valid if value is not empty array
-        !(value['value'].is_a?(Array) && value['value'].empty?)
-      else
-        true
-      end
-    end
-  end
 end
 
 
