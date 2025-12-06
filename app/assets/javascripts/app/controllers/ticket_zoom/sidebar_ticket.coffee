@@ -172,14 +172,14 @@ class SidebarTicket extends App.Controller
     )
 
     if @ticket.currentView() is 'agent'
-      # Initialize CC widget (only for agents with CC permission)
-      if @ticket.hasCcPermission && @ticket.hasCcPermission('full')
-        @ccWidget = new App.WidgetCc(
-          el:          localEl.filter('.js-cc')
-          ticket:      @ticket
-          ccs:         @ccs || @ticket._ccs_cache || []
-          editable:    @ticket.hasCcPermission('full')
-        )
+      # Initialize CC widget for all agents (visible to all, editable based on ticket permissions)
+      # Use same permission check as other widgets (Tags, Links, etc.)
+      @ccWidget = new App.WidgetCc(
+        el:          localEl.filter('.js-cc')
+        ticket:      @ticket
+        ccs:         @ccs || @ticket._ccs_cache || []
+        editable:    @ticket.editable()  # Use same check as Tags widget
+      )
       
       @mentionWidget = new App.WidgetMention(
         el:       localEl.filter('.js-subscriptions')

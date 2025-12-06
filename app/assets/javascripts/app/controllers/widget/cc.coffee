@@ -131,15 +131,36 @@ class App.WidgetCc extends App.Controller
       userId = $(this).val()
       selectedUserIds.push(parseInt(userId)) if userId
 
-    # Get current CC user IDs (excluding current user)
+    # Get current user ID to exclude
     currentUserId = App.Session.get('id')
-    currentCcUserIds = @localCcs
-      .map((cc) -> parseInt(cc.user_id))
-      .filter((id) -> id != parseInt(currentUserId))
-
-    # Calculate adds and removes
-    @pendingAdds = selectedUserIds.filter((id) -> !currentCcUserIds.includes(id))
-    @pendingRemoves = currentCcUserIds.filter((id) -> !selectedUserIds.includes(id))
+    
+    # Calculate based on original state (before any pending changes)
+    # This ensures we don't have conflicts
+    originalCcUserIds = @originalCcUserIds.filter((id) -> id != parseInt(currentUserId))
+    
+    # Calculate what should be added (in selected but not in original)
+    newAdds = selectedUserIds.filter((id) -> !originalCcUserIds.includes(id))
+    # Calculate what should be removed (in original but not in selected)
+    newRemoves = originalCcUserIds.filter((id) -> !selectedUserIds.includes(id))
+    
+    # Initialize pending arrays
+    @pendingAdds = @pendingAdds || []
+    @pendingRemoves = @pendingRemoves || []
+    
+    # Resolve conflicts: remove users from pendingAdds if they're now being removed
+    @pendingAdds = @pendingAdds.filter((id) -> !newRemoves.includes(id))
+    # Resolve conflicts: remove users from pendingRemoves if they're now being added back
+    @pendingRemoves = @pendingRemoves.filter((id) -> !newAdds.includes(id))
+    
+    # Add new adds (not already in pendingAdds)
+    for userId in newAdds
+      unless @pendingAdds.includes(userId)
+        @pendingAdds.push(userId)
+    
+    # Add new removes (not already in pendingRemoves)
+    for userId in newRemoves
+      unless @pendingRemoves.includes(userId)
+        @pendingRemoves.push(userId)
 
     # Update local state for display (optimistic update)
     # Remove users that are being removed
@@ -174,9 +195,17 @@ class App.WidgetCc extends App.Controller
     ccElement = $(e.currentTarget).closest('.js-cc-item')
     userId = parseInt(ccElement.data('user-id'))
 
-    # Add to pending removes
-    unless @pendingRemoves.includes(userId)
-      @pendingRemoves.push(userId)
+    # Initialize pending arrays if needed
+    @pendingAdds = @pendingAdds || []
+    @pendingRemoves = @pendingRemoves || []
+
+    # If user is in pendingAdds (was just added), remove from pendingAdds instead of adding to pendingRemoves
+    if @pendingAdds.includes(userId)
+      @pendingAdds = @pendingAdds.filter((id) -> id != userId)
+    else
+      # User is in original CC list, add to pendingRemoves
+      unless @pendingRemoves.includes(userId)
+        @pendingRemoves.push(userId)
 
     # Remove from local state
     @localCcs = @localCcs.filter((cc) -> parseInt(cc.user_id) != userId)

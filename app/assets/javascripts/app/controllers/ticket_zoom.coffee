@@ -1295,6 +1295,12 @@ class App.TicketZoom extends App.Controller
       @submitTicketUpdate(ticket, taskAction, nextTicket, macro)
 
   submitCcChanges: (ticket, ccChanges, callback) =>
+    # Remove any users that are in both adds and removes (shouldn't happen, but safety check)
+    # If a user is in both, cancel them out (no operation needed)
+    conflictingUsers = ccChanges.adds.filter((id) -> ccChanges.removes.includes(id))
+    ccChanges.adds = ccChanges.adds.filter((id) -> !conflictingUsers.includes(id))
+    ccChanges.removes = ccChanges.removes.filter((id) -> !conflictingUsers.includes(id))
+    
     # Track pending operations
     pendingOps = ccChanges.adds.length + ccChanges.removes.length
     completedOps = 0
