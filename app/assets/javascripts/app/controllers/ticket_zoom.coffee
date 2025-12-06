@@ -1046,7 +1046,16 @@ class App.TicketZoom extends App.Controller
       resetButton.removeClass('hide')
 
   ticketParams: =>
-    @formParam(@$('.edit'))
+    params = @formParam(@$('.edit'))
+
+    # Normalize cc_user_ids to integers and sorted to avoid false-positive diffs
+    if params.cc_user_ids?
+      params.cc_user_ids = params.cc_user_ids
+        .map((id) -> parseInt(id, 10))
+        .filter((id) -> !isNaN(id))
+        .sort((a, b) -> a - b)
+
+    params
 
   submitDisable: (e) =>
     if e
