@@ -765,6 +765,7 @@ class App.TicketZoom extends App.Controller
       )
 
       @sidebarWidget = new App.TicketZoomSidebar(
+        ccs: @ccs
         el:               elLocal
         sidebarState:     @sidebarState
         object_id:        @ticket_id
@@ -1279,6 +1280,79 @@ class App.TicketZoom extends App.Controller
     if taskAction is 'closeNextInOverview' || taskAction is 'next_from_overview'
       nextTicket = @getNextTicketInOverview()
 
+    # Get pending CC changes from widget
+    ccWidget = @sidebarWidget?.get('100-TicketEdit')?.ccWidget
+    ccChanges = if ccWidget then ccWidget.getPendingChanges() else { adds: [], removes: [] }
+
+    # Submit CC changes first (if any), then ticket update
+    if ccChanges.adds.length > 0 || ccChanges.removes.length > 0
+      @submitCcChanges(ticket, ccChanges, =>
+        # After CC changes are submitted, submit ticket update
+        @submitTicketUpdate(ticket, taskAction, nextTicket, macro)
+      )
+    else
+      # No CC changes, just submit ticket update
+      @submitTicketUpdate(ticket, taskAction, nextTicket, macro)
+
+  submitCcChanges: (ticket, ccChanges, callback) =>
+    # Track pending operations
+    pendingOps = ccChanges.adds.length + ccChanges.removes.length
+    completedOps = 0
+    
+    # If no operations, call callback immediately
+    if pendingOps == 0
+      callback()
+      return
+
+    # Helper to check if all operations are done
+    checkComplete = =>
+      completedOps++
+      if completedOps >= pendingOps
+        callback()
+
+    # Add new CC users
+    for userId in ccChanges.adds
+      do (userId) =>
+        @ajax(
+          id: "cc_add_#{ticket.id}_#{userId}"
+          type: 'POST'
+          url: "#{@apiPath}/tickets/#{ticket.id}/ticket_ccs"
+          data: JSON.stringify({ user_id: userId })
+          processData: true
+          success: (data) =>
+            checkComplete()
+          error: (xhr, statusText, error) =>
+            # Log error but don't block ticket update
+            @log('error', "Failed to add CC user #{userId}: #{error}")
+            checkComplete()  # Continue anyway
+        )
+
+    # Remove CC users
+    for userId in ccChanges.removes
+      do (userId) =>
+        # Find CC record ID for this user
+        ccWidget = @sidebarWidget?.get('100-TicketEdit')?.ccWidget
+        ccRecord = ccWidget?.localCcs?.find((cc) -> parseInt(cc.user_id) == userId)
+        ccId = ccRecord?.id
+
+        if ccId
+          @ajax(
+            id: "cc_remove_#{ticket.id}_#{ccId}"
+            type: 'DELETE'
+            url: "#{@apiPath}/tickets/#{ticket.id}/ticket_ccs/#{ccId}"
+            processData: true
+            success: (data) =>
+              checkComplete()
+            error: (xhr, statusText, error) =>
+              # Log error but don't block ticket update
+              @log('error', "Failed to remove CC user #{userId}: #{error}")
+              checkComplete()  # Continue anyway
+          )
+        else
+          # No CC ID found, skip this remove
+          checkComplete()
+
+  submitTicketUpdate: (ticket, taskAction, nextTicket, macro) =>
     # submit changes
     @ajax(
       id: "ticket_update_#{ticket.id}"
@@ -1298,6 +1372,10 @@ class App.TicketZoom extends App.Controller
 
         if @sidebarWidget
           @sidebarWidget.commit()
+          
+          # Clear pending CC changes after successful update
+          ccWidget = @sidebarWidget.get('100-TicketEdit')?.ccWidget
+          ccWidget?.clearPendingChanges() if ccWidget
 
         if taskAction is 'closeNextInOverview' || taskAction is 'next_from_overview'
           @openTicketInOverview(nextTicket)

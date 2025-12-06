@@ -130,6 +130,11 @@ class SidebarTicket extends App.Controller
 
   reload: (args) =>
 
+    # apply CC changes
+    if @ccWidget
+      if args.ccs
+        @ccWidget.reload(args.ccs)
+    
     # apply tag changes
     if @tagWidget
       if args.tags
@@ -167,6 +172,15 @@ class SidebarTicket extends App.Controller
     )
 
     if @ticket.currentView() is 'agent'
+      # Initialize CC widget (only for agents with CC permission)
+      if @ticket.hasCcPermission && @ticket.hasCcPermission('full')
+        @ccWidget = new App.WidgetCc(
+          el:          localEl.filter('.js-cc')
+          ticket:      @ticket
+          ccs:         @ccs || @ticket._ccs_cache || []
+          editable:    @ticket.hasCcPermission('full')
+        )
+      
       @mentionWidget = new App.WidgetMention(
         el:       localEl.filter('.js-subscriptions')
         object:   @ticket

@@ -55,6 +55,7 @@ class App.TicketZoomSidebar extends App.ControllerObserver
           links:            @links
           approvals:        @approvals
           shares:           @shares
+          ccs:              @ccs
           parent:           @parent
         )
       else
@@ -69,6 +70,7 @@ class App.TicketZoomSidebar extends App.ControllerObserver
           links:            @links
           approvals:        @approvals
           shares:           @shares
+          ccs:              @ccs
           parent:           @parent
         )
       @sidebarItems.push @sidebarBackends[key]
