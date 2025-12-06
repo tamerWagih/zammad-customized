@@ -180,6 +180,10 @@ class TicketsController < ApplicationController
 
       # Extract cc_user_ids before param_cleanup strips it out (handle both symbol and string keys)
       cc_user_ids_raw = clean_params.delete(:cc_user_ids) || clean_params.delete('cc_user_ids')
+      # Fallback if cc_user_ids sent nested under :ticket (some clients)
+      if cc_user_ids_raw.nil? && params[:ticket].is_a?(Hash)
+        cc_user_ids_raw = params[:ticket][:cc_user_ids] || params[:ticket]['cc_user_ids']
+      end
 
       # Normalize cc_user_ids to array
       cc_user_ids = if cc_user_ids_raw.is_a?(Array)
@@ -312,6 +316,10 @@ class TicketsController < ApplicationController
 
     # Extract cc_user_ids before update (if present) - handle both symbol and string keys
     cc_user_ids_raw = clean_params.delete(:cc_user_ids) || clean_params.delete('cc_user_ids')
+    # Fallback if cc_user_ids sent nested under :ticket (some clients)
+    if cc_user_ids_raw.nil? && params[:ticket].is_a?(Hash)
+      cc_user_ids_raw = params[:ticket][:cc_user_ids] || params[:ticket]['cc_user_ids']
+    end
     
     # Normalize cc_user_ids to array
     new_cc_user_ids = if cc_user_ids_raw.is_a?(Array)
