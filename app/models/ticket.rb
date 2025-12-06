@@ -816,10 +816,8 @@ returns a hex color code
 
   # Override to add cc_user_ids to API response
   def filter_unauthorized_attributes(attributes)
-    # Convert ccs association to cc_user_ids array for frontend
-    if attributes.key?('cc_ids') || ccs.loaded? || ccs.any?
-      attributes['cc_user_ids'] = ccs.pluck(:user_id).compact.uniq
-    end
+    # Always expose cc_user_ids so the frontend form can render CCs
+    attributes['cc_user_ids'] = ccs.pluck(:user_id).compact.uniq
     super(attributes)
   end
 

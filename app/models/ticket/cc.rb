@@ -112,8 +112,8 @@ class Ticket::Cc < ApplicationModel
     end
   end
 
-  def search_index_attribute_lookup(include_references: true)
-    attributes = super(include_references: include_references)
+  def search_index_attribute_lookup(record)
+    attributes = super(record)
     attributes.merge(
       user:        user_name,
       permissions: Array(permissions).join(', '),

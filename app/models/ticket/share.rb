@@ -93,8 +93,8 @@ class Ticket::Share < ApplicationModel
     self.permissions = ['comment'] if permissions.blank?
   end
 
-  def search_index_attribute_lookup(include_references: true)
-    attributes = super(include_references: include_references)
+  def search_index_attribute_lookup(record)
+    attributes = super(record)
     attributes.merge(
       group:     group&.fullname || group&.name,
       shared_by: shared_by&.fullname,

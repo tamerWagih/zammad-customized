@@ -27,7 +27,8 @@ class App.TicketZoomOverviewNavigator extends App.Controller
       # Custom filters use their link as the ID
       @overview_link = @overview_id
     
-    @bindId = App.OverviewListCollection.bind(@overview_link, lateUpdate, true)
+    # Do not auto-fetch here; use the lazy behavior (third arg = false)
+    @bindId = App.OverviewListCollection.bind(@overview_link, lateUpdate, false)
 
     # Ensure overview data is fetched (especially important for custom filters)
     if !App.OverviewListCollection.get(@overview_link)
