@@ -146,10 +146,10 @@ class App.TicketZoom extends App.Controller
       newTicketRaw = data.assets.Ticket[@ticket_id]
 
     view       = @ticket && @ticket.currentView && @ticket.currentView()
-    # Note: CC permissions checked later after @ticket._ccs_cache is set
-    readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || false
-    changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || false
-    fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || false
+    # Include CC permissions in the pre-render comparison so CC permission changes trigger rerender
+    readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('read')) || false
+    changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('change')) || false
+    fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('full')) || false
     formMeta   = data.form_meta
 
     # on the following states we want to rerender the ticket:
