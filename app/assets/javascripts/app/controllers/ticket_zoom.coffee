@@ -1280,19 +1280,10 @@ class App.TicketZoom extends App.Controller
     if taskAction is 'closeNextInOverview' || taskAction is 'next_from_overview'
       nextTicket = @getNextTicketInOverview()
 
-    # Get pending CC changes from widget
-    ccWidget = @sidebarWidget?.get('100-TicketEdit')?.ccWidget
-    ccChanges = if ccWidget then ccWidget.getPendingChanges() else { adds: [], removes: [] }
-
-    # Submit CC changes first (if any), then ticket update
-    if ccChanges.adds.length > 0 || ccChanges.removes.length > 0
-      @submitCcChanges(ticket, ccChanges, =>
-        # After CC changes are submitted, submit ticket update
-        @submitTicketUpdate(ticket, taskAction, nextTicket, macro)
-      )
-    else
-      # No CC changes, just submit ticket update
-      @submitTicketUpdate(ticket, taskAction, nextTicket, macro)
+    # CC changes are now handled by form system (cc_user_ids field)
+    # The form automatically includes cc_user_ids in ticketParams()
+    # No need for separate widget-based CC submission
+    @submitTicketUpdate(ticket, taskAction, nextTicket, macro)
 
   submitCcChanges: (ticket, ccChanges, callback) =>
     # Remove any users that are in both adds and removes (shouldn't happen, but safety check)

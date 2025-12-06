@@ -135,8 +135,8 @@ class SidebarTicket extends App.Controller
       # Convert ccs array to cc_user_ids array for form system
       cc_user_ids = args.ccs.map((cc) -> cc.user_id).filter((id) -> id)
       
-      # Update ticket model with new cc_user_ids
-      if @ticket && cc_user_ids.length >= 0
+      # Update ticket model with new cc_user_ids (even if empty array to clear CCs)
+      if @ticket
         @ticket.cc_user_ids = cc_user_ids
       
       # Trigger form re-render if Edit instance exists
