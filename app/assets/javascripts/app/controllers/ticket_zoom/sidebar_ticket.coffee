@@ -130,10 +130,19 @@ class SidebarTicket extends App.Controller
 
   reload: (args) =>
 
-    # apply CC changes
-    if @ccWidget
-      if args.ccs
-        # CC is now handled by form system, no widget needed
+    # apply CC changes - update ticket model and trigger form re-render
+    if args.ccs
+      # Convert ccs array to cc_user_ids array for form system
+      cc_user_ids = args.ccs.map((cc) -> cc.user_id).filter((id) -> id)
+      
+      # Update ticket model with new cc_user_ids
+      if @ticket && cc_user_ids.length >= 0
+        @ticket.cc_user_ids = cc_user_ids
+      
+      # Trigger form re-render if Edit instance exists
+      if @edit && @edit.controllerFormSidebarTicket
+        # Re-render form with updated ticket attributes
+        @edit.render()
     
     # apply tag changes
     if @tagWidget
