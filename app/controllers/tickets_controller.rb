@@ -178,12 +178,14 @@ class TicketsController < ApplicationController
         clean_params[:customer_id] = local_customer.id
       end
 
-      # Extract cc_user_ids before param_cleanup strips it out (handle both symbol and string keys)
-      cc_user_ids_raw = clean_params.delete(:cc_user_ids) || clean_params.delete('cc_user_ids')
+    # Extract cc_user_ids before param_cleanup strips it out (handle both symbol and string keys)
+    cc_user_ids_raw = clean_params.delete(:cc_user_ids) || clean_params.delete('cc_user_ids')
       # Fallback if cc_user_ids sent nested under :ticket (some clients)
       if cc_user_ids_raw.nil? && params[:ticket].is_a?(Hash)
         cc_user_ids_raw = params[:ticket][:cc_user_ids] || params[:ticket]['cc_user_ids']
       end
+
+    Rails.logger.info("[CC][create] cc_user_ids_raw=#{cc_user_ids_raw.inspect} params[:ticket]=#{params[:ticket].inspect}")
 
       # Normalize cc_user_ids to array
       cc_user_ids = if cc_user_ids_raw.is_a?(Array)
@@ -320,6 +322,8 @@ class TicketsController < ApplicationController
     if cc_user_ids_raw.nil? && params[:ticket].is_a?(Hash)
       cc_user_ids_raw = params[:ticket][:cc_user_ids] || params[:ticket]['cc_user_ids']
     end
+
+    Rails.logger.info("[CC][update] cc_user_ids_raw=#{cc_user_ids_raw.inspect} params[:ticket]=#{params[:ticket].inspect}")
     
     # Normalize cc_user_ids to array
     new_cc_user_ids = if cc_user_ids_raw.is_a?(Array)
