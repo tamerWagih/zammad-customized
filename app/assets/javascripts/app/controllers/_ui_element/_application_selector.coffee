@@ -127,14 +127,18 @@ class App.UiElement.ApplicationSelector
         # Check if we're in custom filter mode by attribute flag
         if attribute.customFilterMode
           # Use custom filter attributes from dedicated endpoint
+          # CustomFilterAttributes is now grouped by model (like selectorAttributesByObject)
           # If not loaded yet, use empty array (will be populated when loaded)
-          configureAttributes = App.CustomFilterAttributes || []
+          attributesByObject = App.CustomFilterAttributes || {}
+          configureAttributes = attributesByObject[groupMeta.model] || []
         else
           # Use standard object manager attributes
           attributesByObject = App.ObjectManagerAttribute.selectorAttributesByObject()
           configureAttributes = attributesByObject[groupMeta.model] || []
         
         for config in configureAttributes
+          # Make a deep copy to avoid modifying the original config
+          config = $.extend(true, {}, config)
           config.objectName    = groupMeta.model
           config.attributeName = config.name
 
@@ -190,6 +194,25 @@ class App.UiElement.ApplicationSelector
       null: false
       translate: true
       operator: [__('is'), __('is not')]
+
+    # Add special attributes for Customer (User) group
+    if groups.customer
+      elements['customer.role_ids'] =
+        name: 'role_ids'
+        display: __('Role')
+        tag: 'select'
+        relation: 'Role'
+        null: false
+        operator: [__('is'), __('is not')]
+        multiple: true
+
+    # Add special attributes for Organization group
+    if groups.organization
+      elements['organization.members_existing'] =
+        name: 'members_existing'
+        display: __('Existing members')
+        tag: 'boolean'
+        operator: [__('is'), __('is not')]
 
     [defaults, groups, elements]
 
@@ -364,30 +387,55 @@ class App.UiElement.ApplicationSelector
   @preview: (item) ->
     params = App.ControllerForm.params(item)
     
-    # Check if we're in custom filter mode by looking for the modal class
+    # Check if we're in custom filter mode by multiple methods
     isCustomFilterMode = item.closest('.custom-filter-modal').length > 0
     
-    # Use custom filter selector endpoint for custom filters
-    previewUrl = if isCustomFilterMode
-      "#{App.Config.get('api_path')}/custom_filter_selectors/preview"
-    else
-      "#{App.Config.get('api_path')}/tickets/selector"
+    # Also check if attribute has customFilterMode flag
+    if !isCustomFilterMode
+      conditionField = item.find('[name="condition"]')
+      if conditionField.length > 0
+        fieldData = conditionField.data()
+        isCustomFilterMode = fieldData?.customFilterMode == true
     
-    # Add object type for custom filter endpoint
+    console.log "[SELECTOR_PREVIEW] Item:", item
+    console.log "[SELECTOR_PREVIEW] Modal check:", item.closest('.custom-filter-modal').length
+    console.log "[SELECTOR_PREVIEW] Is custom filter mode:", isCustomFilterMode
+    console.log "[SELECTOR_PREVIEW] Params:", params
+    console.log "[SELECTOR_PREVIEW] Params.condition:", JSON.stringify(params.condition)
+    
+    # Use appropriate endpoint based on context:
+    # - Custom filters (agents): /custom_filter_selectors/preview (includes custom filter attributes)
+    # - Admin overviews: /tickets/selector (standard selector with ObjectManager attributes)
     if isCustomFilterMode
+      previewUrl = "#{App.Config.get('api_path')}/custom_filter_selectors/preview"
       params.object = 'tickets'
+    else
+      # Admin overview - use standard selector endpoint
+      previewUrl = "#{App.Config.get('api_path')}/tickets/selector"
+    
+    console.log "[SELECTOR_PREVIEW] Using URL:", previewUrl
     
     App.Ajax.request(
       id:    'application_selector'
       type:  'POST'
       url:   previewUrl
       data:        JSON.stringify(params)
-      processData: true,
+      processData: false,
+      contentType: 'application/json',
       success: (data, status, xhr) =>
+        console.log "[SELECTOR_PREVIEW] Success - count:", data.object_count, "ids:", data.object_ids
         App.Collection.loadAssets(data.assets)
         item.find('.js-previewCounterContainer').removeClass('hide')
         item.find('.js-previewLoader').addClass('hide')
         @ticketTable(data.object_ids, data.object_count, item)
+      error: (xhr, status, error) =>
+        console.error "[SELECTOR_PREVIEW] Error:", xhr.status, xhr.responseText
+        item.find('.js-previewLoader').addClass('hide')
+        try
+          errorData = JSON.parse(xhr.responseText)
+          console.error "[SELECTOR_PREVIEW] Error detail:", errorData.error_detail
+        catch e
+          console.error "[SELECTOR_PREVIEW] Could not parse error response"
     )
 
   @ticketTable: (ticket_ids, ticket_count, item) ->

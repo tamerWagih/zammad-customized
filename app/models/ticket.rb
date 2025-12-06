@@ -34,9 +34,14 @@ class Ticket < ApplicationModel
   include ::Ticket::PerformChanges
 
   store :preferences
+
+  # Virtual attribute for CC user IDs during ticket creation
+  attr_accessor :cc_user_ids
+
   after_initialize :check_defaults, if: :new_record?
   before_create  :check_generate, :check_defaults, :check_title, :set_default_state, :set_default_priority
   before_update  :check_defaults, :check_title, :reset_pending_time, :check_owner_active
+  after_create   :create_cc_records
 
   # This must be loaded late as it depends on the internal before_create and before_update handlers of ticket.rb.
   include Ticket::SetsLastOwnerUpdateTime
@@ -101,6 +106,7 @@ class Ticket < ApplicationModel
   has_many      :mentions,               as: :mentionable, dependent: :destroy
   has_many      :approvals,              class_name: 'Ticket::Approval', dependent: :destroy
   has_many      :shares,                 class_name: 'Ticket::Share', dependent: :destroy
+  has_many      :ccs,                    class_name: 'Ticket::Cc', dependent: :destroy
   has_one       :shared_draft,           class_name: 'Ticket::SharedDraftZoom', inverse_of: :ticket, dependent: :destroy
   belongs_to    :state,                  class_name: 'Ticket::State', optional: true
   belongs_to    :priority,               class_name: 'Ticket::Priority', optional: true
@@ -733,44 +739,56 @@ returns a hex color code
   end
 
   # Check share permissions for a given user
+  # Sharer: full access
+  # Receiver from SAME group as ticket: full access
+  # Receiver from DIFFERENT group: comment-only
   def share_permissions_for(user)
     default = { read: false, comment: false, edit: false }
+    Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user&.id}: Starting calculation"
     return default unless user
     return default unless respond_to?(:shares)
 
     begin
       # Only agents can access shared tickets
-      return default unless user.permissions?('ticket.agent')
-      
-      user_group_ids = Array(user.group_ids_access('read'))
-      Rails.logger.info "[SHARE_PERMISSIONS] Checking permissions for user #{user.id} (#{user.email}) on ticket #{id}"
-      Rails.logger.info "[SHARE_PERMISSIONS] User group IDs: #{user_group_ids.inspect}"
-      return default if user_group_ids.blank?
-      
-      # Find matching share for user's groups
-      matching_share = shares.active_current.find do |share|
-        user_group_ids.include?(share.group_id)
+      unless user.permissions?('ticket.agent')
+        Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Not an agent, returning default"
+        return default
       end
       
-      Rails.logger.info "[SHARE_PERMISSIONS] Matching share: #{matching_share.inspect}"
-      return default unless matching_share
+      # Check if user is the sharer (creator)
+      user_is_sharer = shares.active_current.exists?(shared_by_id: user.id)
       
-      # Get the actual permissions from the share record
-      share_perms = Array(matching_share.permissions).map(&:to_s).map(&:downcase)
-      Rails.logger.info "[SHARE_PERMISSIONS] Share permissions array: #{share_perms.inspect}"
+      # Check if user is a receiver (member of shared group)
+      active = shares.active_current
+      user_group_ids = user.groups.pluck(:id)  # All groups, any access level
+      receiver_shares = active.select { |s| user_group_ids.include?(s.group_id) }
+      user_is_receiver = receiver_shares.present?
       
-      has_full = share_perms.include?('full')
+      Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Sharer=#{user_is_sharer}, Receiver=#{user_is_receiver}, Active shares=#{active.count}"
       
-      result = {
-        read: has_full || share_perms.include?('read'),
-        comment: has_full || share_perms.include?('comment'),
-        edit: has_full || share_perms.include?('edit')
-      }
+      unless user_is_sharer || user_is_receiver
+        Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Not sharer or receiver, returning default"
+        return default
+      end
       
-      Rails.logger.info "[SHARE_PERMISSIONS] Computed permissions: #{result.inspect}"
-      result
+      # Sharer: full access
+      if user_is_sharer
+        result = { read: true, comment: true, edit: true }
+        Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Sharer - full access, returning #{result.inspect}"
+        return result
+      end
+
+      # Receiver: check if they have ANY access to ticket's group
+      has_group_access = user.group_access?(group_id, 'read')
+
+      if has_group_access
+        { read: true, comment: true, edit: true }
+      else
+        { read: true, comment: true, edit: false }
+      end
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
+      Rails.logger.warn e.backtrace.first(5).join("\n")
       default
     end
   end
@@ -796,25 +814,189 @@ returns a hex color code
     perms[:read] || perms[:comment] || perms[:edit]
   end
 
-  # Revoke expired shares
-  def revoke_expired_shares!
-    return unless respond_to?(:shares)
-    
-    begin
-      # Find expired shares that are still active
-      expired_shares = shares.where(status: 'active')
-                             .where('expires_at < ?', Time.current)
-      
-      # Revoke each individually to trigger callbacks (notifications, WebSocket events)
-      # Don't use update_all as it bypasses ActiveRecord callbacks
-      expired_shares.find_each do |share|
-        # Set user_id for notification system
-        UserInfo.current_user_id = 1 # System user
-        share.update!(status: 'revoked')
-      end
-    rescue StandardError => e
-      Rails.logger.warn "Failed to revoke expired shares for ticket #{id}: #{e.message}"
-    end
+  # Override to add cc_user_ids to API response
+  def filter_unauthorized_attributes(attributes)
+    # Always expose cc_user_ids so the frontend form can render CCs
+    attributes['cc_user_ids'] = ccs.pluck(:user_id).compact.uniq
+    super(attributes)
   end
+
+  # Create CC records after ticket creation if cc_user_ids is provided
+  def create_cc_records
+    Rails.logger.info "[CC] ===== CREATE_CC_RECORDS START ====="
+    Rails.logger.info "[CC] cc_user_ids: #{cc_user_ids.inspect}"
+    
+    return if cc_user_ids.blank?
+    return unless cc_user_ids.is_a?(Array)
+
+    current_user_id = UserInfo.current_user_id
+    Rails.logger.info "[CC] Processing #{cc_user_ids.length} CC users for ticket #{id}"
+
+    cc_user_ids.each_with_index do |user_id, index|
+      Rails.logger.info "[CC] Processing user #{index + 1}/#{cc_user_ids.length}: #{user_id}"
+      next if user_id.blank?
+
+      user = User.find_by(id: user_id)
+      unless user
+        Rails.logger.warn "[CC] User #{user_id} not found - skipping"
+        next
+      end
+      
+      if user.id == current_user_id
+        Rails.logger.info "[CC] Skipping current user #{user.id}"
+        next
+      end
+
+      # Create CC record (triggers HasTransactionDispatcher automatically)
+      # CRITICAL: Set permissions explicitly (don't rely on database default)
+      # Database default is ['read', 'comment'], but agents should get ['full']
+      
+      # Check user permissions
+      is_agent = user.permissions?('ticket.agent')
+      is_customer = user.permissions?('ticket.customer')
+      is_admin = user.permissions?('admin')
+      
+      Rails.logger.info "[CC] ===== PERMISSION CHECK FOR USER #{user.id} (#{user.login}) ====="
+      Rails.logger.info "[CC] User roles: #{user.roles.pluck(:name).inspect}"
+      Rails.logger.info "[CC] Has ticket.agent: #{is_agent}"
+      Rails.logger.info "[CC] Has ticket.customer: #{is_customer}"
+      Rails.logger.info "[CC] Has admin: #{is_admin}"
+      
+      # Determine permissions based on role
+      # CRITICAL: Admins have ticket.agent permission, so they get 'full' too
+      # Regular agents also have ticket.agent, so they get 'full'
+      # Customers only have ticket.customer, so they get 'read', 'comment'
+      permissions = if is_agent
+                      Rails.logger.info "[CC] ✅ User has ticket.agent → Setting permissions to ['full']"
+                      ['full']
+                    elsif is_customer
+                      Rails.logger.info "[CC] ✅ User is customer only → Setting permissions to ['read', 'comment']"
+                      ['read', 'comment']
+                    else
+                      Rails.logger.warn "[CC] ⚠️ User has neither agent nor customer permission → Defaulting to ['read', 'comment']"
+                      ['read', 'comment']
+                    end
+      
+      Rails.logger.info "[CC] Final permissions array: #{permissions.inspect}"
+      
+      cc = ccs.build(
+        user:           user,
+        permissions:    permissions,  # Explicitly set based on user type
+        created_by_id:  current_user_id,
+        updated_by_id:  current_user_id
+      )
+      
+      # Disable before_validation callback temporarily to prevent override
+      cc.skip_callbacks = true if cc.respond_to?(:skip_callbacks=)
+      
+      cc.save!
+      
+      Rails.logger.info "[CC] ===== CC RECORD SAVED ====="
+      Rails.logger.info "[CC] CC ##{cc.id} for user #{user.id} (#{user.fullname})"
+      Rails.logger.info "[CC] Permissions IN DATABASE: #{cc.reload.permissions.inspect}"
+      Rails.logger.info "[CC] ============================="
+      
+      # NOTE: Online notification is created by Transaction::CcNotification (HasTransactionDispatcher)
+      # Don't create it here to avoid duplicates
+      
+    rescue => e
+      Rails.logger.error "[CC] Failed to create CC for user #{user_id}: #{e.message}"
+      Rails.logger.error "[CC] Backtrace: #{e.backtrace.first(3).join('\n')}"
+    end
+    
+    Rails.logger.info "[CC] ===== CREATE_CC_RECORDS COMPLETE ====="
+  end
+
+  # Sync CC users: add new ones, remove deleted ones (diff-based)
+  # This method handles notifications automatically via HasTransactionDispatcher
+  def sync_cc_users(new_user_ids)
+    return if new_user_ids.nil?  # nil means no change
+    
+    current_user_id = UserInfo.current_user_id
+    new_user_ids = new_user_ids.map(&:to_i).reject(&:zero?).uniq
+    
+    # Get current CC user IDs
+    current_cc_user_ids = ccs.pluck(:user_id).compact.uniq
+    
+    # Calculate differences
+    to_add = new_user_ids - current_cc_user_ids
+    to_remove = current_cc_user_ids - new_user_ids
+    
+    Rails.logger.info "[CC] ===== SYNC_CC_USERS START ====="
+    Rails.logger.info "[CC] Current CC users: #{current_cc_user_ids.inspect}"
+    Rails.logger.info "[CC] New CC users: #{new_user_ids.inspect}"
+    Rails.logger.info "[CC] To add: #{to_add.inspect}"
+    Rails.logger.info "[CC] To remove: #{to_remove.inspect}"
+    
+    # Remove CCs that are no longer in the list
+    to_remove.each do |user_id|
+      cc_record = ccs.find_by(user_id: user_id)
+      if cc_record
+        Rails.logger.info "[CC] Removing CC for user #{user_id}"
+        
+        # CRITICAL: HasTransactionDispatcher doesn't have after_destroy callback
+        # We must manually add destroy event to EventBuffer BEFORE destroying
+        # Include serialized data since record won't exist when notification runs
+        serialized_data = {
+          id:               cc_record.id,
+          ticket_id:        cc_record.ticket_id,
+          user_id:          cc_record.user_id,
+          permissions:      cc_record.permissions,
+          message:          cc_record.message,
+          created_by_id:    cc_record.created_by_id,
+          updated_by_id:    cc_record.updated_by_id,
+          created_at:       cc_record.created_at,
+          updated_at:       cc_record.updated_at
+        }
+        
+        EventBuffer.add('transaction', {
+          object:     'Ticket::Cc',
+          type:       'delete',
+          object_id:  cc_record.id,
+          user_id:    current_user_id,
+          created_at: Time.zone.now,
+          data:       serialized_data  # Include data for notification to use
+        })
+        
+        # Now destroy the record (notification will use serialized data)
+        cc_record.destroy!
+      end
+    end
+    
+    # Add new CCs
+    to_add.each do |user_id|
+      next if user_id == current_user_id  # Don't CC yourself
+      
+      user = User.find_by(id: user_id)
+      unless user
+        Rails.logger.warn "[CC] User #{user_id} not found - skipping"
+        next
+      end
+      
+      # Check if CC already exists (race condition protection)
+      next if ccs.exists?(user_id: user_id)
+      
+      Rails.logger.info "[CC] Adding CC for user #{user_id} (#{user.login})"
+      
+      # Determine permissions based on user role
+      is_agent = user.permissions?('ticket.agent')
+      permissions = is_agent ? ['full'] : ['read', 'comment']
+      
+      cc = ccs.build(
+        user:           user,
+        permissions:    permissions,
+        created_by_id:  current_user_id,
+        updated_by_id:  current_user_id
+      )
+      
+      cc.save!
+      Rails.logger.info "[CC] CC record created for user #{user_id}"
+      # Create will trigger HasTransactionDispatcher → Transaction::CcNotification (type: 'create')
+    end
+    
+    Rails.logger.info "[CC] ===== SYNC_CC_USERS COMPLETE ====="
+  end
+
+  public :sync_cc_users
 end
 

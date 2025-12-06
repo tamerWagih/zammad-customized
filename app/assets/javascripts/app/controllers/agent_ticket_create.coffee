@@ -791,8 +791,9 @@ class App.TicketCreate extends App.Controller
         if ui.sidebarWidget
           ui.sidebarWidget.commit(ticket_id: @id)
 
-        # access to group
-        if @editable('change')
+        # CRITICAL: Navigate to ticket if user has read OR change permission
+        # Creators need read access even if they can't edit
+        if @editable('read') || @editable('change')
           ui.navigate "#ticket/zoom/#{@id}"
           return
 

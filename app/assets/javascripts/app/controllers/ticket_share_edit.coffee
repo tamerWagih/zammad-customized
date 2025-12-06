@@ -9,20 +9,6 @@ class App.TicketShareEdit extends App.ControllerModal
     'submit form': 'submit'
 
   content: ->
-    expiresAt = ''
-    if @share?.expires_at
-      try
-        dt = new Date(@share.expires_at)
-        expiresAt = dt.toISOString().slice(0, 10)
-      catch
-        if @share.expires_at.match(/^\d{4}-\d{2}-\d{2}/)
-          expiresAt = @share.expires_at.match(/^\d{4}-\d{2}-\d{2}/)[0]
-        else
-          expiresAt = ''
-
-    # Get today's date for min attribute (disable past dates)
-    today = new Date().toISOString().slice(0, 10)
-
     groupName = @share?.group_name || @share?.group?.fullname || @share?.group?.name
 
     """
@@ -40,14 +26,6 @@ class App.TicketShareEdit extends App.ControllerModal
           <textarea name="message" class="form-control" rows="3">#{@share?.message or ''}</textarea>
         </div>
       </div>
-
-      <div class="form-group">
-        <label class="control-label col-sm-3">#{__('Expire on (Optional)')}</label>
-        <div class="col-sm-9">
-          <input type="date" name="expires_at" class="form-control" value="#{expiresAt}" min="#{today}">
-          <small class="help-block">#{__('Access ends at the end of the selected day')}</small>
-        </div>
-      </div>
     </div>
     """
 
@@ -62,12 +40,6 @@ class App.TicketShareEdit extends App.ControllerModal
       return
 
     form_data = @formParam(e.currentTarget)
-
-    if form_data.expires_at
-      try
-        form_data.expires_at = new Date(form_data.expires_at).toISOString().slice(0, 10)
-      catch
-        form_data.expires_at = ''
 
     @ajax(
       id: 'update_share'

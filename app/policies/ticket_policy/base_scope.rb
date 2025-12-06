@@ -22,17 +22,47 @@ class TicketPolicy < ApplicationPolicy
       bind = []
 
       if user.permissions?('ticket.agent')
-        sql.push('group_id IN (?)')
-        bind.push(user.group_ids_access(self.class::ACCESS_TYPE))
+        # Include tickets from groups user has access to
+        group_ids = user.group_ids_access(self.class::ACCESS_TYPE)
+        if group_ids.present?
+          sql.push('group_id IN (?)')
+          bind.push(group_ids)
+        end
 
+        # Include shared tickets
         shared_ids = shared_ticket_ids(self.class::ACCESS_TYPE)
         if shared_ids.present?
           sql.push('tickets.id IN (?)')
           bind.push(shared_ids)
         end
+
+        # Include approval tickets (approvers can see tickets they need to approve)
+        approval_ids = approval_ticket_ids
+        if approval_ids.present?
+          sql.push('tickets.id IN (?)')
+          bind.push(approval_ids)
+        end
+
+        # Include CC tickets (CC'd users can see tickets they are CC'd on)
+        cc_ids = cc_ticket_ids
+        if cc_ids.present?
+          sql.push('tickets.id IN (?)')
+          bind.push(cc_ids)
+        end
+
+        # Include tickets created by user (for creator_access? to work)
+        sql.push('tickets.created_by_id = ?')
+        bind.push(user.id)
       end
 
       if user.permissions?('ticket.customer')
+        # Include CC tickets for customers too (CC'd customers can see tickets)
+        cc_ids = cc_ticket_ids
+        if cc_ids.present?
+          sql.push('tickets.id IN (?)')
+          bind.push(cc_ids)
+        end
+
         sql.push('tickets.customer_id = ?')
         bind.push(user.id)
 
@@ -64,12 +94,34 @@ class TicketPolicy < ApplicationPolicy
     def shared_ticket_ids(access)
       return [] unless user.permissions?('ticket.agent')
 
-      group_ids = Array(user.group_ids_access(access)).compact
+      # Get ALL groups the user belongs to (any access level)
+      # Don't filter by access - if user is in a group that's shared with, they should see the ticket
+      # This matches approval behavior where approvers see tickets regardless of group access
+      group_ids = user.groups.pluck(:id)
       return [] if group_ids.blank?
 
       Ticket::Share.active_current.where(group_id: group_ids).pluck(:ticket_id).uniq
     rescue StandardError => e
       Rails.logger.warn("Failed to resolve shared ticket ids for user #{user.id}: #{e.message}")
+      []
+    end
+
+    def approval_ticket_ids
+      return [] unless user.permissions?('ticket.agent')
+
+      Ticket::Approval.where(approver_id: user.id).pluck(:ticket_id).uniq
+    rescue StandardError => e
+      Rails.logger.warn("Failed to resolve approval ticket ids for user #{user.id}: #{e.message}")
+      []
+    end
+
+    def cc_ticket_ids
+      return [] unless user
+
+      # Include tickets where user is CC'd (both agents and customers)
+      Ticket::Cc.where(user_id: user.id).pluck(:ticket_id).uniq
+    rescue StandardError => e
+      Rails.logger.warn("Failed to resolve CC ticket ids for user #{user.id}: #{e.message}")
       []
     end
   end

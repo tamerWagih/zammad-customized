@@ -49,15 +49,11 @@ module Ticket::Share::TriggersSubscriptions
         message: message,
         status: status,
         created_at: created_at,
-        expires_at: expires_at,
         updated_at: updated_at
       }
     }
-    
-    Rails.logger.info "[SHARE_WEBSOCKET] Broadcasting TicketShare:#{action} for share ##{id} (ticket ##{ticket_id})"
-    Rails.logger.info "[SHARE_WEBSOCKET] Event data: #{event_data.inspect}"
+
     Sessions.broadcast("TicketShare:#{action}", event_data)
-    Rails.logger.info "[SHARE_WEBSOCKET] Broadcast completed for TicketShare:#{action}"
   end
 end
 

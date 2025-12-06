@@ -421,7 +421,7 @@ class App.ControllerTable extends App.Controller
               callback          = callback.callback
 
             if cursorMap[event]
-              table.find('tbody > tr').each (i, elem) ->
+              table.find('tbody > tr:not(.js-groupHeader)').each (i, elem) ->
                 dom = $(elem)
 
                 if availabilityCheck
@@ -430,7 +430,7 @@ class App.ControllerTable extends App.Controller
                   return if !availabilityCheck(id)
 
                 dom.css( 'cursor', cursorMap[event] )
-            table.on(event, 'tbody > tr',
+            table.on(event, 'tbody > tr:not(.js-groupHeader)',
               (e) ->
                 id = $(e.target).parents('tr').data('id')
 
@@ -517,9 +517,41 @@ class App.ControllerTable extends App.Controller
           return helper
         update: @dndCallback
       table.find('tbody').sortable(dndOptions)
-
+    
     @el.html(container)
     @setBulkSelected(bulkIds)
+    
+    # Bind group collapse events AFTER DOM insertion with direct binding
+    if @groupBy
+      # Direct binding approach - bind to each header individually
+      @el.find('tr.js-groupHeader').each (index, element) =>
+        $header = $(element)
+        groupName = $header.data('group-name')
+        
+        $header.off('click.groupToggle').on 'click.groupToggle', (e) =>
+          # Don't toggle if clicking on checkbox
+          return if $(e.target).is('input[type="checkbox"]')
+          
+          # Toggle collapsed state
+          isCollapsed = $header.hasClass('is-collapsed')
+          $header.toggleClass('is-collapsed')
+          
+          # Rotate the icon using inline style (works immediately without asset recompilation)
+          $icon = $header.find('.table-group-icon')
+          if isCollapsed
+            $icon.css('transform', 'rotate(0deg)')  # Expand - arrow down
+          else
+            $icon.css('transform', 'rotate(-90deg)')  # Collapse - arrow right
+          
+          # Find all rows belonging to this group and toggle visibility
+          $rows = $header.nextUntil('tr.js-groupHeader')
+          $rows.toggle()
+          
+          # Save collapsed state to localStorage
+          @saveGroupCollapseState(groupName, !isCollapsed)
+      
+      # Apply saved collapse states
+      @applyGroupCollapseStates()
 
   renderTableContainer: =>
     $(App.view('generic/table')(
@@ -806,6 +838,37 @@ class App.ControllerTable extends App.Controller
         @renderTableFull()
       App.QueueManager.add('tableRender', render)
       App.QueueManager.run('tableRender')
+    
+  saveGroupCollapseState: (groupName, isCollapsed) =>
+    return if !@tableId
+    storageKey = "table_group_collapsed_#{@tableId}"
+    collapsedGroups = App.LocalStorage.get(storageKey) || {}
+    if isCollapsed
+      collapsedGroups[groupName] = true
+    else
+      delete collapsedGroups[groupName]
+    App.LocalStorage.set(storageKey, collapsedGroups)
+  
+  loadGroupCollapseStates: =>
+    return {} if !@tableId
+    storageKey = "table_group_collapsed_#{@tableId}"
+    App.LocalStorage.get(storageKey) || {}
+  
+  applyGroupCollapseStates: =>
+    collapsedGroups = @loadGroupCollapseStates()
+    return if _.isEmpty(collapsedGroups)
+    
+    # Apply collapsed state to each group
+    for groupName, isCollapsed of collapsedGroups
+      continue if !isCollapsed
+      $header = @el.find("tr.js-groupHeader[data-group-name='#{groupName}']")
+      continue if $header.length is 0
+      
+      # Add collapsed class to header
+      $header.addClass('is-collapsed')
+      
+      # Hide rows in this group
+      $header.nextUntil('.js-groupHeader').hide()
 
   sortList: =>
     return if _.isEmpty(@objects)

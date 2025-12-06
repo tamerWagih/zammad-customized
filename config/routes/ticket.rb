@@ -23,6 +23,7 @@ Zammad::Application.routes.draw do
 
   # tickets
   match api_path + '/tickets/search',                                to: 'tickets#search',            via: %i[get post]
+  match api_path + '/tickets/cc_users',                              to: 'tickets/cc_users#index',    via: :get
   match api_path + '/tickets',                                       to: 'tickets#index',             via: :get
   match api_path + '/tickets/:id',                                   to: 'tickets#show',              via: :get
   match api_path + '/tickets',                                       to: 'tickets#create',            via: :post
@@ -84,4 +85,10 @@ Zammad::Application.routes.draw do
   match api_path + '/tickets/:ticket_id/shares/:id/revoke',                   to: 'ticket_shares#revoke',                                     via: :post
   match api_path + '/tickets/:ticket_id/shares/:id',                          to: 'ticket_shares#update',                                     via: :patch
   match api_path + '/tickets/:ticket_id/shares/:id',                          to: 'ticket_shares#destroy',                                    via: :delete
+
+  # ticket CCs
+  match api_path + '/tickets/:ticket_id/ccs',                                 to: 'ticket_ccs#index',                                         via: :get
+  match api_path + '/tickets/:ticket_id/ccs',                                 to: 'ticket_ccs#create',                                        via: :post
+  match api_path + '/tickets/:ticket_id/ccs/:id',                             to: 'ticket_ccs#update',                                        via: :patch
+  match api_path + '/tickets/:ticket_id/ccs/:id',                             to: 'ticket_ccs#destroy',                                       via: :delete
 end

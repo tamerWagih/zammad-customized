@@ -59,12 +59,12 @@ class App.TicketOverviewTable extends App.Controller
       ticketListShow.push App.Ticket.fullLocal(ticket.id)
     
     # For custom filters, use the overview object directly
+    # CRITICAL: Always ensure we have a valid overview object
     if overview && overview.is_custom
       @overview = overview
-    else if overview
+    else if overview && overview.id
       @overview = App.Overview.find(overview.id)
     else
-      # Handle case where overview is undefined
       return
 
     @removePopovers()
@@ -103,10 +103,13 @@ class App.TicketOverviewTable extends App.Controller
 
     # set page title
     # For custom filters, create a virtual overview object since they don't exist in the model store
+    # CRITICAL: Always ensure we have a valid overview object
     if overview && overview.is_custom
       @overview = overview
-    else
+    else if overview && overview.id
       @overview = App.Overview.find(overview.id)
+    else
+      return
 
     # render init page
     checkbox = false
@@ -162,12 +165,16 @@ class App.TicketOverviewTable extends App.Controller
         ticket = App.Ticket.findNative(id)
         return if !ticket
 
+        # For custom filters, use the link (UUID) as overview_id
+        # For standard overviews, use the id
+        overview_id = if @overview.is_custom then @overview.link else @overview.id
+
         App.TaskManager.execute(
           key:        "Ticket-#{ticket.id}"
           controller: 'TicketZoom'
           params:
             ticket_id:   ticket.id
-            overview_id: @overview.id
+            overview_id: overview_id
           show:       true
         )
         @navigate ticket.uiUrl()

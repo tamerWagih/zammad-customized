@@ -47,28 +47,14 @@ class TicketsController < ApplicationController
     authorize!(ticket)
 
     auto_assign_ticket(ticket)
-    
-    # Revoke expired shares before rendering (with error handling)
-    begin
-      ticket.revoke_expired_shares! if ticket.respond_to?(:revoke_expired_shares!)
-    rescue StandardError => e
-      Rails.logger.warn "Failed to revoke expired shares for ticket #{ticket.id}: #{e.message}"
-    end
 
     if response_expand?
       result = ticket.attributes_with_association_names
       begin
         result[:share_permissions] = ticket.share_permissions_for(current_user) if ticket.respond_to?(:share_permissions_for)
-        
-        # Add share expiry date if user has a share
-        if ticket.respond_to?(:shares) && current_user
-          user_share = current_user_share(ticket)
-          result[:share_expires_at] = user_share&.expires_at
-        end
       rescue StandardError => e
         Rails.logger.warn "Failed to get share permissions for ticket #{ticket.id}: #{e.message}"
         result[:share_permissions] = { read: false, comment: false, edit: false }
-        result[:share_expires_at] = nil
       end
       render json: result, status: :ok
       return
@@ -85,17 +71,9 @@ class TicketsController < ApplicationController
       return
     end
 
-    # Add share_permissions and share_expires_at to the ticket JSON (with error handling)
+    # Add share_permissions to the ticket JSON (with error handling)
     ticket_json = ticket.as_json
     begin
-      # Check all shares for this ticket
-      if ticket.respond_to?(:shares)
-        if current_user
-          user_share = current_user_share(ticket)
-          ticket_json[:share_expires_at] = user_share&.expires_at
-        end
-      end
-      
       if ticket.respond_to?(:share_permissions_for)
         share_perms = ticket.share_permissions_for(current_user)
         ticket_json[:share_permissions] = share_perms
@@ -107,7 +85,6 @@ class TicketsController < ApplicationController
       Rails.logger.warn "Failed to get share permissions for ticket #{ticket.id}: #{e.message}"
       Rails.logger.warn "Error backtrace: #{e.backtrace.join('\n')}"
       ticket_json[:share_permissions] = { read: false, comment: false, edit: false }
-      ticket_json[:share_expires_at] = nil
     end
     render json: ticket_json
   end
@@ -201,9 +178,32 @@ class TicketsController < ApplicationController
         clean_params[:customer_id] = local_customer.id
       end
 
+    # Extract cc_user_ids before param_cleanup strips it out (handle both symbol and string keys)
+    cc_user_ids_raw = clean_params.delete(:cc_user_ids) || clean_params.delete('cc_user_ids')
+      # Fallback if cc_user_ids sent nested under :ticket (some clients)
+      if cc_user_ids_raw.nil? && params[:ticket].is_a?(Hash)
+        cc_user_ids_raw = params[:ticket][:cc_user_ids] || params[:ticket]['cc_user_ids']
+      end
+
+    Rails.logger.info("[CC][create] cc_user_ids_raw=#{cc_user_ids_raw.inspect} params[:ticket]=#{params[:ticket].inspect}")
+
+      # Normalize cc_user_ids to array
+      cc_user_ids = if cc_user_ids_raw.is_a?(Array)
+                      cc_user_ids_raw.map(&:to_i).reject(&:zero?)
+                    elsif cc_user_ids_raw.is_a?(String)
+                      cc_user_ids_raw.split(',').map(&:strip).map(&:to_i).reject(&:zero?)
+                    elsif cc_user_ids_raw.is_a?(Integer)
+                      [cc_user_ids_raw]
+                    else
+                      []
+                    end
+
       clean_params = Ticket.param_cleanup(clean_params, true)
       clean_params[:screen] = 'create_middle'
       ticket = Ticket.new(clean_params)
+
+      # Assign cc_user_ids to ticket (will be processed in after_create callback)
+      ticket.cc_user_ids = cc_user_ids if cc_user_ids.present?
       authorize!(ticket, :create?)
 
       # create ticket
@@ -297,6 +297,16 @@ class TicketsController < ApplicationController
     params.delete(:checklist_id)
 
     clean_params = Ticket.association_name_to_id_convert(params)
+
+    # Extract cc_user_ids BEFORE param_cleanup strips virtual attributes
+    cc_user_ids_raw = clean_params.delete(:cc_user_ids) || clean_params.delete('cc_user_ids')
+    # Fallback if cc_user_ids sent nested under :ticket (some clients)
+    if cc_user_ids_raw.nil? && params[:ticket].is_a?(Hash)
+      cc_user_ids_raw = params[:ticket][:cc_user_ids] || params[:ticket]['cc_user_ids']
+    end
+
+    Rails.logger.info("[CC][update] cc_user_ids_raw=#{cc_user_ids_raw.inspect} params[:ticket]=#{params[:ticket].inspect}")
+
     clean_params = Ticket.param_cleanup(clean_params, true)
 
     # only apply preferences changes (keep not updated keys/values)
@@ -316,8 +326,25 @@ class TicketsController < ApplicationController
       end
     end
 
+    # Normalize cc_user_ids to array
+    new_cc_user_ids = if cc_user_ids_raw.is_a?(Array)
+                        cc_user_ids_raw.map(&:to_i).reject(&:zero?)
+                      elsif cc_user_ids_raw.is_a?(String)
+                        cc_user_ids_raw.split(',').map(&:strip).map(&:to_i).reject(&:zero?)
+                      elsif cc_user_ids_raw.is_a?(Integer)
+                        [cc_user_ids_raw]
+                      else
+                        nil  # nil means no change, [] means remove all
+                      end
+
     ticket.with_lock do
       ticket.update!(clean_params)
+      
+      # Handle CC updates with diff logic (only add/remove changed ones)
+      if !cc_user_ids_raw.nil?  # Only process if cc_user_ids was provided
+        ticket.sync_cc_users(new_cc_user_ids || [])
+      end
+      
       if params[:article].present?
         if (shared_draft_id = params[:article][:shared_draft_id])
           shared_draft = Ticket::SharedDraftZoom.find_by id: shared_draft_id

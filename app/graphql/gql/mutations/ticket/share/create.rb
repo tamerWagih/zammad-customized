@@ -18,8 +18,7 @@ module Gql
               .execute(
                 ticket:     ticket,
                 group_id:   input[:group_id],
-                message:    input[:message],
-                expires_at: input[:expires_at]
+                message:    input[:message]
               )
 
             {

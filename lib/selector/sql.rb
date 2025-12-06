@@ -101,7 +101,23 @@ class Selector::Sql < Selector::Base
     tables                          = []
     bind_params                     = []
     like                            = Rails.application.config.db_like
-    attribute_table, attribute_name = block_condition[:name].split('.')
+    
+    # Parse attribute name (handle both 'ticket.ccd_to_me' and 'ccd_to_me')
+    attribute_name_full = block_condition[:name].to_s
+    if attribute_name_full.include?('.')
+      attribute_table, attribute_name = attribute_name_full.split('.', 2)
+    else
+      # If no table prefix, assume it's a ticket attribute
+      attribute_table = 'ticket'
+      attribute_name = attribute_name_full
+    end
+    
+    Rails.logger.info "SQL: Processing condition - name=#{attribute_name_full}, table=#{attribute_table}, attr=#{attribute_name}, operator=#{block_condition[:operator]}, value=#{block_condition[:value].inspect}"
+    
+    # Log if it's a custom filter attribute (now also available in default overviews)
+    if ['shared_with_me', 'not_shared_with_me', 'is_approved', 'is_rejected', 'requested_for_approval', 'not_requested_for_approval', 'approval_status', 'ccd_to_me', 'not_ccd_to_me'].include?(attribute_name)
+      Rails.logger.info "SQL: Processing custom filter attribute - table=#{attribute_table}, attr=#{attribute_name}, value=#{block_condition[:value].inspect}, current_user=#{options[:current_user]&.id}"
+    end
 
     # get tables to join
     return if !attribute_name
@@ -271,31 +287,89 @@ class Selector::Sql < Selector::Base
           bind_params.push block_condition[:value]
         end
       end
-    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'shared_with_me'
-      # Handle shared with me selector (ONLY in custom filter context)
-      if block_condition[:operator] == 'is'
-        query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
-        bind_params.push current_user.group_ids_access('read')
-      else
-        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
-        bind_params.push current_user.group_ids_access('read')
-      end
-    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'approval_status'
+    elsif attribute_table == 'ticket' && attribute_name == 'shared_with_me'
+      # SIMPLIFIED: Show only tickets shared with me
+      # If filter is present in condition, apply it (even if value is empty/default)
+      raise "shared_with_me requires current_user" unless current_user
+      
+      user_groups = current_user.group_ids_access('read') rescue []
+      user_groups = [0] if user_groups.blank?  # Prevent SQL error with empty array
+      
+      Rails.logger.info "SQL: shared_with_me user_groups=#{user_groups.inspect}, user_id=#{current_user.id}"
+      
+      # ticket_shares only has group_id (not individual user sharing)
+      query << "tickets.id IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
+      bind_params.push user_groups
+    
+    elsif attribute_table == 'ticket' && attribute_name == 'not_shared_with_me'
+      # SIMPLIFIED: Show only tickets NOT shared with me
+      # If filter is present in condition, apply it (even if value is empty/default)
+      raise "not_shared_with_me requires current_user" unless current_user
+      
+      user_groups = current_user.group_ids_access('read') rescue []
+      user_groups = [0] if user_groups.blank?
+      
+      # ticket_shares only has group_id (not individual user sharing)
+      query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_shares WHERE status = 'active' AND group_id IN (?))"
+      bind_params.push user_groups
+    elsif attribute_table == 'ticket' && attribute_name == 'approval_status'
       # Handle approval status selector (ONLY in custom filter context)
+      # Shows ALL tickets with specific approval status (any approver, not just me)
+      raise "approval_status requires current_user" unless current_user
+      
       if block_condition[:operator] == 'is'
-        query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = ?)"
+        # "is pending" - Show all tickets with pending approval status
+        query << "tickets.id IN (SELECT DISTINCT ticket_id FROM ticket_approvals WHERE status = ?)"
         bind_params.push block_condition[:value]
       else
-        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = ?)"
+        # "is not pending" - Show all tickets that don't have pending approval status
+        query << "tickets.id NOT IN (SELECT DISTINCT ticket_id FROM ticket_approvals WHERE status = ?)"
         bind_params.push block_condition[:value]
       end
-    elsif options[:custom_filter_context] && attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
-      # Handle requested for approval selector (ONLY in custom filter context)
-      if block_condition[:operator] == 'is'
-        query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending')"
-      else
-        query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending')"
-      end
+    elsif attribute_table == 'ticket' && attribute_name == 'requested_for_approval'
+      # SIMPLIFIED: Show only tickets where approval is requested FROM ME (I'm the approver)
+      # If filter is present in condition, apply it (even if value is empty/default)
+      raise "requested_for_approval requires current_user" unless current_user
+      
+      Rails.logger.info "SQL: requested_for_approval user_id=#{current_user.id}"
+      
+      query << "tickets.id IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
+      bind_params.push current_user.id
+    
+    elsif attribute_table == 'ticket' && attribute_name == 'not_requested_for_approval'
+      # SIMPLIFIED: Show only tickets where I'm NOT the approver
+      # If filter is present in condition, apply it (even if value is empty/default)
+      raise "not_requested_for_approval requires current_user" unless current_user
+      
+      query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_approvals WHERE status = 'pending' AND approver_id = ?)"
+      bind_params.push current_user.id
+    elsif attribute_table == 'ticket' && attribute_name == 'is_approved'
+      # SIMPLIFIED: Show only tickets with 'approved' tag
+      # If filter is present in condition, apply it (even if value is empty/default)
+      Rails.logger.info "SQL: is_approved filter added"
+      query << "tickets.id IN (SELECT tags.o_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'approved' AND tags.o_type = 'Ticket')"
+    elsif attribute_table == 'ticket' && attribute_name == 'is_rejected'
+      # SIMPLIFIED: Show only tickets with 'rejected' tag
+      # If filter is present in condition, apply it (even if value is empty/default)
+      Rails.logger.info "SQL: is_rejected filter added"
+      query << "tickets.id IN (SELECT tags.o_id FROM tags INNER JOIN tag_items ON tags.tag_item_id = tag_items.id WHERE tag_items.name = 'rejected' AND tags.o_type = 'Ticket')"
+    elsif attribute_table == 'ticket' && attribute_name == 'ccd_to_me'
+      # Show only tickets where I am CC'd
+      # If filter is present in condition, apply it (even if value is empty/default)
+      raise "ccd_to_me requires current_user" unless current_user
+      
+      Rails.logger.info "SQL: ccd_to_me user_id=#{current_user.id}"
+      
+      query << "tickets.id IN (SELECT ticket_id FROM ticket_ccs WHERE user_id = ?)"
+      bind_params.push current_user.id
+    
+    elsif attribute_table == 'ticket' && attribute_name == 'not_ccd_to_me'
+      # Show only tickets where I am NOT CC'd
+      # If filter is present in condition, apply it (even if value is empty/default)
+      raise "not_ccd_to_me requires current_user" unless current_user
+      
+      query << "tickets.id NOT IN (SELECT ticket_id FROM ticket_ccs WHERE user_id = ?)"
+      bind_params.push current_user.id
     elsif attribute_table == 'user' && attribute_name == 'role_ids'
       query << if block_condition[:operator] == 'is'
                  "users.id IN (

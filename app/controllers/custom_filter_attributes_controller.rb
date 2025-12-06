@@ -7,15 +7,33 @@ class CustomFilterAttributesController < ApplicationController
 
   # GET /api/v1/custom_filter_attributes
   def index
-    # Return safe attributes based on user role
-    attributes = build_safe_attributes_for_user
+    # Return safe attributes based on user role, grouped by model
+    attributes = build_safe_attributes_for_user_grouped
 
     render json: attributes
   end
 
   private
 
-  def build_safe_attributes_for_user
+  def build_safe_attributes_for_user_grouped
+    # Return attributes grouped by model (Ticket, User, Organization, TicketArticle)
+    # This matches the structure expected by selectorAttributesByObject()
+    
+    if !current_user.permissions?('ticket.agent') && !current_user.permissions?('admin.overview')
+      return {
+        'Ticket' => build_customer_attributes
+      }
+    end
+    
+    {
+      'Ticket' => build_ticket_attributes,
+      'User' => build_user_attributes,
+      'Organization' => build_organization_attributes,
+      'TicketArticle' => build_article_attributes
+    }
+  end
+
+  def build_ticket_attributes
     # Provide ALL ticket attributes for agents and admins (same functionality)
     # The only difference is ticket visibility - agents see only tickets they have permission to access
     # This is enforced by Ticket.selector2sql(current_user: ...) in the backend
@@ -60,21 +78,84 @@ class CustomFilterAttributesController < ApplicationController
       { name: 'tags', display: 'Tags', tag: 'tag', searchable: true },
       { name: 'mention_user_ids', display: 'Subscribe', tag: 'select', relation: 'User', searchable: true },
     ]
+    
+    # Add ObjectManager custom attributes (like category, subcategory, etc.)
+    object_manager_attributes = build_object_manager_attributes('Ticket')
+    
+    # Merge base attributes with ObjectManager attributes
+    all_base_names = base_attributes.map { |a| a[:name] }
+    object_manager_attributes.each do |attr|
+      # Only add if not already in base_attributes
+      next if all_base_names.include?(attr[:name])
+      base_attributes.push(attr)
+    end
 
     # Add custom filter specific attributes (shared with me, approval status, etc.)
+    # SIMPLIFIED: Each filter has a single "Yes" option (presence check)
+    # Select the filter to include it, or don't select it to exclude it
+    # No "is/is not" operators, no "Yes/No" values - just simple presence!
     custom_attributes = [
+      # Share Filters
       { 
         name: 'shared_with_me', 
         display: 'Shared with Me', 
-        tag: 'select', 
-        type: 'boolean', 
-        searchable: true, 
-        operator: ['is', 'is not'], 
-        options: [
-          { value: true, name: 'Yes' },
-          { value: false, name: 'No' }
-        ] 
+        tag: 'select',
+        searchable: true,
+        operator: ['is'],  # Only "is" operator
+        options: [{ value: true, name: 'Yes' }],  # Only "Yes" option
+        default: true  # Auto-select "Yes" when filter is added
       },
+      { 
+        name: 'not_shared_with_me', 
+        display: 'Not Shared with Me', 
+        tag: 'select',
+        searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }],
+        default: true
+      },
+      
+      # Approval Tag Filters (checking for approved/rejected tags)
+      { 
+        name: 'is_approved', 
+        display: 'Is Approved', 
+        tag: 'select',
+        searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }],
+        default: true
+      },
+      { 
+        name: 'is_rejected', 
+        display: 'Is Rejected', 
+        tag: 'select',
+        searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }],
+        default: true
+      },
+      
+      # Approval Request Filters
+      { 
+        name: 'requested_for_approval', 
+        display: 'Requested for Approval (from me)', 
+        tag: 'select',
+        searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }],
+        default: true
+      },
+      { 
+        name: 'not_requested_for_approval', 
+        display: 'Not Requested for Approval (from me)', 
+        tag: 'select',
+        searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }],
+        default: true
+      },
+      
+      # Approval Status (keep as select since it has 3 values)
       { 
         name: 'approval_status', 
         display: 'Approval Status', 
@@ -88,21 +169,82 @@ class CustomFilterAttributesController < ApplicationController
           { value: 'rejected', name: 'Rejected' }
         ] 
       },
+      
+      # CC Filters
       { 
-        name: 'requested_for_approval', 
-        display: 'Requested for Approval', 
-        tag: 'select', 
-        type: 'boolean', 
-        searchable: true, 
-        operator: ['is', 'is not'], 
-        options: [
-          { value: true, name: 'Yes' },
-          { value: false, name: 'No' }
-        ] 
+        name: 'ccd_to_me', 
+        display: "CC'd to Me", 
+        tag: 'select',
+        searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }],
+        default: true
+      },
+      { 
+        name: 'not_ccd_to_me', 
+        display: "Not CC'd to Me", 
+        tag: 'select',
+        searchable: true,
+        operator: ['is'],
+        options: [{ value: true, name: 'Yes' }],
+        default: true
       },
     ]
 
     base_attributes + custom_attributes
+  end
+
+  def build_user_attributes
+    # Customer/User attributes for filtering
+    [
+      { name: 'login', display: 'Login', tag: 'input', type: 'text', searchable: true },
+      { name: 'firstname', display: 'First name', tag: 'input', type: 'text', searchable: true },
+      { name: 'lastname', display: 'Last name', tag: 'input', type: 'text', searchable: true },
+      { name: 'email', display: 'Email', tag: 'input', type: 'email', searchable: true },
+      { name: 'organization_id', display: 'Organization', tag: 'select', relation: 'Organization', searchable: true },
+      { name: 'phone', display: 'Phone', tag: 'input', type: 'tel', searchable: true },
+      { name: 'mobile', display: 'Mobile', tag: 'input', type: 'tel', searchable: true },
+      { name: 'fax', display: 'Fax', tag: 'input', type: 'tel', searchable: true },
+      { name: 'web', display: 'Web', tag: 'input', type: 'url', searchable: true },
+      { name: 'street', display: 'Street', tag: 'input', type: 'text', searchable: true },
+      { name: 'zip', display: 'Zip', tag: 'input', type: 'text', searchable: true },
+      { name: 'city', display: 'City', tag: 'input', type: 'text', searchable: true },
+      { name: 'country', display: 'Country', tag: 'input', type: 'text', searchable: true },
+      { name: 'department', display: 'Department', tag: 'input', type: 'text', searchable: true },
+      { name: 'note', display: 'Note', tag: 'textarea', searchable: true },
+      { name: 'role_ids', display: 'Role', tag: 'select', relation: 'Role', searchable: true },
+      { name: 'active', display: 'Active', tag: 'boolean', searchable: true },
+      { name: 'created_at', display: 'Created at', tag: 'datetime', searchable: true },
+      { name: 'updated_at', display: 'Updated at', tag: 'datetime', searchable: true },
+    ]
+  end
+
+  def build_organization_attributes
+    # Organization attributes for filtering
+    [
+      { name: 'name', display: 'Name', tag: 'input', type: 'text', searchable: true },
+      { name: 'shared', display: 'Shared organization', tag: 'boolean', searchable: true },
+      { name: 'vip', display: 'VIP', tag: 'boolean', searchable: true },
+      { name: 'note', display: 'Note', tag: 'textarea', searchable: true },
+      { name: 'active', display: 'Active', tag: 'boolean', searchable: true },
+      { name: 'created_at', display: 'Created at', tag: 'datetime', searchable: true },
+      { name: 'updated_at', display: 'Updated at', tag: 'datetime', searchable: true },
+    ]
+  end
+
+  def build_article_attributes
+    # Article attributes for filtering
+    [
+      { name: 'from', display: 'From', tag: 'input', type: 'text', searchable: true },
+      { name: 'to', display: 'To', tag: 'input', type: 'text', searchable: true },
+      { name: 'cc', display: 'CC', tag: 'input', type: 'text', searchable: true },
+      { name: 'subject', display: 'Subject', tag: 'input', type: 'text', searchable: true },
+      { name: 'body', display: 'Text', tag: 'textarea', searchable: true },
+      { name: 'type_id', display: 'Type', tag: 'select', relation: 'TicketArticleType', searchable: true },
+      { name: 'sender_id', display: 'Sender', tag: 'select', relation: 'TicketArticleSender', searchable: true },
+      { name: 'internal', display: 'Visibility', tag: 'radio', searchable: true },
+      { name: 'created_at', display: 'Created at', tag: 'datetime', searchable: true },
+    ]
   end
 
   def build_customer_attributes
@@ -115,6 +257,41 @@ class CustomFilterAttributesController < ApplicationController
       { name: 'created_at', display: 'Created at', tag: 'datetime', searchable: true },
       { name: 'updated_at', display: 'Updated at', tag: 'datetime', searchable: true },
     ]
+  end
+
+  def build_object_manager_attributes(model_name)
+    # Get ObjectManager custom attributes for the specified model
+    # This includes custom fields like category, subcategory, etc.
+    object = ObjectManager::Object.new(model_name)
+    attributes = object.attributes(current_user, nil, data_only: true, skip_permission: false)
+    
+    # Convert to format expected by frontend
+    attributes.map do |attr|
+      result = {
+        name: attr[:name],
+        display: attr[:display],
+        tag: attr[:tag],
+        searchable: true
+      }
+      
+      # Add additional properties based on tag type
+      result[:type] = attr[:type] if attr[:type]
+      result[:relation] = attr[:relation] if attr[:relation]
+      result[:multiple] = attr[:multiple] if attr.key?(:multiple)
+      result[:null] = attr[:null] if attr.key?(:null)
+      result[:translate] = attr[:translate] if attr.key?(:translate)
+      result[:options] = attr[:options] if attr[:options]
+      result[:default] = attr[:default] if attr.key?(:default)
+      result[:nulloption] = attr[:nulloption] if attr.key?(:nulloption)
+      result[:relation_condition] = attr[:relation_condition] if attr[:relation_condition]
+      result[:filter] = attr[:filter] if attr[:filter]
+      result[:operator] = attr[:operator] if attr[:operator]
+      
+      result
+    end
+  rescue => e
+    Rails.logger.error "Error building ObjectManager attributes for #{model_name}: #{e.message}"
+    []
   end
 end
 

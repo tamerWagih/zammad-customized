@@ -1,7 +1,7 @@
 # Copyright (C) 2012-2025 Zammad Foundation, https://zammad-foundation.org/
 
 class App.TicketShare extends App.Model
-  @configure 'TicketShare', 'id', 'ticket_id', 'group_id', 'group_name', 'group', 'shared_by_id', 'shared_by_name', 'permissions', 'message', 'status', 'created_at', 'updated_at', 'expires_at'
+  @configure 'TicketShare', 'id', 'ticket_id', 'group_id', 'group_name', 'group', 'shared_by_id', 'shared_by_name', 'permissions', 'message', 'status', 'created_at', 'updated_at'
   @extend Spine.Model.Ajax
   @url: @apiPath + '/tickets'
   @configure_attributes = [
@@ -15,12 +15,11 @@ class App.TicketShare extends App.Model
     { name: 'message',           display: __('Message'),          tag: 'textarea', rows: 4, limit: 500, null: true },
     { name: 'status',            display: __('Status'),           tag: 'select',   multiple: false, limit: 100, null: false, options: { 'active': __('Active'), 'revoked': __('Revoked') }, default: 'active' },
     { name: 'created_at',        display: __('Created'),          tag: 'datetime', null: true, readonly: 1 },
-    { name: 'updated_at',        display: __('Updated'),          tag: 'datetime', null: true, readonly: 1 },
-    { name: 'expires_at',        display: __('Expires'),          tag: 'datetime', null: true }
+    { name: 'updated_at',        display: __('Updated'),          tag: 'datetime', null: true, readonly: 1 }
   ]
   @configure_delete = true
   @configure_clone = true
-  @configure_overview = ['group_name', 'shared_by_name', 'status', 'created_at', 'expires_at']
+  @configure_overview = ['group_name', 'shared_by_name', 'status', 'created_at']
 
   @urlFor: (action, id) ->
     if action is 'create'
@@ -42,12 +41,8 @@ class App.TicketShare extends App.Model
   isActive: ->
     @status is 'active'
 
-  isExpired: ->
-    return false unless @expires_at
-    new Date(@expires_at) < new Date()
-
   canEdit: ->
-    @isActive() and not @isExpired()
+    @isActive()
 
   permissionsText: ->
     if @permissions and @permissions.length > 0

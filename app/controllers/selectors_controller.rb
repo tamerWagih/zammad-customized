@@ -13,7 +13,14 @@ class SelectorsController < ApplicationController
 
     raise Exceptions::UnprocessableEntity, __('Invalid condition') if condition.blank?
 
-    object_count, objects = object_klass.selectors(condition, limit: 6, execution_time: true)
+    # Build options hash - pass current_user for ticket selectors to support
+    # user-specific filters (CC'd to Me, Shared with Me, Approval filters, etc.)
+    options = { limit: 6, execution_time: true }
+    if object_klass == Ticket
+      options[:current_user] = current_user
+    end
+
+    object_count, objects = object_klass.selectors(condition, options)
 
     assets     = {}
     object_ids = []

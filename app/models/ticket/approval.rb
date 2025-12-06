@@ -7,24 +7,6 @@ class Ticket::Approval < ApplicationModel
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Approval::TriggersNotifications
-  
-  # Debug: Add logging for online notifications
-  after_create :log_approval_created
-  after_update :log_approval_updated
-  
-  private
-  
-  def log_approval_created
-    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Approval ##{id} created - should trigger online notification"
-    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Import mode: #{Setting.get('import_mode')}"
-    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Client notification events ignored: #{client_notification_events_ignored}"
-  end
-  
-  def log_approval_updated
-    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Approval ##{id} updated - should trigger online notification"
-    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Import mode: #{Setting.get('import_mode')}"
-    Rails.logger.info "[APPROVAL_ONLINE_NOTIFICATION] Client notification events ignored: #{client_notification_events_ignored}"
-  end
 
   PRIORITIES = %w[low normal high urgent].freeze
   STATUSES   = %w[pending approved rejected].freeze
@@ -45,6 +27,7 @@ class Ticket::Approval < ApplicationModel
   scope :approved, -> { where(status: 'approved') }
   scope :rejected, -> { where(status: 'rejected') }
 
+  # Public methods for approve/reject actions
   def approve!
     # Use update! instead of update_columns to trigger callbacks and HasTransactionDispatcher
     # This ensures only ONE transaction event is created, not two
@@ -57,6 +40,7 @@ class Ticket::Approval < ApplicationModel
     update!(status: 'rejected')
   end
 
+  # Status check methods
   def pending?
     status == 'pending'
   end
@@ -69,6 +53,7 @@ class Ticket::Approval < ApplicationModel
     status == 'rejected'
   end
 
+  # Name accessor methods
   def approver_name
     approver&.fullname
   end
@@ -101,13 +86,11 @@ class Ticket::Approval < ApplicationModel
   end
 
   def search_index_attribute_lookup(record)
-    {
-      ticket_id: record.ticket_id,
-      approver:  record.approver&.fullname,
-      requester: record.requester&.fullname,
-      status:    record.status,
-      message:   record.message,
-    }
+    attributes = super(record)
+    attributes.merge(
+      approver:  approver&.fullname,
+      requester: requester&.fullname,
+    )
   end
 
   def activity_message

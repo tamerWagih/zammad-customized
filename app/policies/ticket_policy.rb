@@ -40,6 +40,11 @@ class TicketPolicy < ApplicationPolicy
     # This method is used to check if a follow-up is possible (mostly based on the configuration).
     # Agents are always allowed to reopen tickets, configuration does not matter.
 
+    # For adding comments/articles, check 'create' permission instead of 'change'
+    # This allows users with comment-only share access to add comments
+    can_create = access?('create')
+    return true if can_create
+
     return update? if Ticket::StateType.lookup(id: record.state.state_type_id).name != 'closed' # check if the ticket state is already closed
     return true if agent_update_access?
 
@@ -81,16 +86,36 @@ class TicketPolicy < ApplicationPolicy
   end
 
   def access?(access)
-    # Check approval access FIRST (approvers get full access)
+    # Check CC access FIRST (CC'd users get access)
+    cc_decision = cc_access?(access)
+    unless cc_decision.nil?
+      return cc_decision
+    end
+
+    # Check approval access (approvers get full access)
     approval_decision = approval_access?(access)
-    return approval_decision unless approval_decision.nil?
-    
+    unless approval_decision.nil?
+      return approval_decision
+    end
+
+    # Check if user is the ticket creator (view + comment access)
+    creator_decision = creator_access?(access)
+    unless creator_decision.nil?
+      return creator_decision
+    end
+
     share_decision = share_access?(access)
-    return share_decision unless share_decision.nil?
+    unless share_decision.nil?
+      return share_decision
+    end
 
-    return true if agent_access?(access)
+    group_decision = agent_access?(access)
+    if group_decision
+      return true
+    end
 
-    customer_access?
+    customer_decision = customer_access?
+    customer_decision
   end
 
   def agent_access?(access)
@@ -99,19 +124,44 @@ class TicketPolicy < ApplicationPolicy
     user.group_access?(record.group.id, access)
   end
 
-  # Allow access via Ticket::Approval for approvers.
-  # Only agents and admins can be approvers (standard Zammad requirement).
-  # Approvers get full access to tickets they need to approve.
-  # This prevents the need to create shares that give access to entire groups.
+  # Allow access via Ticket::Cc for CC'd users.
+  # Agents get full access, customers get read + comment access.
+  def cc_access?(access)
+    return nil unless user
+
+    # Check if user is CC'd on this ticket
+    cc_record = record.ccs.find_by(user_id: user.id)
+    return nil if cc_record.nil?
+
+    # Check permissions based on CC record
+    case access.to_s
+    when 'read'
+      cc_record.read_access?
+    when 'change', 'create'
+      # CRITICAL: Allow if user has full access OR comment access
+      # This allows both agents (full) and customers (comment) to update tickets
+      cc_record.full_access? || cc_record.comment_access?
+    when 'full'
+      cc_record.full_access?
+    else
+      nil
+    end
+  end
+
+  # Allow access via Ticket::Approval.
+  # Only agents and admins can be approvers or requesters (standard Zammad requirement).
+  # Both requester and approver get full access
   def approval_access?(access)
     return nil unless user
-    return nil unless user.permissions?('ticket.agent') # Only agents can be approvers
+    return nil unless user.permissions?('ticket.agent') # Only agents can be approvers/requesters
     
-    # Check if user is an approver for this ticket (any status)
+    # Check if user is a requester (creator) or approver for this ticket
+    is_requester = record.approvals.exists?(requester_id: user.id)
     is_approver = record.approvals.exists?(approver_id: user.id)
-    return nil unless is_approver
     
-    # Approvers get full access (read, comment, edit) for tickets they need to approve
+    return nil unless is_requester || is_approver
+    
+    # Both requester and approver get full access (read, comment, edit)
     case access.to_s
     when 'read', 'change', 'create', 'full'
       true
@@ -120,31 +170,79 @@ class TicketPolicy < ApplicationPolicy
     end
   end
 
+  # Allow ticket creator (created_by) to view and comment on their tickets
+  # even if the ticket is in a different group
+  def creator_access?(access)
+    return nil unless user
+    return nil unless user.permissions?('ticket.agent')
+    
+    # Check if user created this ticket
+    return nil unless record.created_by_id == user.id
+    
+    # CRITICAL: Check if creator is a DIRECT MEMBER of ticket's group (not via role)
+    user_group_ids = user.groups.pluck(:id)
+    is_direct_member = user_group_ids.include?(record.group_id)
+    
+    # If creator IS a direct member, check if they have the requested permission
+    # If they do, let agent_access? handle it (for full access via group)
+    # If they DON'T (e.g., have 'create' but not 'read'), grant creator access
+    if is_direct_member
+      has_permission = user.group_access?(record.group_id, access.to_s)
+      return nil if has_permission  # User has permission via group, let agent_access handle it
+      # User is direct member but lacks this permission → fall through to grant creator access
+    end
+    
+    # Creator either:
+    # 1. NOT direct member of ticket's group, OR
+    # 2. IS direct member but lacks the requested permission
+    # → Grant view + comment, but let other checks handle change/full
+    case access.to_s
+    when 'read', 'create'
+      true  # Grant read and create (view + comment)
+    else
+      nil   # Don't handle change/full - let group/other access handle it
+    end
+  end
+
   # Allow access via Ticket::Share for the current user.
-  # Maps Zammad policy accesses to share permissions:
-  # - 'read'  -> read/comment/edit
-  # - 'change'-> edit
-  # - 'create'-> comment (e.g., add notes)
+  # Sharer from different group: full access
+  # Sharer from SAME group: full access via agent_access?
+  # Receiver from SAME group: full access via agent_access?
+  # Receiver from DIFFERENT group: comment-only access
   def share_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
 
-    share_group_ids = Ticket::Share.active_current.where(ticket_id: record.id).pluck(:group_id)
-    return nil if share_group_ids.empty?
-
-    # Check if user has ANY permission level in the shared groups (read, change, or full)
-    user_group_ids_read = Array(user.group_ids_access('read'))
-    user_group_ids_change = Array(user.group_ids_access('change'))
-    user_group_ids_full = Array(user.group_ids_access('full'))
+    # Check if user is the sharer (person who created the share)
+    user_is_sharer = record.shares.active_current.exists?(shared_by_id: user.id)
     
-    # Combine all group IDs where user has any permission
-    user_group_ids = (user_group_ids_read + user_group_ids_change + user_group_ids_full).uniq
-    return nil if (share_group_ids & user_group_ids).blank?
+    # Check if user is a receiver (member of a group that ticket is shared with)
+    active_shares = Ticket::Share.active_current.where(ticket_id: record.id)
+    user_group_ids = user.groups.pluck(:id)
+    receiver_shares = active_shares.select { |s| user_group_ids.include?(s.group_id) }
+    user_is_receiver = receiver_shares.present?
 
-    # Users with share access get full permissions
+    return nil unless user_is_sharer || user_is_receiver
+
+    # CRITICAL: Check if user is a DIRECT MEMBER of ticket's group (not via role)
+    # If user IS a direct member, let agent_access? handle it (standard group permissions)
+    # If user is NOT a direct member but has share → use share-only permissions
+    # This prevents role-based permissions from overriding share restrictions
+    is_direct_member = user_group_ids.include?(record.group_id)
+    return nil if is_direct_member
+    
+    # User does NOT have requested access to ticket's group: handle via share logic
+    # Sharer (no access to ticket's group) → Full access
+    if user_is_sharer
+      return true if %w[read change create full].include?(access.to_s)
+    end
+    
+    # Receiver (no access to ticket's group) → Comment-only access
     case access.to_s
-    when 'read', 'change', 'create', 'full'
+    when 'read', 'create'
       true
+    when 'change', 'full'
+      false
     else
       nil
     end

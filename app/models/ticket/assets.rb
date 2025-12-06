@@ -31,6 +31,7 @@ returns
     return data if data[ app_model ][ id ]
 
     data[ app_model ][ id ] = attributes_with_association_ids
+    
     if UserInfo.current_user && respond_to?(:share_permissions_for)
       begin
         perms = share_permissions_for(UserInfo.current_user)
@@ -38,21 +39,6 @@ returns
       rescue StandardError => e
         Rails.logger.warn("Failed to compute share permissions for ticket #{id}: #{e.message}")
         data[app_model][id]['share_permissions'] = { read: false, comment: false, edit: false }
-      end
-
-      data[app_model][id]['share_expires_at'] = nil
-
-      begin
-        if respond_to?(:shares)
-          user_group_ids = Array(UserInfo.current_user.group_ids_access('read'))
-          if user_group_ids.present?
-            share = shares.active_current.detect { |ticket_share| user_group_ids.include?(ticket_share.group_id) }
-            data[app_model][id]['share_expires_at'] = share&.expires_at
-          end
-        end
-      rescue StandardError => e
-        Rails.logger.warn("Failed to compute share expiry for ticket #{id}: #{e.message}")
-        data[app_model][id]['share_expires_at'] = nil
       end
     end
 

@@ -146,9 +146,10 @@ class App.TicketZoom extends App.Controller
       newTicketRaw = data.assets.Ticket[@ticket_id]
 
     view       = @ticket && @ticket.currentView && @ticket.currentView()
-    readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || false
-    changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || false
-    fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || false
+    # Include CC permissions in the pre-render comparison so CC permission changes trigger rerender
+    readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('read')) || false
+    changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('change')) || false
+    fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('full')) || false
     formMeta   = data.form_meta
 
     # on the following states we want to rerender the ticket:
@@ -186,9 +187,10 @@ class App.TicketZoom extends App.Controller
     # remember time_accountings
     @time_accountings = data.time_accountings
 
-    # remember approvals and shares (same pattern as tags and links)
+    # remember approvals, shares, and CCs (same pattern as tags and links)
     @approvals = data.approvals || []
     @shares = data.shares || []
+    @ccs = data.ccs || []
     
 
     if draft = App.TicketSharedDraftZoom.findByAttribute 'ticket_id', @ticket_id
@@ -200,19 +202,21 @@ class App.TicketZoom extends App.Controller
     @ticket         = App.Ticket.fullLocal(@ticket_id)
     @ticket.article = undefined
     
-    # Set approvals and shares on ticket object for permission checks (same pattern as tags)
+    # Set approvals, shares, and CCs on ticket object for permission checks
+    # SIMPLE: Just like approvals - store the arrays and let the model check them
     @ticket._approvals_cache = @approvals
     @ticket._shares_cache = @shares
-    
+    @ticket._ccs_cache = @ccs
     
     # Evaluate permissions with detailed logging
     @view           = @ticket && @ticket.currentView && @ticket.currentView()
     
-    @readable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || false
+    # Check permissions: userGroupAccess (agents), groupAccess (group members), and CC permissions
+    @readable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('read')) || false
     
-    @changeable     = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || false
+    @changeable     = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('change')) || false
     
-    @fullable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || false
+    @fullable       = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('full')) || false
     
     @formMeta       = data.form_meta
 
@@ -259,11 +263,27 @@ class App.TicketZoom extends App.Controller
               # Update instance variables (same pattern as tags/links)
               @approvals = ticketData.approvals || []
               @shares = ticketData.shares || []
+              @ccs = ticketData.ccs || []
               
               # Set cache on ticket object for permission checks
               @ticket._approvals_cache = @approvals if @ticket
               @ticket._shares_cache = @shares if @ticket
+              @ticket._ccs_cache = @ccs if @ticket
               
+              # CRITICAL: Recalculate permissions after approval change
+              oldReadable = @readable
+              oldChangeable = @changeable
+              oldFullable = @fullable
+              
+              @readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('read')) || false
+              @changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('change')) || false
+              @fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('full')) || false
+              
+              # If ANY permission changed, force re-render
+              if oldReadable != @readable || oldChangeable != @changeable || oldFullable != @fullable
+                console.log "[APPROVAL_REFRESH] Permissions changed (read: #{oldReadable}->#{@readable}, change: #{oldChangeable}->#{@changeable}), forcing re-render"
+                @renderDone = false
+                @render()
               
               # Trigger sidebar rerender for approval/share widgets
               App.Event.trigger('ui::ticket::sidebarRerender')
@@ -301,11 +321,28 @@ class App.TicketZoom extends App.Controller
               # Update instance variables (same pattern as tags/links)
               @approvals = ticketData.approvals || []
               @shares = ticketData.shares || []
+              @ccs = ticketData.ccs || []
               
               # Set cache on ticket object for permission checks
+              # SIMPLE: Just update the arrays, let the model check them
               @ticket._approvals_cache = @approvals if @ticket
               @ticket._shares_cache = @shares if @ticket
+              @ticket._ccs_cache = @ccs if @ticket
               
+              # CRITICAL: Recalculate permissions after share change
+              oldReadable = @readable
+              oldChangeable = @changeable
+              oldFullable = @fullable
+              
+              @readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('read')) || false
+              @changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('change')) || false
+              @fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('full')) || false
+              
+              # If ANY permission changed, force re-render
+              if oldReadable != @readable || oldChangeable != @changeable || oldFullable != @fullable
+                console.log "[SHARE_REFRESH] Permissions changed (read: #{oldReadable}->#{@readable}, change: #{oldChangeable}->#{@changeable}), forcing re-render"
+                @renderDone = false
+                @render()
               
               # Trigger sidebar rerender for approval/share widgets
               App.Event.trigger('ui::ticket::sidebarRerender')
@@ -329,13 +366,16 @@ class App.TicketZoom extends App.Controller
           App.Ticket.refresh([ticketData]) if ticketData?
           @ticket = App.Ticket.findNative(@ticket_id)
           
-          # Update approvals/shares cache for permission checks
+          # Update approvals/shares/CCs cache for permission checks
           if ticketData.approvals
             @approvals = ticketData.approvals
             @ticket._approvals_cache = @approvals if @ticket
           if ticketData.shares
             @shares = ticketData.shares
             @ticket._shares_cache = @shares if @ticket
+          if ticketData.ccs
+            @ccs = ticketData.ccs
+            @ticket._ccs_cache = @ccs if @ticket
           
           # Trigger sidebar rerender
           App.Event.trigger('ui::ticket::sidebarRerender')
@@ -370,8 +410,8 @@ class App.TicketZoom extends App.Controller
     # set icon and title based on ticket
     if @ticket_id && App.Ticket.exists(@ticket_id)
       ticket         = App.Ticket.findNative(@ticket_id)
-      meta.head      = ticket.title
-      meta.title     = "##{ticket.number} - #{ticket.title}"
+      meta.head      = "#{ticket.number} - #{ticket.title}"
+      meta.title     = "#{App.Config.get('ticket_hook')}#{ticket.number} - #{ticket.title}"
       meta.class     = "task-state-#{ ticket.getState() }"
       meta.type      = 'task'
       meta.iconTitle = ticket.iconTitle()
@@ -665,7 +705,8 @@ class App.TicketZoom extends App.Controller
 
       @form_id = @taskGet('article').form_id || App.ControllerForm.formId()
 
-      if @ticket.editable()
+      # Check 'create' permission for article form (allows comment-only users)
+      if @ticket.editable('create')
         @articleNew = new App.TicketZoomArticleNew(
           ticket:                       @ticket
           ticket_id:                    @ticket_id
@@ -724,6 +765,7 @@ class App.TicketZoom extends App.Controller
       )
 
       @sidebarWidget = new App.TicketZoomSidebar(
+        ccs: @ccs
         el:               elLocal
         sidebarState:     @sidebarState
         object_id:        @ticket_id
@@ -833,6 +875,16 @@ class App.TicketZoom extends App.Controller
   currentStore: =>
     return if !@ticket
     currentStoreTicket = @ticket.attributes()
+    
+    # Normalize CC list for stable diffing
+    if currentStoreTicket.cc_user_ids?
+      currentStoreTicket.cc_user_ids = currentStoreTicket.cc_user_ids
+        .map((id) -> parseInt(id, 10))
+        .filter((id) -> !isNaN(id))
+        .sort((a, b) -> a - b)
+    else
+      currentStoreTicket.cc_user_ids = []
+    
     delete currentStoreTicket.article
     internal = @Config.get('ui_ticket_zoom_article_note_new_internal')
     currentStore  =
@@ -1004,7 +1056,19 @@ class App.TicketZoom extends App.Controller
       resetButton.removeClass('hide')
 
   ticketParams: =>
-    @formParam(@$('.edit'))
+    params = @formParam(@$('.edit'))
+
+    # Normalize cc_user_ids to integers and sorted to avoid false-positive diffs
+    if params.cc_user_ids?
+      params.cc_user_ids = params.cc_user_ids
+        .map((id) -> parseInt(id, 10))
+        .filter((id) -> !isNaN(id))
+        .sort((a, b) -> a - b)
+    else
+      # Ensure empty array so diffing matches currentStore normalization
+      params.cc_user_ids = []
+
+    params
 
   submitDisable: (e) =>
     if e
@@ -1228,7 +1292,7 @@ class App.TicketZoom extends App.Controller
       error: =>
         @draftFetched()
 
-  submitPost: (e, ticket, macro) =>
+  submitPost: (e, ticket, macro, ticketParams = null) =>
     taskAction = @$('.js-secondaryActionButtonLabel').data('type')
 
     if macro && macro.ux_flow_next_up
@@ -1238,12 +1302,90 @@ class App.TicketZoom extends App.Controller
     if taskAction is 'closeNextInOverview' || taskAction is 'next_from_overview'
       nextTicket = @getNextTicketInOverview()
 
+    # Ensure ticketParams is available (used to pass cc_user_ids explicitly)
+    ticketParams = ticketParams || @ticketParams()
+
+    # CC changes are now handled by form system (cc_user_ids field)
+    # The form automatically includes cc_user_ids in ticketParams()
+    # No need for separate widget-based CC submission
+    @submitTicketUpdate(ticket, taskAction, nextTicket, macro, e, ticketParams)
+
+  submitCcChanges: (ticket, ccChanges, callback) =>
+    # Remove any users that are in both adds and removes (shouldn't happen, but safety check)
+    # If a user is in both, cancel them out (no operation needed)
+    conflictingUsers = ccChanges.adds.filter((id) -> ccChanges.removes.includes(id))
+    ccChanges.adds = ccChanges.adds.filter((id) -> !conflictingUsers.includes(id))
+    ccChanges.removes = ccChanges.removes.filter((id) -> !conflictingUsers.includes(id))
+    
+    # Track pending operations
+    pendingOps = ccChanges.adds.length + ccChanges.removes.length
+    completedOps = 0
+    
+    # If no operations, call callback immediately
+    if pendingOps == 0
+      callback()
+      return
+
+    # Helper to check if all operations are done
+    checkComplete = =>
+      completedOps++
+      if completedOps >= pendingOps
+        callback()
+
+    # Add new CC users
+    for userId in ccChanges.adds
+      do (userId) =>
+        @ajax(
+          id: "cc_add_#{ticket.id}_#{userId}"
+          type: 'POST'
+          url: "#{@apiPath}/tickets/#{ticket.id}/ticket_ccs"
+          data: JSON.stringify({ user_id: userId })
+          processData: true
+          success: (data) =>
+            checkComplete()
+          error: (xhr, statusText, error) =>
+            # Log error but don't block ticket update
+            @log('error', "Failed to add CC user #{userId}: #{error}")
+            checkComplete()  # Continue anyway
+        )
+
+    # Remove CC users
+    for userId in ccChanges.removes
+      do (userId) =>
+        # Find CC record ID for this user
+        ccWidget = @sidebarWidget?.get('100-TicketEdit')?.ccWidget
+        ccRecord = ccWidget?.localCcs?.find((cc) -> parseInt(cc.user_id) == userId)
+        ccId = ccRecord?.id
+
+        if ccId
+          @ajax(
+            id: "cc_remove_#{ticket.id}_#{ccId}"
+            type: 'DELETE'
+            url: "#{@apiPath}/tickets/#{ticket.id}/ticket_ccs/#{ccId}"
+            processData: true
+            success: (data) =>
+              checkComplete()
+            error: (xhr, statusText, error) =>
+              # Log error but don't block ticket update
+              @log('error', "Failed to remove CC user #{userId}: #{error}")
+              checkComplete()  # Continue anyway
+          )
+        else
+          # No CC ID found, skip this remove
+          checkComplete()
+
+  submitTicketUpdate: (ticket, taskAction, nextTicket, macro, e, ticketParams = {}) =>
     # submit changes
+    # Ensure cc_user_ids is sent even if model serialization drops it
+    payload = ticket.attributes()
+    if ticketParams.cc_user_ids?
+      payload.cc_user_ids = ticketParams.cc_user_ids
+
     @ajax(
       id: "ticket_update_#{ticket.id}"
       type: 'PUT'
       url: "#{App.Ticket.url}/#{ticket.id}?all=true"
-      data: JSON.stringify(ticket.attributes())
+      data: JSON.stringify(payload)
       processData: true
       success: (data) =>
 
@@ -1257,6 +1399,10 @@ class App.TicketZoom extends App.Controller
 
         if @sidebarWidget
           @sidebarWidget.commit()
+          
+          # Clear pending CC changes after successful update
+          ccWidget = @sidebarWidget.get('100-TicketEdit')?.ccWidget
+          ccWidget?.clearPendingChanges() if ccWidget
 
         if taskAction is 'closeNextInOverview' || taskAction is 'next_from_overview'
           @openTicketInOverview(nextTicket)
@@ -1459,7 +1605,7 @@ class App.TicketZoom extends App.Controller
     return if !@tooltipCopied
     @tooltipCopied.tooltip('hide')
 
-  # Disable editing capabilities when user has only read permission or share expired
+  # Disable editing capabilities when user has only read permission
 
 class TicketZoomRouter extends App.ControllerPermanent
   @requiredPermission: ['ticket.agent', 'ticket.customer']

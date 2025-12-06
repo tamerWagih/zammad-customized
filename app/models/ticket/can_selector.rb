@@ -42,8 +42,8 @@ get count of tickets and tickets which match on selector
           scope.limit(limit)
         ]
       rescue ActiveRecord::StatementInvalid => e
-        Rails.logger.error e
-        raise ActiveRecord::Rollback
+        Rails.logger.error "Ticket selector SQL error: #{e.message}"
+        raise e
       end
     end
 

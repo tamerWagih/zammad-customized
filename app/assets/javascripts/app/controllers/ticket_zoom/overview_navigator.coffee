@@ -16,12 +16,23 @@ class App.TicketZoomOverviewNavigator extends App.Controller
     # Check if this is a custom filter (UUID format) or standard overview (numeric ID)
     @overview = App.Overview.find(@overview_id)
     
-    # If overview not found, it might be a custom filter - skip navigator
-    if !@overview
-      @html('')
-      return
+    # Determine the link to use for OverviewListCollection
+    # For standard overviews, use overview.link (fallback to overview.id if link is missing)
+    # For custom filters, @overview_id is the link (UUID)
+    if @overview
+      # Use link if available, otherwise fallback to id (similar to overview_list_collection.coffee)
+      @overview_link = @overview.link || @overview.id
+    else
+      # If overview not found, assume it's a custom filter link (UUID)
+      # Custom filters use their link as the ID
+      @overview_link = @overview_id
     
-    @bindId = App.OverviewListCollection.bind(@overview.link, lateUpdate, false)
+    # Do not auto-fetch here; use the lazy behavior (third arg = false)
+    @bindId = App.OverviewListCollection.bind(@overview_link, lateUpdate, false)
+
+    # Ensure overview data is fetched (especially important for custom filters)
+    if !App.OverviewListCollection.get(@overview_link)
+      App.OverviewListCollection.fetch(@overview_link)
 
     @render()
 
@@ -29,23 +40,31 @@ class App.TicketZoomOverviewNavigator extends App.Controller
     App.OverviewListCollection.unbind(@bindId)
 
   render: =>
-    if !@overview_id || !@overview
+    if !@overview_id || !@overview_link
       @html('')
       return
 
-    # get overview data
-    overview = App.OverviewListCollection.get(@overview.link)
+    # get overview data from OverviewListCollection using the link
+    overview = App.OverviewListCollection.get(@overview_link)
     return if !overview
+    return if !overview.tickets || overview.tickets.length is 0
+    return if !overview.overview
+    
+    # Ensure ticket_id is a number for comparison
+    ticket_id = parseInt(@ticket_id, 10)
+    
     current_position = 0
     found            = false
     item_next        = false
     item_previous    = false
     for ticket in overview.tickets
       current_position += 1
-      item_next         = overview.tickets[current_position]
-      item_previous     = overview.tickets[current_position-2]
-      if ticket.id is @ticket_id
+      # Compare ticket IDs (handle both string and number)
+      ticket_id_to_compare = if typeof ticket.id is 'string' then parseInt(ticket.id, 10) else ticket.id
+      if ticket_id_to_compare is ticket_id
         found = true
+        item_next         = overview.tickets[current_position]
+        item_previous     = overview.tickets[current_position-2]
         break
 
     if !found

@@ -1,5 +1,5 @@
 class App.Ticket extends App.Model
-  @configure 'Ticket', 'number', 'title', 'group_id', 'owner_id', 'customer_id', 'state_id', 'priority_id', 'article', 'tags', 'links', 'updated_at', 'preferences', 'share_permissions', 'share_expires_at'
+  @configure 'Ticket', 'number', 'title', 'group_id', 'owner_id', 'customer_id', 'state_id', 'priority_id', 'article', 'tags', 'links', 'cc_user_ids', 'updated_at', 'preferences', 'share_permissions'
   @extend Spine.Model.Ajax
   @url: @apiPath + '/tickets'
   @configure_attributes = [
@@ -7,6 +7,7 @@ class App.Ticket extends App.Model
       { name: 'title',                    display: __('Title'),        tag: 'input',    type: 'text', limit: 100, null: false },
       { name: 'customer_id',              display: __('Customer'),     tag: 'input',    type: 'text', limit: 100, null: false, autocapitalize: false, relation: 'User' },
       { name: 'organization_id',          display: __('Organization'), tag: 'select',   relation: 'Organization' },
+      { name: 'cc_user_ids',              display: __('CC'),           tag: 'cc_user_select', multiple: true, limit: 50, null: true, relation: '', edit: true, screen: { create_middle: { shown: true, item_class: 'column' }, edit: { shown: true, item_class: 'column' } } },
       { name: 'group_id',                 display: __('Group'),        tag: 'tree_select',   multiple: false, limit: 100, null: false, relation: 'Group', width: '10%', edit: true },
       { name: 'owner_id',                 display: __('Owner'),        tag: 'select',   multiple: false, limit: 100, null: true, relation: 'User', width: '12%', edit: true },
       { name: 'state_id',                 display: __('State'),        tag: 'select',   multiple: false, null: false, relation: 'TicketState', default: 'new', width: '12%', edit: true, customer: true },
@@ -28,6 +29,18 @@ class App.Ticket extends App.Model
       { name: 'created_at',               display: __('Created at'),   tag: 'datetime', width: '110px', readonly: 1 },
       { name: 'updated_by_id',            display: __('Updated by'),   relation: 'User', readonly: 1 },
       { name: 'updated_at',               display: __('Updated at'),   tag: 'datetime', width: '110px', readonly: 1 },
+      # Share Filters (for selector in default overviews)
+      { name: 'shared_with_me',           display: __('Shared with Me'), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      { name: 'not_shared_with_me',       display: __('Not Shared with Me'), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      # Approval Filters (for selector in default overviews)
+      { name: 'approval_status',          display: __('Approval Status'), tag: 'select', searchable: true, operator: ['is', 'is not'], options: [{ value: 'pending', name: __('Pending') }, { value: 'approved', name: __('Approved') }, { value: 'rejected', name: __('Rejected') }] },
+      { name: 'requested_for_approval',   display: __('Requested for Approval'), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      { name: 'not_requested_for_approval', display: __('Not Requested for Approval'), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      { name: 'is_approved',              display: __('Is Approved'), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      { name: 'is_rejected',              display: __('Is Rejected'), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      # CC Filters (for selector in default overviews)
+      { name: 'ccd_to_me',                display: __("CC'd to Me"), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
+      { name: 'not_ccd_to_me',            display: __("Not CC'd to Me"), tag: 'select', searchable: true, operator: ['is'], options: [{ value: true, name: __('Yes') }], default: true },
     ]
 
   uiUrl: ->
@@ -141,6 +154,12 @@ class App.Ticket extends App.Model
         App.i18n.translateContent('%s deleted share on |%s|', item.created_by.displayName(), item.title)
       when 'Ticket/Share updated'
         App.i18n.translateContent('%s updated share on |%s|', item.created_by.displayName(), item.title)
+      when 'Ticket/Cc created', 'CC created'
+        App.i18n.translateContent('%s CC\'d you on |%s|', item.created_by.displayName(), item.title)
+      when 'Ticket/Cc updated', 'CC updated'
+        App.i18n.translateContent('CC updated on |%s| by %s', item.title, item.created_by.displayName())
+      when 'Ticket/Cc deleted', 'CC deleted'
+        App.i18n.translateContent('You were removed from CC on |%s| by %s', item.title, item.created_by.displayName())
       else
         "Unknow action for (#{@objectDisplayName()}/#{item.type}), extend activityMessage() of model."
 
@@ -219,7 +238,13 @@ class App.Ticket extends App.Model
     user = App.User.current()
 
     return false if !user?
-    return true  if @editableByCustomer(user)
+    
+    # Check if customer has edit rights (owner or organization)
+    return true if @editableByCustomer(user)
+    
+    # Check if customer is CC'd with comment permissions
+    if user.permission('ticket.customer') && @hasCcPermission(permission)
+      return true
 
     return @userGroupAccess(permission)
 
@@ -230,56 +255,136 @@ class App.Ticket extends App.Model
     user.allOrganizationIds().includes(@organization_id)
 
   userGroupAccess: (permission) ->
-    # Check all access methods: standard group access, approvals, and shares
-    # Backend TicketPolicy checks these too, so frontend should match
+    # Check all access methods: standard group access, approvals, shares, and CC
+    # Backend TicketPolicy checks CC -> Approval -> Share -> Group, so frontend should match
     
     user = App.User.current()
     return false unless user
     return false unless user.permission('ticket.agent')
     
-    # 1. Check standard group access
-    return true if @isAccessibleByGroup(user, permission)
+    # 1. Check CC permissions FIRST
+    if @hasCcPermission(permission)
+      return true
     
-    # 2. Check if user is an approver (approvers get full access)
+    # 2. Check if user is an approver
     if @_approvals_cache or @approvals
       approvals = @_approvals_cache or @approvals or []
       for approval in approvals
         if parseInt(approval.approver_id) is parseInt(user.id)
           return true
     
-    # 3. Check share permissions (uses share_permissions from backend)
-    return true if @hasSharePermission(permission)
+    # 3. Check creator access
+    if parseInt(@created_by_id) is parseInt(user.id)
+      requested = permission?.toString()?.toLowerCase() || 'read'
+      
+      # CRITICAL: Check if creator is a DIRECT MEMBER of ticket's group (not via role)
+      ticketGroupId = @group_id?.toString?()
+      userDirectGroupIds = Object.keys(user.group_ids || {})  # Direct membership only
+      isDirectMember = ticketGroupId in userDirectGroupIds
+      
+      # Check if user should get creator access
+      shouldGrantCreatorAccess = false
+      
+      if isDirectMember
+        # If creator IS a direct member, check if they have the requested permission
+        # If they do, skip (let group access handle it for full access)
+        # If they DON'T (e.g., have 'create' but not 'read'), still grant creator access
+        userRequestedGroupIds = user.allGroupIds?(requested) || []
+        hasPermission = userRequestedGroupIds.some (gid) -> gid?.toString?() is ticketGroupId
+        # Grant creator access if user lacks this permission
+        shouldGrantCreatorAccess = !hasPermission
+      else
+        # Creator is NOT a direct member → grant creator access
+        shouldGrantCreatorAccess = true
+      
+      # Apply creator access if determined above
+      if shouldGrantCreatorAccess
+        # ALWAYS grant read and create for creators (regardless of what's being requested)
+        if requested in ['read', 'create']
+          return true
+        # For 'change' or 'full', don't grant (return nothing to continue to next check)
+        # Explicitly continue (no return value)
+    
+    # 4. Check share permissions
+    shareResult = @hasSharePermission(permission)
+    if shareResult is true
+      return true
+    else if shareResult is false
+      return false
+    
+    # 5. Check standard group access
+    if @isAccessibleByGroup(user, permission)
+      return true
     
     false
 
   hasSharePermission: (permission) ->
-    return false unless App.User.current()?.permission('ticket.agent')
-
-    perms = @sharePermissions()
-    perms ?= @sharePermissionsFallback()
-    return false unless perms
-
-    requested = []
-    if Array.isArray(permission)
-      requested = permission
-    else if permission?
-      requested = [permission]
-    else
-      requested = ['read']
-
-    for perm in requested
-      normalized = perm?.toString()?.toLowerCase()
-      allowed = switch normalized
-        when 'read' then perms.read
-        when 'change' then perms.edit
-        when 'create' then perms.comment or perms.edit
-        when 'comment' then perms.comment
-        when 'edit' then perms.edit
-        when 'full' then perms.edit
-        else perms.read
-      return true if allowed
-
-    false
+    return null unless App.User.current()?.permission('ticket.agent')
+    
+    user = App.User.current()
+    return null unless user
+    
+    shares = @_shares_cache or @shares or []
+    return null unless shares?.length
+    
+    # CRITICAL: Get ALL group IDs user belongs to (any permission level) to match backend
+    # Backend uses user.groups.pluck(:id) which doesn't filter by permission
+    userAllGroupIds = []
+    if user.group_ids
+      for groupId, permissions of user.group_ids
+        userAllGroupIds.push groupId
+    # Also include groups from roles
+    if user.role_ids
+      for roleId in user.role_ids
+        if App.Role.exists(roleId)
+          role = App.Role.findNative(roleId)
+          if role.group_ids
+            for groupId, permissions of role.group_ids
+              userAllGroupIds.push groupId
+    userAllGroupIds = _.uniq(userAllGroupIds)
+    return null unless userAllGroupIds.length
+    
+    # Check if user is sharer OR receiver (member of shared group)
+    now = new Date()
+    isSharer = shares.some (share) ->
+      share?.shared_by_id?.toString?() is user.id?.toString?() and share?.status is 'active'
+    
+    matchingShare = null
+    isReceiver = shares.some (share) ->
+      return false unless share?.status is 'active'
+      return false unless share.group_id?
+      groupMatch = userAllGroupIds.some (gid) -> gid?.toString?() is share.group_id?.toString?()
+      return false unless groupMatch
+      matchingShare = share  # Remember the matching share
+      true
+    
+    hasShare = isSharer or isReceiver
+    return null unless hasShare
+    
+    requested = permission?.toString()?.toLowerCase() || 'read'
+    
+    # CRITICAL: Check if user is a DIRECT MEMBER of ticket's group (not via role)
+    # If user IS a direct member, let group access handle it (standard group permissions)
+    # If user is NOT a direct member but has share → use share-only permissions
+    # This prevents role-based permissions from overriding share restrictions
+    ticketGroupId = @group_id?.toString?()
+    userDirectGroupIds = Object.keys(user.group_ids || {})  # Direct membership only
+    isDirectMember = ticketGroupId in userDirectGroupIds
+    
+    # If user IS a direct member of ticket's group, skip (let group access handle it)
+    return null if isDirectMember
+    
+    # User does NOT have requested access to ticket's group: handle via share logic
+    # Sharer (no access to ticket's group) → Full access
+    if isSharer
+      return true
+    
+    # Receiver (no access to ticket's group) → Comment-only access
+    if requested in ['change', 'full']
+      return false
+    
+    # For read/create
+    true
 
   sharePermissions: ->
     perms = @share_permissions ? @preferences?.share_permissions
@@ -309,7 +414,21 @@ class App.Ticket extends App.Model
     shares = App.TicketShare?.findAllByAttribute && App.TicketShare.findAllByAttribute('ticket_id', @id) || []
     return null unless shares?.length
 
-    groupIds = user.allGroupIds?('read') || []
+    # CRITICAL: Get ALL group IDs user belongs to (any permission level) to match backend
+    # Backend uses user.groups.pluck(:id) which doesn't filter by permission
+    groupIds = []
+    if user.group_ids
+      for groupId, permissions of user.group_ids
+        groupIds.push groupId
+    # Also include groups from roles
+    if user.role_ids
+      for roleId in user.role_ids
+        if App.Role.exists(roleId)
+          role = App.Role.findNative(roleId)
+          if role.group_ids
+            for groupId, permissions of role.group_ids
+              groupIds.push groupId
+    groupIds = _.uniq(groupIds)
     return null unless groupIds.length
 
     now = new Date()
@@ -318,9 +437,7 @@ class App.Ticket extends App.Model
       return false unless share.group_id?
       groupMatch = groupIds.some (gid) -> gid?.toString?() is share.group_id?.toString?()
       return false unless groupMatch
-      return true unless share.expires_at
-      expiresAt = new Date(share.expires_at)
-      expiresAt > now
+      true
 
     return null unless matchingShare
 
@@ -334,6 +451,48 @@ class App.Ticket extends App.Model
       comment: hasFull or permissions.includes('comment')
       edit: hasFull or permissions.includes('edit') or permissions.includes('change')
     }
+
+  hasCcPermission: (permission) ->
+    # Check if current user is CC'd on this ticket
+    # Agents get full access, customers get read + comment
+    user = App.User.current()
+    return false unless user
+    
+    # Get CC records from cache or model
+    ccs = @_ccs_cache || @ccs || []
+    return false unless ccs.length
+    
+    # Find CC record for current user
+    ccRecord = null
+    for cc in ccs
+      if parseInt(cc.user_id) is parseInt(user.id)
+        ccRecord = cc
+        break
+    
+    return false unless ccRecord
+    
+    # Check permissions from CC record
+    ccPermissions = ccRecord.permissions || []
+    ccPermissions = [ccPermissions] unless Array.isArray(ccPermissions)
+    ccPermissions = ccPermissions.map (perm) -> perm?.toString()?.toLowerCase?() || perm
+    
+    hasFull = ccPermissions.includes('full')
+    hasComment = ccPermissions.includes('comment')
+    hasRead = ccPermissions.includes('read')
+    
+    # Map requested permission to CC permissions
+    requested = permission?.toString()?.toLowerCase() || 'read'
+    switch requested
+      when 'read'
+        hasFull or hasRead
+      when 'change', 'create', 'edit'
+        hasFull or hasComment  # comment permission allows adding articles/notes
+      when 'full'
+        hasFull
+      when 'comment'
+        hasFull or hasComment
+      else
+        false
 
   userIsCustomer: ->
     user = App.User.current()

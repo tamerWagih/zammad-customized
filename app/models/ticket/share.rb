@@ -7,28 +7,10 @@ class Ticket::Share < ApplicationModel
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Share::TriggersNotifications
-  
-  # Debug: Add logging for online notifications
-  after_create :log_share_created
-  after_update :log_share_updated
-  
-  private
-  
-  def log_share_created
-    Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Share ##{id} created - should trigger online notification"
-    Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Import mode: #{Setting.get('import_mode')}"
-    Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Client notification events ignored: #{client_notification_events_ignored}"
-  end
-  
-  def log_share_updated
-    Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Share ##{id} updated - should trigger online notification"
-    Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Import mode: #{Setting.get('import_mode')}"
-    Rails.logger.info "[SHARE_ONLINE_NOTIFICATION] Client notification events ignored: #{client_notification_events_ignored}"
-  end
 
-  VALID_PERMISSIONS = %w[full].freeze
+  VALID_PERMISSIONS = %w[full comment].freeze
 
-  before_validation :ensure_full_permission
+  before_validation :ensure_default_permission
 
   belongs_to :ticket, touch: true  # Touch parent ticket to trigger its TriggersSubscriptions
   belongs_to :group
@@ -42,10 +24,18 @@ class Ticket::Share < ApplicationModel
   validates :permissions, presence: true
   validate :valid_permissions
 
-  scope :active_current, -> { where(status: 'active').where('expires_at IS NULL OR expires_at > ?', Time.current) }
+  scope :active_current, -> { where(status: 'active') }
 
   def full_access?
     Array(permissions).include?('full')
+  end
+
+  def comment_access?
+    Array(permissions).include?('comment') || full_access?
+  end
+
+  def read_access?
+    full_access? || comment_access?
   end
 
   def revoke!
@@ -74,7 +64,6 @@ class Ticket::Share < ApplicationModel
         status
         created_at
         updated_at
-        expires_at
       ],
       methods: %i[group_name shared_by_name]
     }.merge(options))
@@ -99,24 +88,25 @@ class Ticket::Share < ApplicationModel
     end
   end
 
-  def ensure_full_permission
-    self.permissions = ['full'] if permissions.blank?
+  def ensure_default_permission
+    # Default to comment permission for new shares
+    self.permissions = ['comment'] if permissions.blank?
   end
 
   def search_index_attribute_lookup(record)
-    {
-      ticket_id: record.ticket_id,
-      group:     record.group&.fullname || record.group&.name,
-      shared_by: record.shared_by&.fullname,
-      permissions: Array(record.permissions).join(', '),
-      message:     record.message,
-    }
+    attributes = super(record)
+    attributes.merge(
+      group:     group&.fullname || group&.name,
+      shared_by: shared_by&.fullname,
+      permissions: Array(permissions).join(', '),
+    )
   end
 
   def activity_message
+    permission_text = full_access? ? 'full access' : 'comment access'
     case status
     when 'active'
-      "Ticket shared with group #{group_name} (full access)"
+      "Ticket shared with group #{group_name} (#{permission_text})"
     when 'revoked'
       "Share revoked for group #{group_name}"
     else

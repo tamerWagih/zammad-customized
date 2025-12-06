@@ -201,6 +201,78 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
 
       assets.flush
     end
+    
+    # Push custom filter overviews (like standard overviews)
+    # CRITICAL: Custom filters depend on ticket relationships (CC, approvals, shares)
+    # When tickets change (CC/approval/share added/removed), we must refresh custom filters
+    # because the ticket list might change even if the filter condition is the same
+    custom_filters = @user.preferences[:custom_filters] || []
+    custom_filters.each do |filter|
+      next unless filter['active']
+      
+      # Get custom filter tickets (similar to standard overviews)
+      filter_data = get_custom_filter_data(filter)
+      next if !filter_data
+      
+      # Check if this custom filter has changed (similar to standard overviews)
+      filter_link = filter['link'] || filter['id']
+      last_filter_state = @last_overview[filter_link]
+      
+      # Build current state: ticket IDs, updated_at timestamps, and count for comparison
+      # Sort by ID for consistent comparison
+      current_ticket_state = filter_data[:tickets].map { |t| { id: t[:id].to_i, updated_at: t[:updated_at] } }.sort_by { |t| t[:id] }
+      current_ticket_ids = current_ticket_state.map { |t| t[:id] }.sort
+      current_count = filter_data[:count]
+      current_filter_state = [current_ticket_state, filter_data[:overview], current_count]
+      
+      # Check if filter state changed
+      filter_changed = last_filter_state != current_filter_state
+      
+      # Always refresh if:
+      # 1. Filter hasn't been sent before (first time) - !last_filter_state
+      # 2. Filter state changed (different tickets, different count, or different updated_at) - filter_changed
+      # NOTE: We don't check ticket_changed? here because if tickets changed, we're already in push()
+      # The state comparison should catch ticket updated_at changes, but we're more aggressive for custom filters
+      needs_refresh = !last_filter_state || filter_changed
+      
+      # Skip only if filter unchanged (saves bandwidth)
+      next if !needs_refresh && last_filter_state
+      
+      # Update last state
+      @last_overview[filter_link] = current_filter_state
+      
+      # Prepare assets for custom filter
+      filter_assets = AssetsSet.new
+      filter_data[:tickets].each do |ticket_meta|
+        next if !asset_needed_by_updated_at?('Ticket', ticket_meta[:id], ticket_meta[:updated_at])
+        
+        ticket = Ticket.lookup(id: ticket_meta[:id])
+        next if !ticket
+        
+        filter_assets = asset_push(ticket, filter_assets)
+      end
+      
+      filter_data[:assets] = filter_assets.to_h
+      
+      if @client
+        @client.log "push custom filter overview_list #{filter_link} for user #{@user.id}"
+        
+        # send update to browser (same event as standard overviews)
+        @client.send(
+          event: 'ticket_overview_list',
+          data:  filter_data,
+        )
+      else
+        result = {
+          event: 'ticket_overview_list',
+          data:  filter_data,
+        }
+        results.push result
+      end
+      
+      filter_assets.flush
+    end
+    
     return results if !@client
 
     nil
@@ -255,6 +327,101 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
   rescue => e
     Rails.logger.error "Error counting tickets for custom filter: #{e.message}"
     0
+  end
+
+  def get_custom_filter_data(filter)
+    # Similar to Ticket::Overviews.index but for custom filters
+    # Returns data in the same format as standard overviews
+    
+    condition = filter['condition'] || {}
+    order = filter['order'] || { 'by' => 'created_at', 'direction' => 'DESC' }
+    view = filter['view'] || { 's' => ['number', 'title', 'customer', 'state', 'created_at'] }
+    
+    # Clean up empty values in condition
+    condition.each do |key, value_hash|
+      if value_hash.is_a?(Hash) && value_hash[:value].is_a?(Array) && value_hash[:value].empty?
+        condition.delete(key)
+      end
+    end
+    
+    # Get pagination (same as default overviews)
+    limit = Ticket::Overviews.limit_per_overview
+    
+    # Build overview data
+    overview_data = {
+      id:    filter['id'],
+      name:  filter['name'],
+      link:  filter['link'],
+      view:  {
+        s: view['s'] || ['number', 'title', 'customer', 'state', 'created_at']
+      },
+      order: {
+        by:        order['by'] || 'created_at',
+        direction: order['direction'] || 'DESC',
+      },
+      group_by: filter['group_by'] || '',
+      group_direction: 'DESC',
+      is_custom: true,
+    }
+    
+    tickets = []
+    assets = {}
+    total_count = 0
+    
+    begin
+      # Get tickets based on condition with custom filter context
+      query, bind_params, tables = Ticket.selector2sql(
+        condition, 
+        current_user: @user,
+        custom_filter_context: true
+      )
+      
+      if query.present?
+        # Apply ordering
+        order_by = order['by'] || 'created_at'
+        order_direction = order['direction'] || 'DESC'
+        
+        # CRITICAL: Apply user permission scope first (like Zammad's overview system)
+        base_scope = if condition.key?('ticket.mention_user_ids')
+                       TicketPolicy::ReadScope.new(@user).resolve
+                     else
+                       TicketPolicy::OverviewScope.new(@user).resolve
+                     end
+        
+        # Apply the custom filter condition on top of permission scope
+        scoped_tickets = base_scope.where(query, *bind_params)
+        scoped_tickets = scoped_tickets.joins(tables) if tables.present?
+        
+        # Get total count for pagination
+        total_count = scoped_tickets.distinct.count
+        
+        # Apply pagination (limit)
+        ticket_list = scoped_tickets.order("#{order_by} #{order_direction}")
+                                     .limit(limit)
+        
+        ticket_list.each do |ticket|
+          ticket_meta = {
+            id:         ticket.id,
+            title:      ticket.title,
+            number:     ticket.number,
+            created_at: ticket.created_at,
+            updated_at: ticket.updated_at,
+          }
+          
+          tickets.push ticket_meta
+        end
+      end
+    rescue => e
+      Rails.logger.error "Error loading custom filter data: #{e.message}"
+      # Continue with empty tickets list
+    end
+    
+    {
+      overview: overview_data,
+      tickets: tickets,
+      tickets_count: tickets.length,
+      count: total_count,
+    }
   end
 
 end

@@ -18,8 +18,7 @@ module Gql
               .execute(
                 share:,
                 attributes: {
-                  message: input[:message],
-                  expires_at: input[:expires_at]
+                  message: input[:message]
                 }.compact
               )
 

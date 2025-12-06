@@ -33,9 +33,29 @@ class Edit extends App.Controller
     # and needed to prevent race conditions
     @el.removeAttr('data-ticket-updated-at')
 
+    # Merge backend configure_attributes with frontend to ensure CC field is included
+    # Backend only includes ObjectManager attributes, but cc_user_ids is a virtual attribute (not in ObjectManager)
+    # We need to merge them so ObjectManager customizations are preserved AND frontend-only fields (like CC) are included
+    backendAttributes = @formMeta.configure_attributes || []
+    frontendAttributes = App.Ticket.configure_attributes || []
+    
+    # Create a map of backend attribute names for quick lookup
+    backendAttributeNames = {}
+    for attr in backendAttributes
+      backendAttributeNames[attr.name] = true if attr.name
+    
+    # Merge: use backend attributes (they have ObjectManager customizations), 
+    # but add frontend attributes that aren't in backend (like cc_user_ids)
+    mergedAttributes = backendAttributes.slice()  # Copy backend attributes
+    
+    # Add frontend attributes that aren't in backend and have edit screen configured
+    for attr in frontendAttributes
+      if !backendAttributeNames[attr.name] && attr.screen && attr.screen.edit && attr.screen.edit.shown
+        mergedAttributes.push(attr)
+    
     @controllerFormSidebarTicket = new App.ControllerForm(
       elReplace:      @el
-      model:          { className: 'Ticket', configure_attributes: @formMeta.configure_attributes || App.Ticket.configure_attributes }
+      model:          { className: 'Ticket', configure_attributes: mergedAttributes }
       screen:         'edit'
       handlersConfig: handlers
       filter:         @formMeta.filter
@@ -69,6 +89,9 @@ class Edit extends App.Controller
     )
 
   isDisabledByFollowupRules: (attributes) =>
+    # Customers should not edit sidebar fields (CC/LOB, etc.)
+    return true if @ticket && @ticket.currentView && @ticket.currentView() is 'customer'
+
     return false if @ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')
 
     group           = App.Group.find(attributes.group_id)
@@ -130,6 +153,20 @@ class SidebarTicket extends App.Controller
 
   reload: (args) =>
 
+    # apply CC changes - update ticket model and trigger form re-render
+    if args.ccs
+      # Convert ccs array to cc_user_ids array for form system
+      cc_user_ids = args.ccs.map((cc) -> cc.user_id).filter((id) -> id)
+      
+      # Update ticket model with new cc_user_ids (even if empty array to clear CCs)
+      if @ticket
+        @ticket.cc_user_ids = cc_user_ids
+      
+      # Trigger form re-render if Edit instance exists
+      if @edit && @edit.controllerFormSidebarTicket
+        # Re-render form with updated ticket attributes
+        @edit.render()
+    
     # apply tag changes
     if @tagWidget
       if args.tags

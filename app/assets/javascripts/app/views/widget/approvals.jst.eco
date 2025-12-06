@@ -46,21 +46,12 @@
               </button>
             </div>
           <% else if approval.requester_id is @current_user_id: %>
-            <!-- Show edit/delete buttons to requester -->
+            <!-- Show edit/delete buttons to requester only when pending -->
             <div class="approval-actions btn-group btn-group-sm" role="group">
               <button class="btn btn-outline-primary js-edit-approval" data-id="<%= approval.id %>">
                 <i class="icon-edit"></i> <%- @T('Edit') %>
               </button>
               <button class="btn btn-outline-danger js-delete-approval" data-id="<%= approval.id %>">
-                <i class="icon-trash"></i> <%- @T('Delete') %>
-              </button>
-            </div>
-          <% end %>
-        <% else: %>
-          <!-- For completed approvals, only show delete to requester -->
-          <% if approval.requester_id is @current_user_id: %>
-            <div class="approval-actions">
-              <button class="btn btn-outline-danger btn-sm js-delete-approval" data-id="<%= approval.id %>">
                 <i class="icon-trash"></i> <%- @T('Delete') %>
               </button>
             </div>

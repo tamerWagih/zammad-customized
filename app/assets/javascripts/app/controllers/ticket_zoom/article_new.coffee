@@ -187,15 +187,6 @@ class App.TicketZoomArticleNew extends App.Controller
     @releaseGlobalClickEvents()
     ticket = App.Ticket.fullLocal(@ticket_id)
 
-    is_share_expired = false
-    if ticket?.share_expires_at
-      try
-        expires_date = new Date(ticket.share_expires_at)
-        current_date = new Date()
-        is_share_expired = expires_date <= current_date
-      catch
-        is_share_expired = false
-
     can_comment = ticket?.currentView?() isnt 'customer'
     can_edit    = can_comment
 
@@ -208,7 +199,6 @@ class App.TicketZoomArticleNew extends App.Controller
       internalSelector: @internalSelector
       can_comment:      can_comment
       can_edit:         can_edit
-      is_share_expired: is_share_expired
     )
 
     @setArticleTypePre(@type)

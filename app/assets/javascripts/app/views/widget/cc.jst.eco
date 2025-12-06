@@ -1,0 +1,23 @@
+<label><%- @T('CC') %></label>
+<ul class="list list--sidebar">
+  <% for cc in @ccs: %>
+    <li class="list-item js-cc-item" data-user-id="<%= cc.user_id %>">
+      <a href="#" class="list-item-name js-cc-user">
+        <%= cc.user_name || __('Unknown User') %>
+      </a>
+      <% if @editable: %>
+        <div class="list-item-delete js-delete">
+          <%- @Icon('diagonal-cross') %>
+        </div>
+      <% end %>
+    </li>
+  <% end %>
+</ul>
+<% if @editable: %>
+  <div class="text-muted js-addCcLabel u-clickable">+ <%- @T('Add CC') %></div>
+  <div class="js-ccSelect hide"></div>
+<% end %>
+<% if @ccs.length == 0 && !@editable: %>
+  <div class="text-muted"><%- @T('No CC users') %></div>
+<% end %>
+
