@@ -89,6 +89,9 @@ class Edit extends App.Controller
     )
 
   isDisabledByFollowupRules: (attributes) =>
+    # Customers should not edit sidebar fields (CC/LOB, etc.)
+    return true if @ticket && @ticket.currentView && @ticket.currentView() is 'customer'
+
     return false if @ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')
 
     group           = App.Group.find(attributes.group_id)

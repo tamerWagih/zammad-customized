@@ -35,8 +35,10 @@ class App.UiElement.cc_user_select
           for userId in selectedIds
             userIdStr = userId.toString()
             
-            # Find user in loaded data
+            # Find user in loaded data or existing assets
             user = users.find((u) -> u.id.toString() == userIdStr)
+            if !user && App.User?.exists?(userIdStr)
+              user = App.User.find(userIdStr)
             
             # Build a display name even if user is not in the preloaded list
             display_name = ''

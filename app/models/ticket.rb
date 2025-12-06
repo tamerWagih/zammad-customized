@@ -996,5 +996,7 @@ returns a hex color code
     
     Rails.logger.info "[CC] ===== SYNC_CC_USERS COMPLETE ====="
   end
+
+  public :sync_cc_users
 end
 

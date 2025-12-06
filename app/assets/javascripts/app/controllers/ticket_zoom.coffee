@@ -1064,6 +1064,9 @@ class App.TicketZoom extends App.Controller
         .map((id) -> parseInt(id, 10))
         .filter((id) -> !isNaN(id))
         .sort((a, b) -> a - b)
+    else
+      # Ensure empty array so diffing matches currentStore normalization
+      params.cc_user_ids = []
 
     params
 
