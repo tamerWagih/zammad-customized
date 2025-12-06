@@ -216,9 +216,39 @@ class Transaction::CcNotification
     cc_user = ::User.find_by(id: cc_obj.user_id) if cc_obj.user_id
     creator = ::User.find_by(id: cc_obj.created_by_id) if cc_obj.created_by_id
 
+    # Convert OpenStruct to hash for template compatibility (for delete events)
+    # Template uses @objects[:cc][:message] which requires hash access, not OpenStruct
+    cc_hash = if cc_obj.is_a?(OpenStruct)
+                # Convert OpenStruct to hash with symbol keys (template expects symbols)
+                {
+                  id:               cc_obj.id,
+                  ticket_id:        cc_obj.ticket_id,
+                  user_id:          cc_obj.user_id,
+                  permissions:      cc_obj.permissions,
+                  message:          cc_obj.message,
+                  created_by_id:    cc_obj.created_by_id,
+                  updated_by_id:    cc_obj.updated_by_id,
+                  created_at:       cc_obj.created_at,
+                  updated_at:       cc_obj.updated_at
+                }
+              else
+                # For ActiveRecord objects, convert to hash
+                {
+                  id:               cc_obj.id,
+                  ticket_id:        cc_obj.ticket_id,
+                  user_id:          cc_obj.user_id,
+                  permissions:      cc_obj.permissions,
+                  message:          cc_obj.message,
+                  created_by_id:    cc_obj.created_by_id,
+                  updated_by_id:    cc_obj.updated_by_id,
+                  created_at:       cc_obj.created_at,
+                  updated_at:       cc_obj.updated_at
+                }
+              end
+
     {
       ticket:        ticket,
-      cc:            cc_obj,
+      cc:            cc_hash,  # Use hash instead of OpenStruct for template compatibility
       recipient:     user,
       current_user:  current_user,
       changes:       @item[:changes] || {},
