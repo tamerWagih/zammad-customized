@@ -68,13 +68,17 @@ class App.WidgetCc extends App.Controller
       ticket: @ticket
     )
 
-    # Initialize CC select if editable
-    if @editable
-      @initCcSelect()
+    # Don't initialize CC select here - only render when user clicks "Add CC"
+    # This prevents empty input from showing
 
   initCcSelect: =>
-    # Hide select initially
-    @ccSelect?.addClass('hide')
+    # Check if already initialized
+    if @ccSelect && @ccSelect.length > 0
+      return
+
+    # Find the placeholder element
+    ccSelectPlaceholder = @$('.js-ccSelect')
+    return unless ccSelectPlaceholder.length > 0
 
     # Get current CC user IDs (excluding current user)
     currentUserId = App.Session.get('id')
@@ -102,16 +106,29 @@ class App.WidgetCc extends App.Controller
     ccSelectElement = App.UiElement.cc_user_select.render(attribute, params)
     
     # Replace the placeholder with actual select
-    if @ccSelect && ccSelectElement
-      @ccSelect.replaceWith(ccSelectElement)
+    if ccSelectElement && ccSelectElement.length > 0
+      # Wrap the element in a div with js-ccSelect class to maintain selector
+      wrappedElement = $('<div class="js-ccSelect hide"></div>').append(ccSelectElement)
+      ccSelectPlaceholder.replaceWith(wrappedElement)
+      
+      # Store reference to the wrapper (which has the class)
       @ccSelect = @$('.js-ccSelect')
       
-      # Bind change event
+      # Ensure it's hidden
+      @ccSelect.addClass('hide')
+      
+      # Find the actual input/select element within for change event
+      @ccSelectInput = @ccSelect.find('input, select').first()
+      
+      # Bind change event on the wrapper (bubbles from input)
       @ccSelect.on('change', @onCcSelectChange)
 
   showSelect: (e) =>
     e.preventDefault()
     return unless @editable
+
+    # Initialize CC select if not already done
+    @initCcSelect() unless @ccSelect && @ccSelect.length > 0
 
     @addCcLabel.addClass('hide')
     @ccSelect?.removeClass('hide').trigger('focus')
@@ -126,10 +143,21 @@ class App.WidgetCc extends App.Controller
     return unless @editable
 
     # Get selected user IDs from the select
+    # SearchableAjaxSelect stores values in shadow input as <option> elements for multiple selects
     selectedUserIds = []
-    @ccSelect.find('option:selected').each ->
-      userId = $(this).val()
-      selectedUserIds.push(parseInt(userId)) if userId
+    
+    # Find shadow input (hidden select with selected options)
+    shadowInput = @ccSelect.find('.js-shadow')
+    if shadowInput.length > 0 && shadowInput.is('select')
+      # For multiple selects, shadow input contains <option> elements with values
+      shadowInput.find('option').each ->
+        userId = $(this).val()
+        selectedUserIds.push(parseInt(userId)) if userId
+    else
+      # Fallback: find tokens with data-value attribute
+      @ccSelect.find('.token[data-value]').each ->
+        userId = $(this).attr('data-value')
+        selectedUserIds.push(parseInt(userId)) if userId
 
     # Get current user ID to exclude
     currentUserId = App.Session.get('id')
