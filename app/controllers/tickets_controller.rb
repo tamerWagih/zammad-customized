@@ -310,8 +310,28 @@ class TicketsController < ApplicationController
       end
     end
 
+    # Extract cc_user_ids before update (if present)
+    cc_user_ids_raw = clean_params.delete(:cc_user_ids)
+    
+    # Normalize cc_user_ids to array
+    new_cc_user_ids = if cc_user_ids_raw.is_a?(Array)
+                        cc_user_ids_raw.map(&:to_i).reject(&:zero?)
+                      elsif cc_user_ids_raw.is_a?(String)
+                        cc_user_ids_raw.split(',').map(&:strip).map(&:to_i).reject(&:zero?)
+                      elsif cc_user_ids_raw.is_a?(Integer)
+                        [cc_user_ids_raw]
+                      else
+                        nil  # nil means no change, [] means remove all
+                      end
+
     ticket.with_lock do
       ticket.update!(clean_params)
+      
+      # Handle CC updates with diff logic (only add/remove changed ones)
+      if !cc_user_ids_raw.nil?  # Only process if cc_user_ids was provided
+        ticket.sync_cc_users(new_cc_user_ids || [])
+      end
+      
       if params[:article].present?
         if (shared_draft_id = params[:article][:shared_draft_id])
           shared_draft = Ticket::SharedDraftZoom.find_by id: shared_draft_id

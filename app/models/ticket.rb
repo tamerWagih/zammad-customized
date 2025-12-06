@@ -814,6 +814,15 @@ returns a hex color code
     perms[:read] || perms[:comment] || perms[:edit]
   end
 
+  # Override to add cc_user_ids to API response
+  def filter_unauthorized_attributes(attributes)
+    # Convert ccs association to cc_user_ids array for frontend
+    if attributes.key?('cc_ids') || ccs.loaded? || ccs.any?
+      attributes['cc_user_ids'] = ccs.pluck(:user_id).compact.uniq
+    end
+    super(attributes)
+  end
+
   # Create CC records after ticket creation if cc_user_ids is provided
   def create_cc_records
     Rails.logger.info "[CC] ===== CREATE_CC_RECORDS START ====="
@@ -898,6 +907,71 @@ returns a hex color code
     end
     
     Rails.logger.info "[CC] ===== CREATE_CC_RECORDS COMPLETE ====="
+  end
+
+  # Sync CC users: add new ones, remove deleted ones (diff-based)
+  # This method handles notifications automatically via HasTransactionDispatcher
+  def sync_cc_users(new_user_ids)
+    return if new_user_ids.nil?  # nil means no change
+    
+    current_user_id = UserInfo.current_user_id
+    new_user_ids = new_user_ids.map(&:to_i).reject(&:zero?).uniq
+    
+    # Get current CC user IDs
+    current_cc_user_ids = ccs.pluck(:user_id).compact.uniq
+    
+    # Calculate differences
+    to_add = new_user_ids - current_cc_user_ids
+    to_remove = current_cc_user_ids - new_user_ids
+    
+    Rails.logger.info "[CC] ===== SYNC_CC_USERS START ====="
+    Rails.logger.info "[CC] Current CC users: #{current_cc_user_ids.inspect}"
+    Rails.logger.info "[CC] New CC users: #{new_user_ids.inspect}"
+    Rails.logger.info "[CC] To add: #{to_add.inspect}"
+    Rails.logger.info "[CC] To remove: #{to_remove.inspect}"
+    
+    # Remove CCs that are no longer in the list
+    to_remove.each do |user_id|
+      cc_record = ccs.find_by(user_id: user_id)
+      if cc_record
+        Rails.logger.info "[CC] Removing CC for user #{user_id}"
+        # Destroy will trigger HasTransactionDispatcher → Transaction::CcNotification (type: 'delete')
+        cc_record.destroy!
+      end
+    end
+    
+    # Add new CCs
+    to_add.each do |user_id|
+      next if user_id == current_user_id  # Don't CC yourself
+      
+      user = User.find_by(id: user_id)
+      unless user
+        Rails.logger.warn "[CC] User #{user_id} not found - skipping"
+        next
+      end
+      
+      # Check if CC already exists (race condition protection)
+      next if ccs.exists?(user_id: user_id)
+      
+      Rails.logger.info "[CC] Adding CC for user #{user_id} (#{user.login})"
+      
+      # Determine permissions based on user role
+      is_agent = user.permissions?('ticket.agent')
+      permissions = is_agent ? ['full'] : ['read', 'comment']
+      
+      cc = ccs.build(
+        user:           user,
+        permissions:    permissions,
+        created_by_id:  current_user_id,
+        updated_by_id:  current_user_id
+      )
+      
+      cc.save!
+      Rails.logger.info "[CC] CC record created for user #{user_id}"
+      # Create will trigger HasTransactionDispatcher → Transaction::CcNotification (type: 'create')
+    end
+    
+    Rails.logger.info "[CC] ===== SYNC_CC_USERS COMPLETE ====="
   end
 end
 
