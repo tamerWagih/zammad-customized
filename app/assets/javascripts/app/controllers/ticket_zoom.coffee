@@ -1279,7 +1279,7 @@ class App.TicketZoom extends App.Controller
       error: =>
         @draftFetched()
 
-  submitPost: (e, ticket, macro) =>
+  submitPost: (e, ticket, macro, ticketParams = null) =>
     taskAction = @$('.js-secondaryActionButtonLabel').data('type')
 
     if macro && macro.ux_flow_next_up
@@ -1288,6 +1288,9 @@ class App.TicketZoom extends App.Controller
     nextTicket = undefined
     if taskAction is 'closeNextInOverview' || taskAction is 'next_from_overview'
       nextTicket = @getNextTicketInOverview()
+
+    # Ensure ticketParams is available (used to pass cc_user_ids explicitly)
+    ticketParams = ticketParams || @ticketParams()
 
     # CC changes are now handled by form system (cc_user_ids field)
     # The form automatically includes cc_user_ids in ticketParams()
