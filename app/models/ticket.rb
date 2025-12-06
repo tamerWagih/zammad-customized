@@ -935,7 +935,32 @@ returns a hex color code
       cc_record = ccs.find_by(user_id: user_id)
       if cc_record
         Rails.logger.info "[CC] Removing CC for user #{user_id}"
-        # Destroy will trigger HasTransactionDispatcher → Transaction::CcNotification (type: 'delete')
+        
+        # CRITICAL: HasTransactionDispatcher doesn't have after_destroy callback
+        # We must manually add destroy event to EventBuffer BEFORE destroying
+        # Include serialized data since record won't exist when notification runs
+        serialized_data = {
+          id:               cc_record.id,
+          ticket_id:        cc_record.ticket_id,
+          user_id:          cc_record.user_id,
+          permissions:      cc_record.permissions,
+          message:          cc_record.message,
+          created_by_id:    cc_record.created_by_id,
+          updated_by_id:    cc_record.updated_by_id,
+          created_at:       cc_record.created_at,
+          updated_at:       cc_record.updated_at
+        }
+        
+        EventBuffer.add('transaction', {
+          object:     'Ticket::Cc',
+          type:       'delete',
+          object_id:  cc_record.id,
+          user_id:    current_user_id,
+          created_at: Time.zone.now,
+          data:       serialized_data  # Include data for notification to use
+        })
+        
+        # Now destroy the record (notification will use serialized data)
         cc_record.destroy!
       end
     end
