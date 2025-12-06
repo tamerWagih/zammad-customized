@@ -61,12 +61,9 @@ class App.CcUserAjaxSelect extends App.SearchableAjaxSelect
     return if !users
     
     # Convert users to options format {name, value}
-    currentUserId = App.Session.get('id')
     options = []
     
     for user in users
-      continue if user.id == currentUserId
-      
       display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
       display_name = user.login if display_name == ''
       display_name = user.email if !display_name

@@ -56,14 +56,8 @@ class App.WidgetCc extends App.Controller
     return if @lastLocalCcs && _.isEqual(@lastLocalCcs, @localCcs)
     @lastLocalCcs = _.clone(@localCcs)
 
-    # Get current user ID to exclude from display
-    currentUserId = App.Session.get('id')
-
-    # Filter out current user from display
-    displayCcs = @localCcs.filter((cc) -> parseInt(cc.user_id) != parseInt(currentUserId))
-
     @html App.view(@templateName)(
-      ccs: displayCcs || []
+      ccs: @localCcs || []
       editable: @editable
       ticket: @ticket
     )
@@ -80,11 +74,8 @@ class App.WidgetCc extends App.Controller
     ccSelectPlaceholder = @$('.js-ccSelect')
     return unless ccSelectPlaceholder.length > 0
 
-    # Get current CC user IDs (excluding current user)
-    currentUserId = App.Session.get('id')
-    currentCcUserIds = @localCcs
-      .map((cc) -> parseInt(cc.user_id))
-      .filter((id) -> id != parseInt(currentUserId))
+    # Get current CC user IDs (include current user so values match backend)
+    currentCcUserIds = @localCcs.map((cc) -> parseInt(cc.user_id))
 
     # Create CC user select element
     attribute = {
@@ -159,12 +150,9 @@ class App.WidgetCc extends App.Controller
         userId = $(this).attr('data-value')
         selectedUserIds.push(parseInt(userId)) if userId
 
-    # Get current user ID to exclude
-    currentUserId = App.Session.get('id')
-    
     # Calculate based on original state (before any pending changes)
     # This ensures we don't have conflicts
-    originalCcUserIds = @originalCcUserIds.filter((id) -> id != parseInt(currentUserId))
+    originalCcUserIds = @originalCcUserIds.slice()
     
     # Calculate what should be added (in selected but not in original)
     newAdds = selectedUserIds.filter((id) -> !originalCcUserIds.includes(id))

@@ -297,6 +297,16 @@ class TicketsController < ApplicationController
     params.delete(:checklist_id)
 
     clean_params = Ticket.association_name_to_id_convert(params)
+
+    # Extract cc_user_ids BEFORE param_cleanup strips virtual attributes
+    cc_user_ids_raw = clean_params.delete(:cc_user_ids) || clean_params.delete('cc_user_ids')
+    # Fallback if cc_user_ids sent nested under :ticket (some clients)
+    if cc_user_ids_raw.nil? && params[:ticket].is_a?(Hash)
+      cc_user_ids_raw = params[:ticket][:cc_user_ids] || params[:ticket]['cc_user_ids']
+    end
+
+    Rails.logger.info("[CC][update] cc_user_ids_raw=#{cc_user_ids_raw.inspect} params[:ticket]=#{params[:ticket].inspect}")
+
     clean_params = Ticket.param_cleanup(clean_params, true)
 
     # only apply preferences changes (keep not updated keys/values)
@@ -316,15 +326,6 @@ class TicketsController < ApplicationController
       end
     end
 
-    # Extract cc_user_ids before update (if present) - handle both symbol and string keys
-    cc_user_ids_raw = clean_params.delete(:cc_user_ids) || clean_params.delete('cc_user_ids')
-    # Fallback if cc_user_ids sent nested under :ticket (some clients)
-    if cc_user_ids_raw.nil? && params[:ticket].is_a?(Hash)
-      cc_user_ids_raw = params[:ticket][:cc_user_ids] || params[:ticket]['cc_user_ids']
-    end
-
-    Rails.logger.info("[CC][update] cc_user_ids_raw=#{cc_user_ids_raw.inspect} params[:ticket]=#{params[:ticket].inspect}")
-    
     # Normalize cc_user_ids to array
     new_cc_user_ids = if cc_user_ids_raw.is_a?(Array)
                         cc_user_ids_raw.map(&:to_i).reject(&:zero?)

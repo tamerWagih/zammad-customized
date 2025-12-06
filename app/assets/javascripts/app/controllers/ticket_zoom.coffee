@@ -875,6 +875,16 @@ class App.TicketZoom extends App.Controller
   currentStore: =>
     return if !@ticket
     currentStoreTicket = @ticket.attributes()
+    
+    # Normalize CC list for stable diffing
+    if currentStoreTicket.cc_user_ids?
+      currentStoreTicket.cc_user_ids = currentStoreTicket.cc_user_ids
+        .map((id) -> parseInt(id, 10))
+        .filter((id) -> !isNaN(id))
+        .sort((a, b) -> a - b)
+    else
+      currentStoreTicket.cc_user_ids = []
+    
     delete currentStoreTicket.article
     internal = @Config.get('ui_ticket_zoom_article_note_new_internal')
     currentStore  =

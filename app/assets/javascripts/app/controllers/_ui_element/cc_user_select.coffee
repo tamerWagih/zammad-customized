@@ -23,33 +23,36 @@ class App.UiElement.cc_user_select
       attribute.existingTokens = ''
       attribute.value = []
       
-      # Load selected users to get their names
-      currentUserId = App.Session.get('id')
+      # Load selected users to get their names (include current user if CC'd)
       App.Ajax.request(
         type: 'GET'
         url: "#{App.Config.get('api_path')}/tickets/cc_users?per_page=200"
         async: false  # Need names before rendering
         success: (data) ->
           users = if data.users then data.users else data
-          return if !users || users.length == 0
+          users = users || []
           
           for userId in selectedIds
             userIdStr = userId.toString()
-            continue if userIdStr == currentUserId.toString()
             
             # Find user in loaded data
             user = users.find((u) -> u.id.toString() == userIdStr)
+            
+            # Build a display name even if user is not in the preloaded list
+            display_name = ''
             if user
               display_name = "#{user.firstname || ''} #{user.lastname || ''}".trim()
               display_name = user.login if display_name == ''
               display_name = user.email if !display_name
-              display_name += " (#{user.email})" if user.email
-              
-              attribute.value.push(userIdStr)
-              attribute.existingTokens += App.view('generic/token')({
-                name: display_name
-                value: userIdStr
-              })
+              display_name += " (#{user.email})" if user?.email
+            else
+              display_name = "#{__('User')} ##{userIdStr}"
+            
+            attribute.value.push(userIdStr)
+            attribute.existingTokens += App.view('generic/token')({
+              name: display_name
+              value: userIdStr
+            })
       )
     
     # Create custom SearchableAjaxSelect for CC users
