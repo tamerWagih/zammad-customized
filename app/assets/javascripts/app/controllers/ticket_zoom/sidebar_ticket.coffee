@@ -203,41 +203,43 @@ class SidebarTicket extends App.Controller
       parent:    @parent
     )
 
-    if @ticket.currentView() is 'agent'
-      @mentionWidget = new App.WidgetMention(
-        el:       localEl.filter('.js-subscriptions')
-        object:   @ticket
-        mentions: @mentions
-      )
-      @tagWidget = new App.WidgetTag(
-        el:          localEl.filter('.js-tags')
-        object_type: 'Ticket'
-        object:      @ticket
-        tags:        @tags
-        editable:    @ticket.editable()
-      )
-      @linkWidget = new App.WidgetLink.Ticket(
-        el:          localEl.filter('.js-links')
+    # Show all sidebar widgets for both agent and customer; customers see read-only
+    editableSidebar = if @ticket.currentView() is 'agent' then @ticket.editable() else false
+
+    @mentionWidget = new App.WidgetMention(
+      el:       localEl.filter('.js-subscriptions')
+      object:   @ticket
+      mentions: @mentions
+    )
+    @tagWidget = new App.WidgetTag(
+      el:          localEl.filter('.js-tags')
+      object_type: 'Ticket'
+      object:      @ticket
+      tags:        @tags
+      editable:    editableSidebar
+    )
+    @linkWidget = new App.WidgetLink.Ticket(
+      el:          localEl.filter('.js-links')
+      object_type: 'Ticket'
+      object:      @ticket
+      links:       @links
+      editable:    editableSidebar
+    )
+
+    if @permissionCheck('knowledge_base.*') and App.Config.get('kb_active')
+      @linkKbAnswerWidget = new App.WidgetLinkKbAnswer(
+        el:          localEl.filter('.js-linkKbAnswers')
         object_type: 'Ticket'
         object:      @ticket
         links:       @links
-        editable:    @ticket.editable()
+        editable:    editableSidebar
       )
 
-      if @permissionCheck('knowledge_base.*') and App.Config.get('kb_active')
-        @linkKbAnswerWidget = new App.WidgetLinkKbAnswer(
-          el:          localEl.filter('.js-linkKbAnswers')
-          object_type: 'Ticket'
-          object:      @ticket
-          links:       @links
-          editable:    @ticket.editable()
-        )
-
-      @timeUnitWidget = new App.TicketZoomTimeUnit(
-        el:        localEl.filter('.js-timeUnit')
-        object_id: @ticket.id
-        time_accountings: @time_accountings
-      )
+    @timeUnitWidget = new App.TicketZoomTimeUnit(
+      el:        localEl.filter('.js-timeUnit')
+      object_id: @ticket.id
+      time_accountings: @time_accountings
+    )
     @html localEl
 
   showTicketHistory: =>
