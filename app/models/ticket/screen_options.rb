@@ -92,7 +92,14 @@ returns
 
     configure_attributes = nil
     if params[:ticket].present?
-      configure_attributes = ObjectManager::Object.new('Ticket').attributes(params[:current_user], params[:ticket])
+      # Show all ticket attributes (admin-level fields) to everyone; UI enforces editability
+      skip_permission = true
+
+      configure_attributes = ObjectManager::Object.new('Ticket').attributes(
+        params[:current_user],
+        params[:ticket],
+        skip_permission: skip_permission
+      )
     end
 
     core_workflow = CoreWorkflow.perform(payload: {

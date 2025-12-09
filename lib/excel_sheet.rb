@@ -124,7 +124,12 @@ class ExcelSheet
   end
 
   def value_lookup(record, attribute, object, additional)
-    value = record[attribute.to_sym]
+    value =
+      if record.respond_to?(:has_attribute?) && record.has_attribute?(attribute)
+        record[attribute.to_sym]
+      elsif !record.respond_to?(:has_attribute?) && record.respond_to?(:[])
+        record[attribute.to_sym]
+      end
     if attribute[-3, 3] == '_id'
       ref = attribute[0, attribute.length - 3]
       if record.respond_to?(ref.to_sym)
