@@ -1014,5 +1014,6 @@ returns a hex color code
   end
 
   public :sync_cc_users
+  public :sla_violation_type
 end
 
