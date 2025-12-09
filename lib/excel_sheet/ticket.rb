@@ -81,6 +81,7 @@ class ExcelSheet::Ticket < ExcelSheet
       { display: __('Update Escalation At'), name: 'update_escalation_at', width: 18, data_type: 'datetime' },
       { display: __('Update In Min'), name: 'update_in_min', width: 10, data_type: 'integer' },
       { display: __('Update Diff In Min'), name: 'update_diff_in_min', width: 10, data_type: 'integer' },
+      { display: __('SLA Violation Type'), name: 'sla_violation_type', width: 24, data_type: 'string' },
       { display: __('Last Contact At'), name: 'last_contact_at', width: 18, data_type: 'datetime' },
       { display: __('Last Contact Agent At'), name: 'last_contact_agent_at', width: 18, data_type: 'datetime' },
       { display: __('Last Contact Customer At'), name: 'last_contact_customer_at', width: 18, data_type: 'datetime' },

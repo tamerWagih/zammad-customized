@@ -821,6 +821,22 @@ returns a hex color code
     super(attributes)
   end
 
+  # Derive SLA violation type for exports/reports
+  def sla_violation_type
+    response_violation = [first_response_diff_in_min, update_diff_in_min].compact.any? { |diff| diff.negative? }
+    resolution_violation = close_diff_in_min.present? && close_diff_in_min.negative?
+
+    if response_violation && resolution_violation
+      'Response and Resolution Violation'
+    elsif resolution_violation
+      'Resolution Violation'
+    elsif response_violation
+      'Response Violation'
+    else
+      'Not Violated'
+    end
+  end
+
   # Create CC records after ticket creation if cc_user_ids is provided
   def create_cc_records
     Rails.logger.info "[CC] ===== CREATE_CC_RECORDS START ====="
