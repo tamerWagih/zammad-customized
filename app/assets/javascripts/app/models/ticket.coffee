@@ -379,19 +379,25 @@ class App.Ticket extends App.Model
     userDirectGroupIds = Object.keys(user.group_ids || {})  # Direct membership only
     isDirectMember = ticketGroupId in userDirectGroupIds
     
+    # DEBUG: Log share permission check details
+    console.log "[SHARE_PERM] Ticket #{@id}, user #{user.id}, permission='#{permission}': isSharer=#{isSharer}, isReceiver=#{isReceiver}, isDirectMember=#{isDirectMember}"
+    
     # If user IS a direct member of ticket's group, skip (let group access handle it)
     return null if isDirectMember
     
     # User does NOT have requested access to ticket's group: handle via share logic
     # Sharer (no access to ticket's group) → Full access
     if isSharer
+      console.log "[SHARE_PERM] User is SHARER -> returning true"
       return true
     
     # Receiver (no access to ticket's group) → Comment-only access
     if requested in ['change', 'full']
+      console.log "[SHARE_PERM] User is RECEIVER, requested='#{requested}' -> returning false"
       return false
     
     # For read/create
+    console.log "[SHARE_PERM] User is RECEIVER, requested='#{requested}' -> returning true"
     true
 
   sharePermissions: ->
