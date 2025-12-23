@@ -881,13 +881,18 @@ returns a hex color code
       Rails.logger.info "[CC] Has ticket.customer: #{is_customer}"
       Rails.logger.info "[CC] Has admin: #{is_admin}"
       
-      # Determine permissions based on role
-      # CRITICAL: Admins have ticket.agent permission, so they get 'full' too
-      # Regular agents also have ticket.agent, so they get 'full'
-      # Customers only have ticket.customer, so they get 'read', 'comment'
+      # Determine permissions based on role AND group membership:
+      # - Agents WITH full access to ticket's group: ['full']
+      # - Agents WITHOUT full group access (from other departments): ['read', 'comment']
+      # - Customers: ['read', 'comment']
       permissions = if is_agent
-                      Rails.logger.info "[CC] ✅ User has ticket.agent → Setting permissions to ['full']"
-                      ['full']
+                      if user.group_access?(group_id, 'full')
+                        Rails.logger.info "[CC] ✅ Agent with full group access → Setting permissions to ['full']"
+                        ['full']
+                      else
+                        Rails.logger.info "[CC] ✅ Agent WITHOUT full group access → Setting permissions to ['read', 'comment']"
+                        ['read', 'comment']
+                      end
                     elsif is_customer
                       Rails.logger.info "[CC] ✅ User is customer only → Setting permissions to ['read', 'comment']"
                       ['read', 'comment']
@@ -997,9 +1002,16 @@ returns a hex color code
       
       Rails.logger.info "[CC] Adding CC for user #{user_id} (#{user.login})"
       
-      # Determine permissions based on user role
+      # Determine permissions based on user role AND group membership:
+      # - Agents WITH full access to ticket's group: ['full']
+      # - Agents WITHOUT full group access (from other departments): ['read', 'comment']
+      # - Customers: ['read', 'comment']
       is_agent = user.permissions?('ticket.agent')
-      permissions = is_agent ? ['full'] : ['read', 'comment']
+      permissions = if is_agent
+                      user.group_access?(group_id, 'full') ? ['full'] : ['read', 'comment']
+                    else
+                      ['read', 'comment']
+                    end
       
       cc = ccs.build(
         user:           user,

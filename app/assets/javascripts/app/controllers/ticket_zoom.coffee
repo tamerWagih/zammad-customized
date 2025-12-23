@@ -1030,6 +1030,17 @@ class App.TicketZoom extends App.Controller
     if articleDiff.type
       articleDiff.internal = currentParams.article.internal
 
+    # Filter out meta fields that shouldn't trigger a diff if body is empty
+    # These fields are auto-populated by the form but aren't actual content changes
+    metaFieldsToIgnore = ['from', 'ticket_id', 'content_type', 'sender_id', 'shared_draft_id', 'subtype', 'in_reply_to']
+    bodyIsEmpty = !currentParams.article?.body || currentParams.article.body.toString().trim() is ''
+    
+    if bodyIsEmpty
+      # If body is empty, ignore meta fields that are auto-populated
+      for field in metaFieldsToIgnore
+        if articleDiff[field]?
+          delete articleDiff[field]
+
     articleDiffKeys = _.keys(articleDiff)
     contentKeys     = _.difference(articleDiffKeys, ['type', 'internal'])
 
