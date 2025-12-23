@@ -292,7 +292,6 @@ class App.TicketZoom extends App.Controller
               
               # If ANY permission changed, force re-render
               if oldReadable != @readable || oldChangeable != @changeable || oldFullable != @fullable
-                console.log "[APPROVAL_REFRESH] Permissions changed (read: #{oldReadable}->#{@readable}, change: #{oldChangeable}->#{@changeable}), forcing re-render"
                 @renderDone = false
                 @render()
               
@@ -355,7 +354,6 @@ class App.TicketZoom extends App.Controller
               
               # If ANY permission changed, force re-render
               if oldReadable != @readable || oldChangeable != @changeable || oldFullable != @fullable
-                console.log "[SHARE_REFRESH] Permissions changed (read: #{oldReadable}->#{@readable}, change: #{oldChangeable}->#{@changeable}), forcing re-render"
                 @renderDone = false
                 @render()
               
@@ -884,13 +882,6 @@ class App.TicketZoom extends App.Controller
     # update changes in ui
     currentStore = @currentStore()
     modelDiff = @formDiff(currentParams, currentStore)
-    
-    # DEBUG: Log what's causing the diff
-    if !_.isEmpty(modelDiff?.ticket) || !_.isEmpty(modelDiff?.article)
-      console.log '[FORM_DIFF] Ticket diff:', modelDiff?.ticket
-      console.log '[FORM_DIFF] Article diff:', modelDiff?.article
-      console.log '[FORM_DIFF] currentParams.ticket.cc_user_ids:', currentParams?.ticket?.cc_user_ids
-      console.log '[FORM_DIFF] currentStore.ticket.cc_user_ids:', currentStore?.ticket?.cc_user_ids
     
     return if _.isEmpty(modelDiff)
 
