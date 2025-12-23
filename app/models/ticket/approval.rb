@@ -7,11 +7,12 @@ class Ticket::Approval < ApplicationModel
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Approval::TriggersNotifications
+  include ApplicationModel::HasRequestCache  # Clear Auth::RequestCache on commit (performance)
 
   PRIORITIES = %w[low normal high urgent].freeze
   STATUSES   = %w[pending approved rejected].freeze
 
-  belongs_to :ticket, touch: true  # Touch parent ticket to trigger its TriggersSubscriptions
+  belongs_to :ticket  # Note: TriggersSubscriptions handles WebSocket updates, touch: true removed for performance
   belongs_to :approver, class_name: 'User'
   belongs_to :requester, class_name: 'User'
   belongs_to :created_by, class_name: 'User', optional: true

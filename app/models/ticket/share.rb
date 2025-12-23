@@ -7,12 +7,13 @@ class Ticket::Share < ApplicationModel
   include HasTags
   include HasTransactionDispatcher
   include Ticket::Share::TriggersNotifications
+  include ApplicationModel::HasRequestCache  # Clear Auth::RequestCache on commit (performance)
 
   VALID_PERMISSIONS = %w[full comment].freeze
 
   before_validation :ensure_default_permission
 
-  belongs_to :ticket, touch: true  # Touch parent ticket to trigger its TriggersSubscriptions
+  belongs_to :ticket  # Note: TriggersSubscriptions handles WebSocket updates, touch: true removed for performance
   belongs_to :group
   belongs_to :shared_by, class_name: 'User'
   belongs_to :created_by, class_name: 'User', optional: true

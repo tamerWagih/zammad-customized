@@ -91,38 +91,57 @@ class TicketPolicy < ApplicationPolicy
 
     private
 
+    # Cache shared ticket IDs per request using Zammad's native Auth::RequestCache pattern
+    # This prevents repeated DB queries when multiple scopes are resolved in one request
     def shared_ticket_ids(access)
       return [] unless user.permissions?('ticket.agent')
 
-      # Get ALL groups the user belongs to (any access level)
-      # Don't filter by access - if user is in a group that's shared with, they should see the ticket
-      # This matches approval behavior where approvers see tickets regardless of group access
-      group_ids = user.groups.pluck(:id)
-      return [] if group_ids.blank?
-
-      Ticket::Share.active_current.where(group_id: group_ids).pluck(:ticket_id).uniq
+      Auth::RequestCache.fetch_value("TicketPolicy/BaseScope/shared_ticket_ids/#{user.id}") do
+        # Get ALL groups the user belongs to (any access level)
+        # Don't filter by access - if user is in a group that's shared with, they should see the ticket
+        # This matches approval behavior where approvers see tickets regardless of group access
+        group_ids = user_group_ids_cached
+        if group_ids.blank?
+          []
+        else
+          Ticket::Share.active_current.where(group_id: group_ids).pluck(:ticket_id).uniq
+        end
+      end
     rescue StandardError => e
       Rails.logger.warn("Failed to resolve shared ticket ids for user #{user.id}: #{e.message}")
       []
     end
 
+    # Cache approval ticket IDs per request
     def approval_ticket_ids
       return [] unless user.permissions?('ticket.agent')
 
-      Ticket::Approval.where(approver_id: user.id).pluck(:ticket_id).uniq
+      Auth::RequestCache.fetch_value("TicketPolicy/BaseScope/approval_ticket_ids/#{user.id}") do
+        Ticket::Approval.where(approver_id: user.id).pluck(:ticket_id).uniq
+      end
     rescue StandardError => e
       Rails.logger.warn("Failed to resolve approval ticket ids for user #{user.id}: #{e.message}")
       []
     end
 
+    # Cache CC ticket IDs per request
     def cc_ticket_ids
       return [] unless user
 
-      # Include tickets where user is CC'd (both agents and customers)
-      Ticket::Cc.where(user_id: user.id).pluck(:ticket_id).uniq
+      Auth::RequestCache.fetch_value("TicketPolicy/BaseScope/cc_ticket_ids/#{user.id}") do
+        # Include tickets where user is CC'd (both agents and customers)
+        Ticket::Cc.where(user_id: user.id).pluck(:ticket_id).uniq
+      end
     rescue StandardError => e
       Rails.logger.warn("Failed to resolve CC ticket ids for user #{user.id}: #{e.message}")
       []
+    end
+
+    # Cache user group IDs per request (used by shared_ticket_ids)
+    def user_group_ids_cached
+      Auth::RequestCache.fetch_value("TicketPolicy/BaseScope/user_group_ids/#{user.id}") do
+        user.groups.pluck(:id)
+      end
     end
   end
 end

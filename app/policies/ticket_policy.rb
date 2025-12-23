@@ -126,11 +126,12 @@ class TicketPolicy < ApplicationPolicy
 
   # Allow access via Ticket::Cc for CC'd users.
   # Agents get full access, customers get read + comment access.
+  # Uses Auth::RequestCache to avoid repeated DB queries per request.
   def cc_access?(access)
     return nil unless user
 
-    # Check if user is CC'd on this ticket
-    cc_record = record.ccs.find_by(user_id: user.id)
+    # Cache CC record lookup per ticket+user per request
+    cc_record = cc_record_cached
     return nil if cc_record.nil?
 
     # Check permissions based on CC record
@@ -148,18 +149,27 @@ class TicketPolicy < ApplicationPolicy
     end
   end
 
+  # Cache CC record lookup per ticket+user per request
+  # Uses :not_found sentinel to properly cache nil results (Auth::RequestCache doesn't cache nil)
+  def cc_record_cached
+    cache_key = "TicketPolicy/cc_record/#{record.id}/#{user.id}"
+    cached = Auth::RequestCache.fetch_value(cache_key) do
+      record.ccs.find_by(user_id: user.id) || :not_found
+    end
+    cached == :not_found ? nil : cached
+  end
+
   # Allow access via Ticket::Approval.
   # Only agents and admins can be approvers or requesters (standard Zammad requirement).
-  # Both requester and approver get full access
+  # Both requester and approver get full access.
+  # Uses Auth::RequestCache to avoid repeated DB queries per request.
   def approval_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can be approvers/requesters
     
-    # Check if user is a requester (creator) or approver for this ticket
-    is_requester = record.approvals.exists?(requester_id: user.id)
-    is_approver = record.approvals.exists?(approver_id: user.id)
-    
-    return nil unless is_requester || is_approver
+    # Cache approval role check per ticket+user per request
+    approval_role = approval_role_cached
+    return nil unless approval_role
     
     # Both requester and approver get full access (read, comment, edit)
     case access.to_s
@@ -170,8 +180,29 @@ class TicketPolicy < ApplicationPolicy
     end
   end
 
+  # Cache approval role (requester/approver) lookup per ticket+user per request
+  # Returns :requester, :approver, or nil
+  # Uses :not_found sentinel to properly cache nil results (Auth::RequestCache doesn't cache nil)
+  def approval_role_cached
+    cache_key = "TicketPolicy/approval_role/#{record.id}/#{user.id}"
+    cached = Auth::RequestCache.fetch_value(cache_key) do
+      is_requester = record.approvals.exists?(requester_id: user.id)
+      is_approver = record.approvals.exists?(approver_id: user.id)
+      
+      if is_requester
+        :requester
+      elsif is_approver
+        :approver
+      else
+        :not_found
+      end
+    end
+    cached == :not_found ? nil : cached
+  end
+
   # Allow ticket creator (created_by) to view and comment on their tickets
-  # even if the ticket is in a different group
+  # even if the ticket is in a different group.
+  # Uses Auth::RequestCache to avoid repeated DB queries per request.
   def creator_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent')
@@ -180,7 +211,8 @@ class TicketPolicy < ApplicationPolicy
     return nil unless record.created_by_id == user.id
     
     # CRITICAL: Check if creator is a DIRECT MEMBER of ticket's group (not via role)
-    user_group_ids = user.groups.pluck(:id)
+    # Cache user group IDs per request
+    user_group_ids = user_group_ids_cached
     is_direct_member = user_group_ids.include?(record.group_id)
     
     # If creator IS a direct member, check if they have the requested permission
@@ -208,19 +240,16 @@ class TicketPolicy < ApplicationPolicy
   # Sharer from different group: full access
   # Sharer from SAME group: full access via agent_access?
   # Receiver from SAME group: full access via agent_access?
-  # Receiver from DIFFERENT group: comment-only access
+  # Receiver from DIFFERENT group: comment-only access.
+  # Uses Auth::RequestCache to avoid repeated DB queries per request.
   def share_access?(access)
     return nil unless user
     return nil unless user.permissions?('ticket.agent') # Only agents can access shared tickets
 
-    # Check if user is the sharer (person who created the share)
-    user_is_sharer = record.shares.active_current.exists?(shared_by_id: user.id)
-    
-    # Check if user is a receiver (member of a group that ticket is shared with)
-    active_shares = Ticket::Share.active_current.where(ticket_id: record.id)
-    user_group_ids = user.groups.pluck(:id)
-    receiver_shares = active_shares.select { |s| user_group_ids.include?(s.group_id) }
-    user_is_receiver = receiver_shares.present?
+    # Cache share role check per ticket+user per request
+    share_info = share_info_cached
+    user_is_sharer = share_info[:is_sharer]
+    user_is_receiver = share_info[:is_receiver]
 
     return nil unless user_is_sharer || user_is_receiver
 
@@ -228,6 +257,7 @@ class TicketPolicy < ApplicationPolicy
     # If user IS a direct member, let agent_access? handle it (standard group permissions)
     # If user is NOT a direct member but has share → use share-only permissions
     # This prevents role-based permissions from overriding share restrictions
+    user_group_ids = user_group_ids_cached
     is_direct_member = user_group_ids.include?(record.group_id)
     return nil if is_direct_member
     
@@ -245,6 +275,29 @@ class TicketPolicy < ApplicationPolicy
       false
     else
       nil
+    end
+  end
+
+  # Cache share info (sharer/receiver status) per ticket+user per request
+  def share_info_cached
+    Auth::RequestCache.fetch_value("TicketPolicy/share_info/#{record.id}/#{user.id}") do
+      user_group_ids = user_group_ids_cached
+      
+      # Check if user is the sharer (person who created the share)
+      is_sharer = record.shares.active_current.exists?(shared_by_id: user.id)
+      
+      # Check if user is a receiver (member of a group that ticket is shared with)
+      active_shares = record.shares.active_current
+      is_receiver = active_shares.any? { |s| user_group_ids.include?(s.group_id) }
+      
+      { is_sharer: is_sharer, is_receiver: is_receiver }
+    end
+  end
+
+  # Cache user group IDs per request (used by creator_access? and share_access?)
+  def user_group_ids_cached
+    Auth::RequestCache.fetch_value("TicketPolicy/user_group_ids/#{user.id}") do
+      user.groups.pluck(:id)
     end
   end
 

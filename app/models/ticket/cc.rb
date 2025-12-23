@@ -8,10 +8,11 @@ class Ticket::Cc < ApplicationModel
   include HasTags                       # Tag support
   include HasTransactionDispatcher      # Transaction events (CRITICAL!)
   include Ticket::Cc::TriggersSubscriptions  # Custom WebSocket events
+  include ApplicationModel::HasRequestCache  # Clear Auth::RequestCache on commit (performance)
 
   PERMISSIONS = %w[read comment full].freeze
 
-  belongs_to :ticket, touch: true       # Touch parent = triggers parent subscriptions
+  belongs_to :ticket  # Note: TriggersSubscriptions handles WebSocket updates, touch: true removed for performance
   belongs_to :user
   belongs_to :created_by, class_name: 'User', optional: true
   belongs_to :updated_by, class_name: 'User', optional: true
