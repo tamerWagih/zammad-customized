@@ -262,8 +262,13 @@ class App.Ticket extends App.Model
     return false unless user
     return false unless user.permission('ticket.agent')
     
+    # DEBUG: Log permission check
+    console.log "[PERMISSION] userGroupAccess('#{permission}') for ticket #{@id}, user #{user.id}"
+    
     # 1. Check CC permissions FIRST
-    if @hasCcPermission(permission)
+    ccResult = @hasCcPermission(permission)
+    console.log "[PERMISSION] CC check result: #{ccResult}"
+    if ccResult
       return true
     
     # 2. Check approval access (requester gets full, approver gets read/create only)
@@ -314,15 +319,19 @@ class App.Ticket extends App.Model
     
     # 4. Check share permissions
     shareResult = @hasSharePermission(permission)
+    console.log "[PERMISSION] Share check result: #{shareResult}"
     if shareResult is true
       return true
     else if shareResult is false
       return false
     
     # 5. Check standard group access
-    if @isAccessibleByGroup(user, permission)
+    groupResult = @isAccessibleByGroup(user, permission)
+    console.log "[PERMISSION] Group check result: #{groupResult}"
+    if groupResult
       return true
     
+    console.log "[PERMISSION] Final result: false"
     false
 
   hasSharePermission: (permission) ->
