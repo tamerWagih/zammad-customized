@@ -274,6 +274,9 @@ class App.Ticket extends App.Model
       for approval in approvals
         # Requester gets full access (they created the approval request)
         if parseInt(approval.requester_id) is parseInt(user.id)
+          # IMPORTANT: Don't allow approvals to grant change/full unless user has full group access.
+          if requested in ['change', 'full', 'edit']
+            return @isAccessibleByGroup(user, 'full')
           return true
         # Approver gets read/create only (can view and comment, not edit)
         if parseInt(approval.approver_id) is parseInt(user.id)
@@ -383,8 +386,10 @@ class App.Ticket extends App.Model
     return null if isDirectMember
     
     # User does NOT have requested access to ticket's group: handle via share logic
-    # Sharer (no access to ticket's group) → Full access
+    # Sharer/Receiver (no access to ticket's group) → comment-only access
     if isSharer
+      requested = permission?.toString()?.toLowerCase() || 'read'
+      return false if requested in ['change', 'full', 'edit']
       return true
     
     # Receiver (no access to ticket's group) → Comment-only access

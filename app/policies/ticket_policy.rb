@@ -186,9 +186,9 @@ class TicketPolicy < ApplicationPolicy
       # Both requester and approver can read and create (add comments)
       true
     when 'change', 'full'
-      # Only requester gets change/full access (they own the approval request)
-      # Approver should NOT get change/full access
-      approval_role == :requester
+      # IMPORTANT: Do NOT allow approvals to grant change/full across departments.
+      # Only allow change/full if the user also has full access to the ticket's group.
+      approval_role == :requester && user.group_access?(record.group_id, 'full')
     else
       nil
     end
@@ -276,9 +276,16 @@ class TicketPolicy < ApplicationPolicy
     return nil if is_direct_member
     
     # User does NOT have requested access to ticket's group: handle via share logic
-    # Sharer (no access to ticket's group) → Full access
+    # Sharer/Receiver (no access to ticket's group) → comment-only access.
     if user_is_sharer
-      return true if %w[read change create full].include?(access.to_s)
+      case access.to_s
+      when 'read', 'create'
+        return true
+      when 'change', 'full'
+        return false
+      else
+        return nil
+      end
     end
     
     # Receiver (no access to ticket's group) → Comment-only access
