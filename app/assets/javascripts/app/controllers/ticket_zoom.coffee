@@ -378,7 +378,10 @@ class App.TicketZoom extends App.Controller
         type:  'GET'
         url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
         success: (ticketData) =>
-          App.Ticket.refresh([ticketData]) if ticketData?
+          # CRITICAL: ticketData is the full API response with assets, ccs, etc.
+          # We need to refresh with the actual ticket data from assets
+          if ticketData?.assets?.Ticket?[@ticket_id]
+            App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]])
           @ticket = App.Ticket.findNative(@ticket_id)
           
           # Update approvals/shares/CCs cache for permission checks

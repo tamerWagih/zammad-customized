@@ -474,7 +474,8 @@ class App.Ticket extends App.Model
     # Check permissions from CC record
     ccPermissions = ccRecord.permissions || []
     ccPermissions = [ccPermissions] unless Array.isArray(ccPermissions)
-    ccPermissions = ccPermissions.map (perm) -> perm?.toString()?.toLowerCase?() || perm
+    ccPermissions = ccPermissions.map (perm) -> 
+      if perm? then perm.toString().toLowerCase() else perm
     
     hasFull = ccPermissions.includes('full')
     hasComment = ccPermissions.includes('comment')
