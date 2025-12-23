@@ -262,12 +262,8 @@ class App.Ticket extends App.Model
     return false unless user
     return false unless user.permission('ticket.agent')
     
-    # DEBUG: Log permission check
-    console.log "[PERMISSION] userGroupAccess('#{permission}') for ticket #{@id}, user #{user.id}"
-    
     # 1. Check CC permissions FIRST
     ccResult = @hasCcPermission(permission)
-    console.log "[PERMISSION] CC check result: #{ccResult}"
     if ccResult
       return true
     
@@ -319,19 +315,15 @@ class App.Ticket extends App.Model
     
     # 4. Check share permissions
     shareResult = @hasSharePermission(permission)
-    console.log "[PERMISSION] Share check result: #{shareResult}"
     if shareResult is true
       return true
     else if shareResult is false
       return false
     
     # 5. Check standard group access
-    groupResult = @isAccessibleByGroup(user, permission)
-    console.log "[PERMISSION] Group check result: #{groupResult}"
-    if groupResult
+    if @isAccessibleByGroup(user, permission)
       return true
     
-    console.log "[PERMISSION] Final result: false"
     false
 
   hasSharePermission: (permission) ->
@@ -476,6 +468,10 @@ class App.Ticket extends App.Model
     
     # Get CC records from cache or model
     ccs = @_ccs_cache || @ccs || []
+    
+    # DEBUG: Log CC cache state
+    console.log "[CC_PERM] Ticket #{@id}, checking '#{permission}', ccs.length=#{ccs?.length}, _ccs_cache exists=#{!!@_ccs_cache}"
+    
     return false unless ccs.length
     
     # Find CC record for current user
@@ -492,6 +488,9 @@ class App.Ticket extends App.Model
     ccPermissions = [ccPermissions] unless Array.isArray(ccPermissions)
     ccPermissions = ccPermissions.map (perm) -> 
       if perm? then perm.toString().toLowerCase() else perm
+    
+    # DEBUG: Log CC record permissions
+    console.log "[CC_PERM] Found CC record for user #{user.id}, permissions=#{JSON.stringify(ccPermissions)}"
     
     hasFull = ccPermissions.includes('full')
     hasComment = ccPermissions.includes('comment')
