@@ -135,14 +135,20 @@ class TicketPolicy < ApplicationPolicy
     return nil if cc_record.nil?
 
     # Check permissions based on CC record
+    # Permission mapping:
+    # - 'read' = view ticket → requires read_access or full_access
+    # - 'create' = add comments/articles → requires comment_access or full_access
+    # - 'change' = edit ticket attributes → requires full_access ONLY
+    # - 'full' = full access → requires full_access
     case access.to_s
     when 'read'
       cc_record.read_access?
-    when 'change', 'create'
-      # CRITICAL: Allow if user has full access OR comment access
-      # This allows both agents (full) and customers (comment) to update tickets
+    when 'create'
+      # Comment access allows adding articles/comments
       cc_record.full_access? || cc_record.comment_access?
-    when 'full'
+    when 'change', 'full'
+      # CRITICAL: Only full_access can edit ticket attributes
+      # comment_access should NOT grant 'change' permission
       cc_record.full_access?
     else
       nil
