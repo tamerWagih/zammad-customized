@@ -1021,12 +1021,6 @@ class App.TicketZoom extends App.Controller
 
     articleDiff = @forRemoveMeta(App.Utils.formDiff(currentParams.article, currentStore.article))
 
-    # DEBUG: Log raw article diff before filtering
-    if !_.isEmpty(articleDiff)
-      console.log '[FORM_DIFF] Raw article diff:', articleDiff
-      console.log '[FORM_DIFF] currentParams.article:', currentParams.article
-      console.log '[FORM_DIFF] currentStore.article:', currentStore.article
-
     if articleDiff.type
       articleDiff.internal = currentParams.article.internal
 
@@ -1090,12 +1084,6 @@ class App.TicketZoom extends App.Controller
     params         = {}
     params.ticket  = @forRemoveMeta(@ticketParams())
     params.article = @forRemoveMeta(@articleNew?.params())
-
-    # DEBUG: Log when markFormDiff is called
-    if !_.isEmpty(diff.ticket) || !_.isEmpty(diff.article)
-      console.log '[MARK_FORM_DIFF] Called with non-empty diff'
-      console.log '[MARK_FORM_DIFF] diff.ticket:', diff.ticket
-      console.log '[MARK_FORM_DIFF] diff.article:', diff.article
 
     # clear all changes
     if _.isEmpty(diff.ticket) && _.isEmpty(diff.article)

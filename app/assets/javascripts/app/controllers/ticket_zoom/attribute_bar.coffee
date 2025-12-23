@@ -59,7 +59,7 @@ class App.TicketZoomAttributeBar extends App.Controller
   render: (options = {}) =>
     # remember current reset state
     resetButtonShown = false
-    if @resetButton.get(0) && !@resetButton.hasClass('hide') && @ticket.editable()
+    if @resetButton.get(0) && !@resetButton.hasClass('hide') && (@ticket.editable() || @ticket.editable('create'))
       resetButtonShown = true
 
     group                  = App.Group.find options?.newGroupId || @ticket.group_id

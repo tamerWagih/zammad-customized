@@ -149,7 +149,10 @@ class TicketPolicy < ApplicationPolicy
     when 'change', 'full'
       # CRITICAL: Only full_access can edit ticket attributes
       # comment_access should NOT grant 'change' permission
-      cc_record.full_access?
+      # Additional safeguard: even if a legacy CC record has ['full'] stored,
+      # only grant change/full if the user also has full access to the ticket's group.
+      # This prevents cross-department CC users from escalating to full access after commenting.
+      cc_record.full_access? && user.group_access?(record.group_id, 'full')
     else
       nil
     end

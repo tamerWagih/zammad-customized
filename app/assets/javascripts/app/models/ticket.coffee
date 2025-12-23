@@ -474,10 +474,6 @@ class App.Ticket extends App.Model
     
     # Get CC records from cache or model
     ccs = @_ccs_cache || @ccs || []
-    
-    # DEBUG: Log CC cache state
-    console.log "[CC_PERM] Ticket #{@id}, checking '#{permission}', ccs.length=#{ccs?.length}, _ccs_cache exists=#{!!@_ccs_cache}"
-    
     return false unless ccs.length
     
     # Find CC record for current user
@@ -494,9 +490,6 @@ class App.Ticket extends App.Model
     ccPermissions = [ccPermissions] unless Array.isArray(ccPermissions)
     ccPermissions = ccPermissions.map (perm) -> 
       if perm? then perm.toString().toLowerCase() else perm
-    
-    # DEBUG: Log CC record permissions
-    console.log "[CC_PERM] Found CC record for user #{user.id}, permissions=#{JSON.stringify(ccPermissions)}"
     
     hasFull = ccPermissions.includes('full')
     hasComment = ccPermissions.includes('comment')
@@ -518,7 +511,9 @@ class App.Ticket extends App.Model
       when 'change', 'edit', 'full'
         # CRITICAL: Only full access can edit ticket attributes
         # comment permission should NOT grant 'change' permission
-        hasFull
+        # Additional safeguard: even if a legacy CC record has ['full'] stored,
+        # only grant change/full if user also has full group access to this ticket's group.
+        hasFull and @isAccessibleByGroup(user, 'full')
       else
         false
 
