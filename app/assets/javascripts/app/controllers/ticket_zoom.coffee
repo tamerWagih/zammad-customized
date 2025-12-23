@@ -1080,6 +1080,12 @@ class App.TicketZoom extends App.Controller
     params.ticket  = @forRemoveMeta(@ticketParams())
     params.article = @forRemoveMeta(@articleNew?.params())
 
+    # DEBUG: Log when markFormDiff is called
+    if !_.isEmpty(diff.ticket) || !_.isEmpty(diff.article)
+      console.log '[MARK_FORM_DIFF] Called with non-empty diff'
+      console.log '[MARK_FORM_DIFF] diff.ticket:', diff.ticket
+      console.log '[MARK_FORM_DIFF] diff.article:', diff.article
+
     # clear all changes
     if _.isEmpty(diff.ticket) && _.isEmpty(diff.article)
       ticketSidebar.removeClass('is-changed')

@@ -91,19 +91,27 @@ class Ticket::Cc < ApplicationModel
       return
     end
 
-    # Set permissions based on user ROLE (not permission - admins inherit all permissions!)
-    # - Agents: full access (can read, comment, edit)
+    # Set permissions based on user ROLE AND group membership:
+    # - Agents IN the ticket's group: full access (can read, comment, edit)
+    # - Agents NOT in the ticket's group: read + comment only (can view and respond)
     # - Customers: read + comment (can view and respond)
-    # Note: User may have multiple roles - we check for agent first (higher privilege)
     
     return unless user
+    return unless ticket
     
     agent_role = Role.find_by(name: 'Agent')
     customer_role = Role.find_by(name: 'Customer')
     
     if user.role_ids.include?(agent_role&.id)
-      # Users with Agent role get full ticket access
-      self.permissions = ['full']
+      # Check if agent has access to the ticket's group
+      if user.group_access?(ticket.group_id, 'full')
+        # Agent with full group access gets full ticket access
+        self.permissions = ['full']
+      else
+        # Agent WITHOUT full group access only gets read + comment
+        # This is for agents CC'd from other departments
+        self.permissions = ['read', 'comment']
+      end
     elsif user.role_ids.include?(customer_role&.id)
       # Users with Customer role get read and comment access
       self.permissions = ['read', 'comment']
