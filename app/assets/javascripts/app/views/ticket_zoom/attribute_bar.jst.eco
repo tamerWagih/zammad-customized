@@ -52,7 +52,7 @@
       </span>
   </ul>
 </div>
-<form class="buttonDropdown<% if (!@ticket.editable() && !@ticket.editable('create')) || !@resetButtonShown: %> hide<% end %>">
+<form class="buttonDropdown<% if !@ticket.editable() && !@ticket.editable('create'): %> hide<% end %>">
 <% if @macroDisabled && @sharedDraftsDisabled: %>
   <button class="btn btn--primary js-submit"><span><%- @T('Update') %></span></button>
 <% else: %>

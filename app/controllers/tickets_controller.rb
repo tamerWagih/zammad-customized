@@ -326,6 +326,19 @@ class TicketsController < ApplicationController
       end
     end
 
+    # IMPORTANT:
+    # `follow_up?` allows users with 'create' access to add articles/comments.
+    # But it must NOT allow changing ticket attributes (requires 'change' access).
+    # The UI may submit the whole ticket form even when the user only wrote a comment.
+    can_change_ticket = TicketPolicy.new(current_user, ticket).update?
+    unless can_change_ticket
+      # Drop all ticket attribute updates for comment-only users.
+      # Still allow article creation below.
+      clean_params = {}
+      # Also prevent CC list manipulation for comment-only users.
+      cc_user_ids_raw = nil
+    end
+
     # Normalize cc_user_ids to array
     new_cc_user_ids = if cc_user_ids_raw.is_a?(Array)
                         cc_user_ids_raw.map(&:to_i).reject(&:zero?)
@@ -338,10 +351,10 @@ class TicketsController < ApplicationController
                       end
 
     ticket.with_lock do
-      ticket.update!(clean_params)
+      ticket.update!(clean_params) if clean_params.present?
       
       # Handle CC updates with diff logic (only add/remove changed ones)
-      if !cc_user_ids_raw.nil?  # Only process if cc_user_ids was provided
+      if can_change_ticket && !cc_user_ids_raw.nil?  # Only process if cc_user_ids was provided and user can change ticket
         ticket.sync_cc_users(new_cc_user_ids || [])
       end
       

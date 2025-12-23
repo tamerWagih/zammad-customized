@@ -1080,6 +1080,7 @@ class App.TicketZoom extends App.Controller
     ticketForm    = @$('.edit')
     ticketSidebar = @$('.tabsSidebar-tab[data-tab="ticket"]')
     resetButton   = @$('.js-reset')
+    submitForm    = @$('.js-submit').closest('form.buttonDropdown')
 
     params         = {}
     params.ticket  = @forRemoveMeta(@ticketParams())
@@ -1091,6 +1092,7 @@ class App.TicketZoom extends App.Controller
       ticketForm.removeClass('form-changed')
       ticketForm.find('.form-group').removeClass('is-changed')
       resetButton.addClass('hide')
+      submitForm.addClass('hide') if submitForm?.get(0)
 
     # set changes
     else
@@ -1111,6 +1113,10 @@ class App.TicketZoom extends App.Controller
             element.removeClass('is-changed')
 
       resetButton.removeClass('hide')
+      # Show Update button immediately when there are changes (ticket or article),
+      # but only if user is allowed to submit (editable or create).
+      if @ticket && (@ticket.editable() || @ticket.editable('create'))
+        submitForm.removeClass('hide') if submitForm?.get(0)
 
   ticketParams: =>
     params = @formParam(@$('.edit'))
