@@ -969,6 +969,15 @@ class App.TicketZoom extends App.Controller
       ticket:  @formParam(@el.find('.edit'))
       article: @articleNew?.params() || {}
 
+    # Normalize cc_user_ids to integers and sorted (must match currentStore normalization)
+    if currentParams.ticket.cc_user_ids?
+      currentParams.ticket.cc_user_ids = currentParams.ticket.cc_user_ids
+        .map((id) -> parseInt(id, 10))
+        .filter((id) -> !isNaN(id))
+        .sort((a, b) -> a - b)
+    else
+      currentParams.ticket.cc_user_ids = []
+
     # add attachments if exist
     attachmentCount = @$('.article-add .textBubble .attachments .attachment').length
     if attachmentCount > 0
