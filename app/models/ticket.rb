@@ -730,6 +730,9 @@ returns a hex color code
     return true if owner_id.blank?
     return true if owner_id == 1
 
+    # if owner doesn't exist (was deleted or invalid ID), unassign
+    return (self.owner_id = 1) || true if owner.nil?
+
     # return if owner is active, is agent and has access to group of ticket
     return true if owner.active? && owner.permissions?('ticket.agent') && owner.group_access?(group_id, 'full')
 
