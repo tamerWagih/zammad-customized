@@ -481,16 +481,22 @@ class App.Ticket extends App.Model
     hasRead = ccPermissions.includes('read')
     
     # Map requested permission to CC permissions
+    # Permission mapping:
+    # - 'read' = view ticket → requires read or full
+    # - 'create' = add comments/articles → requires comment or full
+    # - 'change' = edit ticket attributes → requires full ONLY
+    # - 'full' = full access → requires full
     requested = permission?.toString()?.toLowerCase() || 'read'
     switch requested
       when 'read'
         hasFull or hasRead
-      when 'change', 'create', 'edit'
-        hasFull or hasComment  # comment permission allows adding articles/notes
-      when 'full'
-        hasFull
-      when 'comment'
+      when 'create', 'comment'
+        # Comment permission allows adding articles/notes
         hasFull or hasComment
+      when 'change', 'edit', 'full'
+        # CRITICAL: Only full access can edit ticket attributes
+        # comment permission should NOT grant 'change' permission
+        hasFull
       else
         false
 

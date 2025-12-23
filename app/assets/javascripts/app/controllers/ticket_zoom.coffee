@@ -208,6 +208,13 @@ class App.TicketZoom extends App.Controller
     @ticket._shares_cache = @shares
     @ticket._ccs_cache = @ccs
     
+    # CRITICAL: Populate cc_user_ids from _ccs_cache for form diffing
+    # Without this, currentStore() returns empty cc_user_ids and form shows false-positive changes
+    if @ccs && @ccs.length > 0
+      @ticket.cc_user_ids = @ccs.map((cc) -> parseInt(cc.user_id)).filter((id) -> !isNaN(id))
+    else
+      @ticket.cc_user_ids = []
+    
     # Evaluate permissions with detailed logging
     @view           = @ticket && @ticket.currentView && @ticket.currentView()
     
@@ -270,6 +277,10 @@ class App.TicketZoom extends App.Controller
               @ticket._shares_cache = @shares if @ticket
               @ticket._ccs_cache = @ccs if @ticket
               
+              # Sync cc_user_ids from _ccs_cache for form diffing
+              if @ticket && @ccs
+                @ticket.cc_user_ids = @ccs.map((cc) -> parseInt(cc.user_id)).filter((id) -> !isNaN(id))
+              
               # CRITICAL: Recalculate permissions after approval change
               oldReadable = @readable
               oldChangeable = @changeable
@@ -329,6 +340,10 @@ class App.TicketZoom extends App.Controller
               @ticket._shares_cache = @shares if @ticket
               @ticket._ccs_cache = @ccs if @ticket
               
+              # Sync cc_user_ids from _ccs_cache for form diffing
+              if @ticket && @ccs
+                @ticket.cc_user_ids = @ccs.map((cc) -> parseInt(cc.user_id)).filter((id) -> !isNaN(id))
+              
               # CRITICAL: Recalculate permissions after share change
               oldReadable = @readable
               oldChangeable = @changeable
@@ -376,6 +391,8 @@ class App.TicketZoom extends App.Controller
           if ticketData.ccs
             @ccs = ticketData.ccs
             @ticket._ccs_cache = @ccs if @ticket
+            # Sync cc_user_ids from _ccs_cache for form diffing
+            @ticket.cc_user_ids = @ccs.map((cc) -> parseInt(cc.user_id)).filter((id) -> !isNaN(id)) if @ticket
           
           # Trigger sidebar rerender
           App.Event.trigger('ui::ticket::sidebarRerender')
