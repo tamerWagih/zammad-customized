@@ -266,12 +266,19 @@ class App.Ticket extends App.Model
     if @hasCcPermission(permission)
       return true
     
-    # 2. Check if user is an approver
+    # 2. Check approval access (requester gets full, approver gets read/create only)
     if @_approvals_cache or @approvals
       approvals = @_approvals_cache or @approvals or []
+      requested = permission?.toString()?.toLowerCase() || 'read'
       for approval in approvals
-        if parseInt(approval.approver_id) is parseInt(user.id)
+        # Requester gets full access (they created the approval request)
+        if parseInt(approval.requester_id) is parseInt(user.id)
           return true
+        # Approver gets read/create only (can view and comment, not edit)
+        if parseInt(approval.approver_id) is parseInt(user.id)
+          if requested in ['read', 'create']
+            return true
+          # For 'change' or 'full', continue to next check (don't grant)
     
     # 3. Check creator access
     if parseInt(@created_by_id) is parseInt(user.id)

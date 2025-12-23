@@ -1040,6 +1040,15 @@ class App.TicketZoom extends App.Controller
         when 'autocompletion_ajax_external_data_source'
           if _.isEmpty(value)
             params.ticket[key] = ''
+        when 'cc_user_select'
+          # Normalize cc_user_ids to sorted integer array for consistent comparison
+          if value? && Array.isArray(value)
+            params.ticket[key] = value
+              .map((id) -> parseInt(id, 10))
+              .filter((id) -> !isNaN(id))
+              .sort((a, b) -> a - b)
+          else if _.isEmpty(value)
+            params.ticket[key] = []
 
   forRemoveMeta: (params = {}) ->
     paramsNew = {}

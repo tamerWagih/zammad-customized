@@ -167,7 +167,8 @@ class TicketPolicy < ApplicationPolicy
 
   # Allow access via Ticket::Approval.
   # Only agents and admins can be approvers or requesters (standard Zammad requirement).
-  # Both requester and approver get full access.
+  # Requester gets full access (they created the approval request).
+  # Approver gets read + create only (can view and comment, not edit ticket).
   # Uses Auth::RequestCache to avoid repeated DB queries per request.
   def approval_access?(access)
     return nil unless user
@@ -177,10 +178,14 @@ class TicketPolicy < ApplicationPolicy
     approval_role = approval_role_cached
     return nil unless approval_role
     
-    # Both requester and approver get full access (read, comment, edit)
     case access.to_s
-    when 'read', 'change', 'create', 'full'
+    when 'read', 'create'
+      # Both requester and approver can read and create (add comments)
       true
+    when 'change', 'full'
+      # Only requester gets change/full access (they own the approval request)
+      # Approver should NOT get change/full access
+      approval_role == :requester
     else
       nil
     end
