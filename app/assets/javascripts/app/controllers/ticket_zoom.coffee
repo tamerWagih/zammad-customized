@@ -1021,6 +1021,12 @@ class App.TicketZoom extends App.Controller
 
     articleDiff = @forRemoveMeta(App.Utils.formDiff(currentParams.article, currentStore.article))
 
+    # DEBUG: Log raw article diff before filtering
+    if !_.isEmpty(articleDiff)
+      console.log '[FORM_DIFF] Raw article diff:', articleDiff
+      console.log '[FORM_DIFF] currentParams.article:', currentParams.article
+      console.log '[FORM_DIFF] currentStore.article:', currentStore.article
+
     if articleDiff.type
       articleDiff.internal = currentParams.article.internal
 
