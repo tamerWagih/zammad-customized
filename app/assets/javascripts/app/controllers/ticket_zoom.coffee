@@ -67,7 +67,24 @@ class App.TicketZoom extends App.Controller
       return if data?.taskKey? and data.taskKey isnt @taskKey
       return if data?.ticket_id? and data.ticket_id.toString() isnt @ticket_id.toString()
       return if !@sidebarWidget
-      @sidebarWidget.render(@formCurrent())
+      # IMPORTANT: Don't call sidebarWidget.render() here.
+      # render() uses TicketZoomSidebar's internal @approvals/@shares/@ccs which may be stale.
+      # Instead, push the latest data via reload() so widgets (approvals/shares/cc) update immediately
+      # without forcing a full sidebar rebuild.
+      @sidebarWidget.reload(
+        params:           @params
+        query:            @query
+        formMeta:         @formMeta
+        markForm:         @markForm
+        tags:             @tags
+        mentions:         @mentions
+        time_accountings: @time_accountings
+        links:            @links
+        approvals:        @approvals
+        shares:           @shares
+        ccs:              @ccs
+        parent:           @
+      )
     )
     @controllerBind('config_update', (data) =>
       return if data.name isnt 'checklist'

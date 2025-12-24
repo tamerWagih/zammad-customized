@@ -14,6 +14,23 @@ class App.TicketZoomSidebar extends App.ControllerObserver
     return @sidebarBackends[key]
 
   reload: (args) =>
+    # Keep internal state in sync so subsequent render() uses fresh data.
+    # This is critical for real-time updates (approvals/shares/ccs) where we call reload()
+    # without rebuilding the entire sidebar.
+    if args?
+      @params           = args.params           if args.params?
+      @query            = args.query            if args.query?
+      @formMeta         = args.formMeta         if args.formMeta?
+      @markForm         = args.markForm         if args.markForm?
+      @tags             = args.tags             if args.tags?
+      @mentions         = args.mentions         if args.mentions?
+      @time_accountings = args.time_accountings if args.time_accountings?
+      @links            = args.links            if args.links?
+      @approvals        = args.approvals        if args.approvals?
+      @shares           = args.shares           if args.shares?
+      @ccs              = args.ccs              if args.ccs?
+      @parent           = args.parent           if args.parent?
+
     for key, backend of @sidebarBackends
       if backend && backend.reload
         backend.reload(args)
