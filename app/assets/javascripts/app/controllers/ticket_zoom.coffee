@@ -367,41 +367,6 @@ class App.TicketZoom extends App.Controller
       )
     )
 
-    # Listen for general ticket actions that might affect permissions
-    @controllerBind('ui::ticket::articleNew::change', (data) =>
-      return unless data?.ticket_id?.toString() is @ticket_id?.toString()
-      # Refresh ticket object and re-enforce permissions
-      @ajax(
-        id:    'ticket-article-refresh'
-        type:  'GET'
-        url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
-        success: (ticketData) =>
-          # CRITICAL: ticketData is the full API response with assets, ccs, etc.
-          # We need to refresh with the actual ticket data from assets
-          if ticketData?.assets?.Ticket?[@ticket_id]
-            App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]])
-          @ticket = App.Ticket.findNative(@ticket_id)
-          
-          # Update approvals/shares/CCs cache for permission checks
-          if ticketData.approvals
-            @approvals = ticketData.approvals
-            @ticket._approvals_cache = @approvals if @ticket
-          if ticketData.shares
-            @shares = ticketData.shares
-            @ticket._shares_cache = @shares if @ticket
-          if ticketData.ccs
-            @ccs = ticketData.ccs
-            @ticket._ccs_cache = @ccs if @ticket
-            # Sync cc_user_ids from _ccs_cache for form diffing
-            @ticket.cc_user_ids = @ccs.map((cc) -> parseInt(cc.user_id)).filter((id) -> !isNaN(id)) if @ticket
-          
-          # Trigger sidebar rerender
-          App.Event.trigger('ui::ticket::sidebarRerender')
-        error: =>
-          console.error 'Failed to refresh ticket data after article change'
-      )
-    )
-
     # Listen for general ticket updates that might require sidebar refresh
     @controllerBind('Ticket:article:create Ticket:article:update', (data) =>
       ticket_id = data?.ticket_id || data?.article?.ticket_id || data?.id || data?.ticket?.id
