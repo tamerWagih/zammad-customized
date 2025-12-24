@@ -6,6 +6,7 @@ class Ticket::Share < ApplicationModel
   include ChecksClientNotification
   include HasTags
   include HasTransactionDispatcher
+  include Ticket::Share::TriggersSubscriptions # Custom WebSocket events for realtime share updates
   include Ticket::Share::TriggersNotifications
   include ApplicationModel::HasRequestCache  # Clear Auth::RequestCache on commit (performance)
 

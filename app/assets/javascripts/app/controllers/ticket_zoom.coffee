@@ -169,6 +169,35 @@ class App.TicketZoom extends App.Controller
     fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('full')) || false
     formMeta   = data.form_meta
 
+    # Keep approval/share/cc state in sync even when the ticket itself didn't change (updated_at unchanged).
+    # Otherwise load() can early-return and the sidebar stays stale even after a full browser refresh (F5).
+    newApprovals = data.approvals || []
+    newShares    = data.shares || []
+    newCcs       = data.ccs || []
+
+    sidebarDataChanged = false
+    if !@approvals? || !_.isEqual(@approvals, newApprovals)
+      @approvals = newApprovals
+      sidebarDataChanged = true
+    if !@shares? || !_.isEqual(@shares, newShares)
+      @shares = newShares
+      sidebarDataChanged = true
+    if !@ccs? || !_.isEqual(@ccs, newCcs)
+      @ccs = newCcs
+      sidebarDataChanged = true
+
+    # Update caches on the ticket model if available (for permission checks and form diffing)
+    if sidebarDataChanged
+      cachedTicket = App.Ticket.findNative(@ticket_id) || App.Ticket.fullLocal(@ticket_id)
+      if cachedTicket
+        cachedTicket._approvals_cache = @approvals
+        cachedTicket._shares_cache    = @shares
+        cachedTicket._ccs_cache       = @ccs
+        if @ccs && @ccs.length > 0
+          cachedTicket.cc_user_ids = @ccs.map((cc) -> parseInt(cc.user_id)).filter((id) -> !isNaN(id))
+        else
+          cachedTicket.cc_user_ids = []
+
     # on the following states we want to rerender the ticket:
     # - if the object attribute configuration has changed (attribute values, dependencies, filters)
     # - if the user view has changed (agent/customer)
@@ -177,7 +206,12 @@ class App.TicketZoom extends App.Controller
       @renderDone = false
 
     ticketIsNewest = @ticketUpdatedAtLastCall && new Date(newTicketRaw.updated_at).getTime() <= new Date(@ticketUpdatedAtLastCall).getTime()
-    return if @renderDone && ticketIsNewest
+    if @renderDone && ticketIsNewest
+      # Ticket didn't change, but approvals/shares/ccs might have.
+      # Trigger a sidebar refresh to keep the UI consistent without forcing a full rerender.
+      if sidebarDataChanged
+        App.Event.trigger('ui::ticket::sidebarRerender', { ticket_id: @ticket_id, taskKey: @taskKey })
+      return
     @ticketUpdatedAtLastCall = newTicketRaw.updated_at
 
     # notify if ticket changed not by my self
@@ -204,10 +238,7 @@ class App.TicketZoom extends App.Controller
     # remember time_accountings
     @time_accountings = data.time_accountings
 
-    # remember approvals, shares, and CCs (same pattern as tags and links)
-    @approvals = data.approvals || []
-    @shares = data.shares || []
-    @ccs = data.ccs || []
+    # approvals/shares/ccs already synced above (so we don't miss updates on early return)
     
 
     if draft = App.TicketSharedDraftZoom.findByAttribute 'ticket_id', @ticket_id

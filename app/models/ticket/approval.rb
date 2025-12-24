@@ -6,6 +6,7 @@ class Ticket::Approval < ApplicationModel
   include ChecksClientNotification
   include HasTags
   include HasTransactionDispatcher
+  include Ticket::Approval::TriggersSubscriptions # Custom WebSocket events for realtime approval updates
   include Ticket::Approval::TriggersNotifications
   include ApplicationModel::HasRequestCache  # Clear Auth::RequestCache on commit (performance)
 
