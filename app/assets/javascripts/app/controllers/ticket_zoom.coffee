@@ -92,6 +92,92 @@ class App.TicketZoom extends App.Controller
       @render()
     )
 
+    # Listen for real-time approval changes to update UI (MUST be in constructor, not load())
+    @controllerBind('TicketApproval:create TicketApproval:update TicketApproval:destroy', (data) =>
+      ticket_id = data?.approval?.ticket_id || data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
+      return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
+      
+      # Delay the refresh to avoid race conditions with optimistic local updates
+      @delay(
+        =>
+          @ajax(
+            id:    "ticket-approval-refresh-#{@ticket_id}"
+            type:  'GET'
+            url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
+            success: (ticketData) =>
+              # Update ticket object with fresh data
+              if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
+                App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]])
+              
+              @ticket = App.Ticket.findNative(@ticket_id)
+              
+              # Update instance variables
+              @approvals = ticketData.approvals || []
+              @shares = ticketData.shares || []
+              @ccs = ticketData.ccs || []
+              
+              # Set cache on ticket object for permission checks
+              @ticket._approvals_cache = @approvals if @ticket
+              @ticket._shares_cache = @shares if @ticket
+              @ticket._ccs_cache = @ccs if @ticket
+              
+              # Sync cc_user_ids
+              if @ticket && @ccs
+                @ticket.cc_user_ids = @ccs.map((cc) -> parseInt(cc.user_id)).filter((id) -> !isNaN(id))
+              
+              # Trigger sidebar rerender for approval/share widgets
+              App.Event.trigger('ui::ticket::sidebarRerender', { ticket_id: @ticket_id, taskKey: @taskKey })
+            error: (xhr, status, error) =>
+              console.error "[TICKET_ZOOM] Ticket ##{@ticket_id}: Failed to refresh after approval change:", status, error
+          )
+        500  # 500ms delay - enough for DB commit, fast enough for good UX
+        "approval-websocket-refresh-#{@ticket_id}"
+      )
+    )
+
+    # Listen for real-time share changes to update UI (MUST be in constructor, not load())
+    @controllerBind('TicketShare:create TicketShare:update TicketShare:destroy', (data) =>
+      ticket_id = data?.share?.ticket_id || data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
+      return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
+      
+      # Delay the refresh to avoid race conditions with optimistic local updates
+      @delay(
+        =>
+          @ajax(
+            id:    "ticket-share-refresh-#{@ticket_id}"
+            type:  'GET'
+            url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
+            success: (ticketData) =>
+              # Update ticket object with fresh data
+              if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
+                App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]])
+              
+              @ticket = App.Ticket.findNative(@ticket_id)
+              
+              # Update instance variables
+              @approvals = ticketData.approvals || []
+              @shares = ticketData.shares || []
+              @ccs = ticketData.ccs || []
+              
+              # Set cache on ticket object for permission checks
+              @ticket._approvals_cache = @approvals if @ticket
+              @ticket._shares_cache = @shares if @ticket
+              @ticket._ccs_cache = @ccs if @ticket
+              
+              # Sync cc_user_ids
+              if @ticket && @ccs
+                @ticket.cc_user_ids = @ccs.map((cc) -> parseInt(cc.user_id)).filter((id) -> !isNaN(id))
+              
+              # Trigger sidebar rerender for approval/share widgets
+              App.Event.trigger('ui::ticket::sidebarRerender', { ticket_id: @ticket_id, taskKey: @taskKey })
+            error: (xhr, status, error) =>
+              console.error "[TICKET_ZOOM] Ticket ##{@ticket_id}: Failed to refresh after share change:", status, error
+          )
+        500  # 500ms delay - enough for DB commit, fast enough for good UX
+        "share-websocket-refresh-#{@ticket_id}"
+      )
+    )
+
   fetchMayBe: (data) =>
     return if @ticketUpdatedAtLastCall && new Date(data.updated_at).getTime() <= new Date(@ticketUpdatedAtLastCall).getTime()
 
@@ -285,145 +371,8 @@ class App.TicketZoom extends App.Controller
 
     App.Event.trigger('ui::ticket::all::loaded', data)
 
-    # NOTE: Removed delayed sidebar rerender - was causing double reload with stale data
-    # The sidebar will be updated by:
-    # 1. Initial render() call which passes fresh @approvals/@shares data
-    # 2. WebSocket events (TicketApproval:*/TicketShare:*) which trigger fetch() and then sidebarRerender
-    # This prevents the blink issue where widgets reload twice (once with new, once with old data)
-
-    # Listen for real-time approval/share changes to update UI permissions
-    @controllerBind('TicketApproval:create TicketApproval:update TicketApproval:destroy', (data) =>
-      ticket_id = data?.approval?.ticket_id || data?.share?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
-      
-      
-      return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
-      
-      
-      # Delay the refresh to avoid race conditions with optimistic local updates
-      # This gives time for DB commit and prevents overwriting local changes with stale data
-      @delay(
-        =>
-          @ajax(
-            id:    'ticket-approval-refresh'
-            type:  'GET'
-            url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
-            success: (ticketData) =>
-              
-              # Update ticket object with fresh data
-              if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
-                App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]])
-              
-              @ticket = App.Ticket.findNative(@ticket_id)
-              
-              # Update instance variables (same pattern as tags/links)
-              @approvals = ticketData.approvals || []
-              @shares = ticketData.shares || []
-              @ccs = ticketData.ccs || []
-              
-              # Set cache on ticket object for permission checks
-              @ticket._approvals_cache = @approvals if @ticket
-              @ticket._shares_cache = @shares if @ticket
-              @ticket._ccs_cache = @ccs if @ticket
-              
-              # Sync cc_user_ids from _ccs_cache for form diffing
-              if @ticket && @ccs
-                @ticket.cc_user_ids = @ccs.map((cc) -> parseInt(cc.user_id)).filter((id) -> !isNaN(id))
-              
-              # CRITICAL: Recalculate permissions after approval change
-              oldReadable = @readable
-              oldChangeable = @changeable
-              oldFullable = @fullable
-              
-              @readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('read')) || false
-              @changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('change')) || false
-              @fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('full')) || false
-              
-              # If ANY permission changed, force re-render
-              if oldReadable != @readable || oldChangeable != @changeable || oldFullable != @fullable
-                @renderDone = false
-                @render()
-              
-              # Trigger sidebar rerender for approval/share widgets
-              App.Event.trigger('ui::ticket::sidebarRerender')
-            error: (xhr, status, error) =>
-              console.error "[TICKET_ZOOM] Ticket ##{@ticket_id}: Failed to refresh ticket data:", status, error
-          )
-        1000  # 1000ms delay (same as Zammad's fetchMayBe pattern)
-        "approval-websocket-refresh-#{@ticket_id}"
-      )
-    )
-
-    @controllerBind('TicketShare:create TicketShare:update TicketShare:destroy', (data) =>
-      ticket_id = data?.share?.ticket_id || data?.approval?.ticket_id || data?.ticket_id || data?.id || data?.ticket?.id
-      
-      
-      return unless ticket_id && @ticket_id && ticket_id.toString() is @ticket_id.toString()
-      
-      
-      # Delay the refresh to avoid race conditions with optimistic local updates
-      # This gives time for DB commit and prevents overwriting local changes with stale data
-      @delay(
-        =>
-          @ajax(
-            id:    'ticket-share-refresh'
-            type:  'GET'
-            url:   "#{@apiPath}/tickets/#{@ticket_id}?all=true"
-            success: (ticketData) =>
-              
-              # Update ticket object with fresh data
-              if ticketData?.assets?.Ticket && ticketData.assets.Ticket[@ticket_id]
-                App.Ticket.refresh([ticketData.assets.Ticket[@ticket_id]])
-              
-              @ticket = App.Ticket.findNative(@ticket_id)
-              
-              # Update instance variables (same pattern as tags/links)
-              @approvals = ticketData.approvals || []
-              @shares = ticketData.shares || []
-              @ccs = ticketData.ccs || []
-              
-              # Set cache on ticket object for permission checks
-              # SIMPLE: Just update the arrays, let the model check them
-              @ticket._approvals_cache = @approvals if @ticket
-              @ticket._shares_cache = @shares if @ticket
-              @ticket._ccs_cache = @ccs if @ticket
-              
-              # Sync cc_user_ids from _ccs_cache for form diffing
-              if @ticket && @ccs
-                @ticket.cc_user_ids = @ccs.map((cc) -> parseInt(cc.user_id)).filter((id) -> !isNaN(id))
-              
-              # CRITICAL: Recalculate permissions after share change
-              oldReadable = @readable
-              oldChangeable = @changeable
-              oldFullable = @fullable
-              
-              @readable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('read')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('read')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('read')) || false
-              @changeable = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('change')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('change')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('change')) || false
-              @fullable   = (@ticket && @ticket.userGroupAccess && @ticket.userGroupAccess('full')) || (@ticket && @ticket.groupAccess && @ticket.groupAccess('full')) || (@ticket && @ticket.hasCcPermission && @ticket.hasCcPermission('full')) || false
-              
-              # If ANY permission changed, force re-render
-              if oldReadable != @readable || oldChangeable != @changeable || oldFullable != @fullable
-                @renderDone = false
-                @render()
-              
-              # Trigger sidebar rerender for approval/share widgets
-              App.Event.trigger('ui::ticket::sidebarRerender')
-            error: (xhr, status, error) =>
-              console.error "[TICKET_ZOOM] Ticket ##{@ticket_id}: Failed to refresh ticket data:", status, error
-          )
-        1000  # 1000ms delay (same as Zammad's fetchMayBe pattern)
-        "share-websocket-refresh-#{@ticket_id}"
-      )
-    )
-
-    # Listen for general ticket updates that might require sidebar refresh
-    @controllerBind('Ticket:article:create Ticket:article:update', (data) =>
-      ticket_id = data?.ticket_id || data?.article?.ticket_id || data?.id || data?.ticket?.id
-      return unless ticket_id?.toString() is @ticket_id?.toString()
-      # Trigger sidebar rerender for approval/share widgets
-      @delay =>
-        App.Event.trigger('ui::ticket::sidebarRerender')
-      , 300, 'sidebar-rerender-article-action'
-    )
+    # NOTE: WebSocket event bindings for TicketApproval:*/TicketShare:* are now in the constructor
+    # so they're registered ONCE when the controller is created, not repeatedly on each load()
 
   meta: =>
 
