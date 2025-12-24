@@ -13,7 +13,7 @@ class Ticket::Approval < ApplicationModel
   PRIORITIES = %w[low normal high urgent].freeze
   STATUSES   = %w[pending approved rejected].freeze
 
-  belongs_to :ticket  # Note: TriggersSubscriptions handles WebSocket updates, touch: true removed for performance
+  belongs_to :ticket, touch: true
   belongs_to :approver, class_name: 'User'
   belongs_to :requester, class_name: 'User'
   belongs_to :created_by, class_name: 'User', optional: true

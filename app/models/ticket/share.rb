@@ -14,7 +14,7 @@ class Ticket::Share < ApplicationModel
 
   before_validation :ensure_default_permission
 
-  belongs_to :ticket  # Note: TriggersSubscriptions handles WebSocket updates, touch: true removed for performance
+  belongs_to :ticket, touch: true
   belongs_to :group
   belongs_to :shared_by, class_name: 'User'
   belongs_to :created_by, class_name: 'User', optional: true

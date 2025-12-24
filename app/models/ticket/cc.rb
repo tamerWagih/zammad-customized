@@ -12,7 +12,7 @@ class Ticket::Cc < ApplicationModel
 
   PERMISSIONS = %w[read comment full].freeze
 
-  belongs_to :ticket  # Note: TriggersSubscriptions handles WebSocket updates, touch: true removed for performance
+  belongs_to :ticket, touch: true
   belongs_to :user
   belongs_to :created_by, class_name: 'User', optional: true
   belongs_to :updated_by, class_name: 'User', optional: true
