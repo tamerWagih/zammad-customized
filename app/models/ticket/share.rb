@@ -6,7 +6,8 @@ class Ticket::Share < ApplicationModel
   include ChecksClientNotification
   include HasTags
   include HasTransactionDispatcher
-  include Ticket::Share::TriggersSubscriptions # Custom WebSocket events for realtime share updates
+  # NOTE: TriggersSubscriptions removed - touch: true on belongs_to :ticket triggers Ticket:update
+  # which the frontend already listens for. Having both caused duplicate refreshes.
   include Ticket::Share::TriggersNotifications
   include ApplicationModel::HasRequestCache  # Clear Auth::RequestCache on commit (performance)
 

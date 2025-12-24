@@ -6,7 +6,8 @@ class Ticket::Approval < ApplicationModel
   include ChecksClientNotification
   include HasTags
   include HasTransactionDispatcher
-  include Ticket::Approval::TriggersSubscriptions # Custom WebSocket events for realtime approval updates
+  # NOTE: TriggersSubscriptions removed - touch: true on belongs_to :ticket triggers Ticket:update
+  # which the frontend already listens for. Having both caused duplicate refreshes.
   include Ticket::Approval::TriggersNotifications
   include ApplicationModel::HasRequestCache  # Clear Auth::RequestCache on commit (performance)
 

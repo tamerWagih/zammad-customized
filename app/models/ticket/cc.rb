@@ -7,7 +7,8 @@ class Ticket::Cc < ApplicationModel
   include ChecksClientNotification      # WebSocket broadcasts (CRITICAL!)
   include HasTags                       # Tag support
   include HasTransactionDispatcher      # Transaction events (CRITICAL!)
-  include Ticket::Cc::TriggersSubscriptions  # Custom WebSocket events
+  # NOTE: TriggersSubscriptions removed - touch: true on belongs_to :ticket triggers Ticket:update
+  # which the frontend already listens for. Having both caused duplicate refreshes.
   include ApplicationModel::HasRequestCache  # Clear Auth::RequestCache on commit (performance)
 
   PERMISSIONS = %w[read comment full].freeze
