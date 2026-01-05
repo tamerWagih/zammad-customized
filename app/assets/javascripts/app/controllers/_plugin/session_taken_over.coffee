@@ -12,25 +12,15 @@ class SessionTakeOver extends App.Controller
         )
     )
 
-    # session take over message
+    # session take over message - DISABLED for multi-tab support
+    # Multiple browser tabs are now allowed for the same user session
     @controllerBind(
       'session_takeover'
       (data) =>
-        # check if error message is already shown
-        if !@error
-
-          # only if new client id isn't own client id
-          if data.taskbar_id isnt App.TaskManager.TaskbarId()
-            @error = new App.SessionMessage(
-              head:         __('Session')
-              message:      __('A new session was created with your account. This session will be stopped to prevent a conflict.')
-              keyboard:     false
-              backdrop:     true
-              buttonClose:  false
-              buttonSubmit: __('Continue session')
-              forceReload:  true
-            )
-            @disconnectClient()
+        # Multi-tab support: Allow multiple tabs per session
+        # Do NOT disconnect other tabs when a new tab opens
+        return
     )
+
 
 App.Config.set('session_taken_over', SessionTakeOver, 'Plugins')
