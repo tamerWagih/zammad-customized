@@ -127,25 +127,33 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
       indexes.push meta
     end
     
-    # Add custom filters
+    # Add custom filters - cache the data for reuse in the second loop
+    # OPTIMIZATION: Get full data once instead of calling count_tickets_for_filter then get_custom_filter_data
     custom_filters = @user.preferences[:custom_filters] || []
+    @cached_custom_filter_data ||= {}
+    
     custom_filters.each do |filter|
       next unless filter['active']
       
-      # Count tickets for this custom filter
-      count = count_tickets_for_filter(filter)
+      # Get full filter data (includes count) and cache it
+      filter_data = get_custom_filter_data(filter)
+      next if !filter_data
+      
+      filter_link = filter['link'] || filter['id']
+      @cached_custom_filter_data[filter_link] = filter_data
       
       meta = {
         id:        filter['id'],
         name:      filter['name'],
-        prio:      filter['prio'] || 2000,  # Default to 2000 to appear after all standard filters
+        prio:      filter['prio'] || 2000,
         link:      filter['link'],
-        count:     count,
+        count:     filter_data[:count],  # Use count from cached data
         is_custom: true,
       }
       indexes.push meta
     end
     
+
     if @client
       @client.log "push overview_index for user #{@user.id}"
       @client.send(
@@ -203,17 +211,17 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
     end
     
     # Push custom filter overviews (like standard overviews)
-    # CRITICAL: Custom filters depend on ticket relationships (CC, approvals, shares)
-    # When tickets change (CC/approval/share added/removed), we must refresh custom filters
-    # because the ticket list might change even if the filter condition is the same
+    # OPTIMIZATION: Use cached data from first loop instead of querying again
     custom_filters = @user.preferences[:custom_filters] || []
     custom_filters.each do |filter|
       next unless filter['active']
       
-      # Get custom filter tickets (similar to standard overviews)
-      filter_data = get_custom_filter_data(filter)
+      # Use cached data from first loop (no duplicate query)
+      filter_link = filter['link'] || filter['id']
+      filter_data = @cached_custom_filter_data[filter_link]
       next if !filter_data
       
+
       # Check if this custom filter has changed (similar to standard overviews)
       filter_link = filter['link'] || filter['id']
       last_filter_state = @last_overview[filter_link]

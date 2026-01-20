@@ -13,6 +13,15 @@ class Ticket::Cc < ApplicationModel
 
   PERMISSIONS = %w[read comment full].freeze
 
+  # Cache role IDs to avoid repeated DB queries on every validation
+  def self.agent_role_id
+    @agent_role_id ||= Role.find_by(name: 'Agent')&.id
+  end
+
+  def self.customer_role_id
+    @customer_role_id ||= Role.find_by(name: 'Customer')&.id
+  end
+
   belongs_to :ticket, touch: true
   belongs_to :user
   belongs_to :created_by, class_name: 'User', optional: true
@@ -77,10 +86,7 @@ class Ticket::Cc < ApplicationModel
     # Allow users who have Agent OR Customer ROLE (not permission)
     # IMPORTANT: Use role_ids, NOT permissions?() - Admins have all permissions!
     # Users can have multiple roles - if ANY role is Agent or Customer, allow them
-    agent_role = Role.find_by(name: 'Agent')
-    customer_role = Role.find_by(name: 'Customer')
-    
-    return if user.role_ids.include?(agent_role&.id) || user.role_ids.include?(customer_role&.id)
+    return if user.role_ids.include?(self.class.agent_role_id) || user.role_ids.include?(self.class.customer_role_id)
 
     errors.add(:user_id, 'must have Agent or Customer role')
   end
@@ -100,10 +106,7 @@ class Ticket::Cc < ApplicationModel
     return unless user
     return unless ticket
     
-    agent_role = Role.find_by(name: 'Agent')
-    customer_role = Role.find_by(name: 'Customer')
-    
-    if user.role_ids.include?(agent_role&.id)
+    if user.role_ids.include?(self.class.agent_role_id)
       # Check if agent has access to the ticket's group
       if user.group_access?(ticket.group_id, 'full')
         # Agent with full group access gets full ticket access
@@ -113,7 +116,7 @@ class Ticket::Cc < ApplicationModel
         # This is for agents CC'd from other departments
         self.permissions = ['read', 'comment']
       end
-    elsif user.role_ids.include?(customer_role&.id)
+    elsif user.role_ids.include?(self.class.customer_role_id)
       # Users with Customer role get read and comment access
       self.permissions = ['read', 'comment']
     else

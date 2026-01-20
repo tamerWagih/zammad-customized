@@ -42,13 +42,14 @@ class _Singleton
     delete @callbacks[counter]
 
   fetch: (view) =>
-    #if App.WebSocket.support() && App.WebSocket.channel()
-    #  App.WebSocket.send(
-    #    event: 'ticket_overview_list'
-    #    view: view
-    #  )
-    #  return
+    if App.WebSocket.support() && App.WebSocket.channel()
+      App.WebSocket.send(
+        event: 'ticket_overview_list'
+        view: view
+      )
+      return
     throw 'No view to fetch list!' if !view
+
     App.OverviewIndexCollection.fetch()
     return if @fetchActive[view]
     @fetchActive[view] = true
