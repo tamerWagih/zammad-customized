@@ -23,7 +23,13 @@ class App.TicketOverviewTable extends App.Controller
     )
 
   showLoading: =>
-    @html '<div class="centered" style="padding: 50px; text-align: center;"><div class="loading icon"></div><div style="margin-top: 10px; color: #888;">Loading...</div></div>'
+    @html '''
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; width: 100%;">
+        <div class="loading icon"></div>
+        <div style="margin-top: 10px; color: #888;">Loading...</div>
+      </div>
+    '''
+
 
   show: =>
     if @table
