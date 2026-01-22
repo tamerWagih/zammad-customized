@@ -42,12 +42,13 @@ class _Singleton
     delete @callbacks[counter]
 
   fetch: (view) =>
-    if App.WebSocket.support() && App.WebSocket.channel()
-      App.WebSocket.send(
-        event: 'ticket_overview_list'
-        view: view
-      )
-      return
+    # Always use AJAX for explicit fetches to get immediate results
+    # WebSocket event 'ticket_overview_list' only triggers reset() on the backend
+    # which sets a cache flag but does NOT return data immediately.
+    # The actual data push happens asynchronously on the next polling cycle (TTL-based).
+    # For new custom filters, this means the user would wait indefinitely.
+    # AJAX ensures we get immediate data when explicitly requesting a view.
+    # Realtime updates still work via the WebSocket push mechanism (ticket_overview_list event binding above).
     throw 'No view to fetch list!' if !view
 
     App.OverviewIndexCollection.fetch()
