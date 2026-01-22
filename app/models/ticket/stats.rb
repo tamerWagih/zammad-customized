@@ -112,37 +112,44 @@ class Ticket::Stats
   end
 
   def search_stats_year(condition)
-    volume_by_year = []
-    now            = Time.zone.now
+    now = Time.zone.now
+    start_date = (now - 11.months).beginning_of_month
+    end_date = now.end_of_month
 
+    base_scope = TicketPolicy::ReadScope.new(current_user).resolve.where(condition)
+
+    # Single query for created tickets grouped by year-month
+    created_raw = base_scope
+      .where(created_at: start_date..end_date)
+      .group("TO_CHAR(created_at, 'YYYY-MM')")
+      .count
+
+    # Single query for closed tickets grouped by year-month
+    closed_raw = base_scope
+      .where(close_at: start_date..end_date)
+      .group("TO_CHAR(close_at, 'YYYY-MM')")
+      .count
+
+    # Build the result array for the last 12 months
+    volume_by_year = []
     (0..11).each do |month_back|
       date_to_check = now - month_back.month
-      date_start = "#{date_to_check.year}-#{date_to_check.month}-01 00:00:00"
-      date_end   = "#{date_to_check.year}-#{date_to_check.month}-#{date_to_check.end_of_month.day} 00:00:00"
-
-      # created
-      created = TicketPolicy::ReadScope.new(current_user).resolve
-                                       .where(created_at: (date_start..date_end))
-                                       .where(condition)
-                                       .count
-
-      # closed
-      closed = TicketPolicy::ReadScope.new(current_user).resolve
-                                      .where(close_at: (date_start..date_end))
-                                      .where(condition)
-                                      .count
+      # Use YYYY-MM format as key to match PostgreSQL TO_CHAR output
+      month_key = date_to_check.strftime('%Y-%m')
 
       data = {
         month:   date_to_check.month,
         year:    date_to_check.year,
         text:    Date::MONTHNAMES[date_to_check.month],
-        created: created,
-        closed:  closed,
+        created: created_raw[month_key] || 0,
+        closed:  closed_raw[month_key] || 0,
       }
       volume_by_year.push data
     end
     volume_by_year
   end
+
+
 
   private
 

@@ -216,9 +216,8 @@ returns
   end
 
   def self.limit_per_overview
-    # Performance optimization: cap at 100 for initial load
-    # The actual setting can be higher for pagination, but initial push is limited
-    [Setting.get('ui_ticket_overview_ticket_limit') || 100, 100].min
+    Setting.get('ui_ticket_overview_ticket_limit')
   end
+
 
 end
