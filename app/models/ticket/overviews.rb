@@ -86,7 +86,8 @@ returns
       db_query_params = _db_query_params(overview, user)
       scope = overview.condition['ticket.mention_user_ids'].present? ? user_scopes[:read] : user_scopes[:overview]
 
-      count = Rails.cache.fetch("overview_count/#{overview.id}/#{user.id}", expires_in: 30.seconds) do
+      count = Rails.cache.fetch("overview_count/#{overview.id}/#{user.id}", expires_in: 5.minutes) do
+
         scope.distinct.where(db_query_params.query_condition, *db_query_params.bind_condition).joins(db_query_params.tables).count
       end
 
@@ -135,7 +136,8 @@ returns
         }
       end
 
-      count = Rails.cache.fetch("overview_count/#{overview.id}/#{user.id}", expires_in: 30.seconds) do
+      count = Rails.cache.fetch("overview_count/#{overview.id}/#{user.id}", expires_in: 5.minutes) do
+
         scope
           .distinct
           .where(db_query_params.query_condition, *db_query_params.bind_condition)
@@ -214,6 +216,9 @@ returns
   end
 
   def self.limit_per_overview
-    Setting.get('ui_ticket_overview_ticket_limit')
+    # Performance optimization: cap at 100 for initial load
+    # The actual setting can be higher for pagination, but initial push is limited
+    [Setting.get('ui_ticket_overview_ticket_limit') || 100, 100].min
   end
+
 end
