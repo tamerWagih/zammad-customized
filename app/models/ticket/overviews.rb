@@ -71,7 +71,35 @@ returns
 
 =end
 
+  # Lazy loading optimization: returns only counts, no tickets
+  # Use this for initial page load, fetch tickets on-demand for active overview
+  def self.index_counts_only(user)
+    overviews = Ticket::Overviews.all(current_user: user)
+    return [] if overviews.blank?
+
+    user_scopes = {
+      read:     TicketPolicy::ReadScope.new(user).resolve,
+      overview: TicketPolicy::OverviewScope.new(user).resolve,
+    }
+
+    overviews.map do |overview|
+      db_query_params = _db_query_params(overview, user)
+      scope = overview.condition['ticket.mention_user_ids'].present? ? user_scopes[:read] : user_scopes[:overview]
+
+      count = Rails.cache.fetch("overview_count/#{overview.id}/#{user.id}", expires_in: 30.seconds) do
+        scope.distinct.where(db_query_params.query_condition, *db_query_params.bind_condition).joins(db_query_params.tables).count
+      end
+
+      {
+        overview: { name: overview.name, id: overview.id, view: overview.link, updated_at: overview.updated_at },
+        count: count,
+        tickets: [],
+      }
+    end
+  end
+
   def self.index(user, links = nil)
+
     overviews = Ticket::Overviews.all(
       current_user: user,
       links:        links,
@@ -107,11 +135,14 @@ returns
         }
       end
 
-      count = scope
-        .distinct
-        .where(db_query_params.query_condition, *db_query_params.bind_condition)
-        .joins(db_query_params.tables)
-        .count
+      count = Rails.cache.fetch("overview_count/#{overview.id}/#{user.id}", expires_in: 30.seconds) do
+        scope
+          .distinct
+          .where(db_query_params.query_condition, *db_query_params.bind_condition)
+          .joins(db_query_params.tables)
+          .count
+      end
+
 
       {
         overview: {

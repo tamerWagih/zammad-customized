@@ -46,7 +46,20 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
       # check if min one ticket has changed
       return if !ticket_changed?(true) && !local_overview_changed
 
-      index_and_lists  = Ticket::Overviews.index(@user)
+      # LAZY LOADING: Get counts for all overviews (fast)
+      index_and_lists = Ticket::Overviews.index_counts_only(@user)
+      
+      # Get tickets ONLY for recently selected overviews (up to 4)
+      recent_views = Sessions::Backend::TicketOverviewList.overview_history_get(@user.id)
+      if recent_views.present?
+        recent_with_tickets = Ticket::Overviews.index(@user, recent_views)
+        # Merge tickets into count-only results
+        index_and_lists.each do |item|
+          match = recent_with_tickets.find { |r| r[:overview][:id] == item[:overview][:id] }
+          item[:tickets] = match[:tickets] if match
+        end
+      end
+      
       @last_full_fetch = Time.zone.now.to_i
     else
 

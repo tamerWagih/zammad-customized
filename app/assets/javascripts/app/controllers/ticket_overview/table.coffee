@@ -8,6 +8,9 @@ class App.TicketOverviewTable extends App.Controller
 
   constructor: ->
     super
+    
+    # Show loading spinner initially
+    @showLoading()
 
     if @view
       @bindId = App.OverviewListCollection.bind(@view, @updateTable)
@@ -18,6 +21,9 @@ class App.TicketOverviewTable extends App.Controller
       return if !@view
       @render(App.OverviewListCollection.get(@view))
     )
+
+  showLoading: =>
+    @html '<div class="centered" style="padding: 50px; text-align: center;"><div class="loading icon"></div><div style="margin-top: 10px; color: #888;">Loading...</div></div>'
 
   show: =>
     if @table
