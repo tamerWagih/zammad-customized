@@ -37,6 +37,17 @@ returns
       # do not transfer crypted pw
       local_attributes.delete('password')
 
+      # Trim heavy preferences for OTHER users (not the current session user)
+      # This significantly reduces the taskbar/init payload size
+      # Current user still gets full preferences via session API
+      if local_attributes['preferences'].present? && UserInfo.current_user_id != id
+        trimmed_prefs = local_attributes['preferences'].except(
+          'notification_config',  # Heavy: ~2-3KB notification matrix
+          'custom_filters'        # Heavy: ~1-5KB user's custom overview filters
+        )
+        local_attributes['preferences'] = trimmed_prefs
+      end
+
       # set temp. current attributes to assets pool to prevent
       # loops, will be updated with lookup attributes later
       data[ app_model ][ id ] = local_attributes
@@ -46,6 +57,7 @@ returns
       if accounts.present?
         local_attributes['accounts'] = accounts
       end
+
 
       # get organizations
       Array(local_attributes['organization_ids'])[0, 3].each do |organization_id|
