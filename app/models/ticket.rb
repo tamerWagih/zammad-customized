@@ -746,15 +746,20 @@ returns a hex color code
   # Receiver from SAME group as ticket: full access
   # Receiver from DIFFERENT group: comment-only
   def share_permissions_for(user)
+    # Memoize per user_id within this request cycle (instance variable resets each cycle)
+    @_share_permissions_cache ||= {}
+    return @_share_permissions_cache[user.id] if user && @_share_permissions_cache.key?(user.id)
+
     default = { read: false, comment: false, edit: false }
-    Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user&.id}: Starting calculation"
+    Rails.logger.debug { "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user&.id}: Starting calculation" }
     return default unless user
     return default unless respond_to?(:shares)
 
     begin
       # Only agents can access shared tickets
       unless user.permissions?('ticket.agent')
-        Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Not an agent, returning default"
+        Rails.logger.debug { "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Not an agent, returning default" }
+        @_share_permissions_cache[user.id] = default
         return default
       end
       
@@ -767,31 +772,36 @@ returns a hex color code
       receiver_shares = active.select { |s| user_group_ids.include?(s.group_id) }
       user_is_receiver = receiver_shares.present?
       
-      Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Sharer=#{user_is_sharer}, Receiver=#{user_is_receiver}, Active shares=#{active.count}"
+      Rails.logger.debug { "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Sharer=#{user_is_sharer}, Receiver=#{user_is_receiver}, Active shares=#{active.count}" }
       
       unless user_is_sharer || user_is_receiver
-        Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Not sharer or receiver, returning default"
+        Rails.logger.debug { "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Not sharer or receiver, returning default" }
+        @_share_permissions_cache[user.id] = default
         return default
       end
       
       # Sharer: full access
       if user_is_sharer
         result = { read: true, comment: true, edit: true }
-        Rails.logger.info "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Sharer - full access, returning #{result.inspect}"
+        Rails.logger.debug { "[SHARE_PERMS_FOR] Ticket ##{id}, User ##{user.id}: Sharer - full access" }
+        @_share_permissions_cache[user.id] = result
         return result
       end
 
       # Receiver: check if they have ANY access to ticket's group
       has_group_access = user.group_access?(group_id, 'read')
 
-      if has_group_access
-        { read: true, comment: true, edit: true }
-      else
-        { read: true, comment: true, edit: false }
-      end
+      result = if has_group_access
+                 { read: true, comment: true, edit: true }
+               else
+                 { read: true, comment: true, edit: false }
+               end
+      @_share_permissions_cache[user.id] = result
+      result
     rescue StandardError => e
       Rails.logger.warn "Failed to get share permissions for user #{user.id} on ticket #{id}: #{e.message}"
       Rails.logger.warn e.backtrace.first(5).join("\n")
+      @_share_permissions_cache[user.id] = default
       default
     end
   end
@@ -817,10 +827,13 @@ returns a hex color code
     perms[:read] || perms[:comment] || perms[:edit]
   end
 
-  # Override to add cc_user_ids to API response
+  # Override to add cc_user_ids to API response.
+  # Uses instance-level memoization to avoid re-querying DB on every call within the same request.
+  # Resets naturally each request cycle since ticket instances are ephemeral.
+  # Cache invalidation: CC changes trigger `touch: true` → new ticket instance in next cycle.
   def filter_unauthorized_attributes(attributes)
-    # Always expose cc_user_ids so the frontend form can render CCs
-    attributes['cc_user_ids'] = ccs.pluck(:user_id).compact.uniq
+    @_cc_user_ids_cache ||= ccs.pluck(:user_id).compact.uniq
+    attributes['cc_user_ids'] = @_cc_user_ids_cache
     super(attributes)
   end
 
@@ -842,17 +855,17 @@ returns a hex color code
 
   # Create CC records after ticket creation if cc_user_ids is provided
   def create_cc_records
-    Rails.logger.info "[CC] ===== CREATE_CC_RECORDS START ====="
-    Rails.logger.info "[CC] cc_user_ids: #{cc_user_ids.inspect}"
+    Rails.logger.debug { "[CC] ===== CREATE_CC_RECORDS START =====" }
+    Rails.logger.debug { "[CC] cc_user_ids: #{cc_user_ids.inspect}" }
     
     return if cc_user_ids.blank?
     return unless cc_user_ids.is_a?(Array)
 
     current_user_id = UserInfo.current_user_id
-    Rails.logger.info "[CC] Processing #{cc_user_ids.length} CC users for ticket #{id}"
+    Rails.logger.debug { "[CC] Processing #{cc_user_ids.length} CC users for ticket #{id}" }
 
     cc_user_ids.each_with_index do |user_id, index|
-      Rails.logger.info "[CC] Processing user #{index + 1}/#{cc_user_ids.length}: #{user_id}"
+      Rails.logger.debug { "[CC] Processing user #{index + 1}/#{cc_user_ids.length}: #{user_id}" }
       next if user_id.blank?
 
       user = User.find_by(id: user_id)
@@ -862,7 +875,7 @@ returns a hex color code
       end
       
       if user.id == current_user_id
-        Rails.logger.info "[CC] Skipping current user #{user.id}"
+        Rails.logger.debug { "[CC] Skipping current user #{user.id}" }
         next
       end
 
@@ -875,11 +888,7 @@ returns a hex color code
       is_customer = user.permissions?('ticket.customer')
       is_admin = user.permissions?('admin')
       
-      Rails.logger.info "[CC] ===== PERMISSION CHECK FOR USER #{user.id} (#{user.login}) ====="
-      Rails.logger.info "[CC] User roles: #{user.roles.pluck(:name).inspect}"
-      Rails.logger.info "[CC] Has ticket.agent: #{is_agent}"
-      Rails.logger.info "[CC] Has ticket.customer: #{is_customer}"
-      Rails.logger.info "[CC] Has admin: #{is_admin}"
+      Rails.logger.debug { "[CC] User #{user.id} (#{user.login}): agent=#{is_agent}, customer=#{is_customer}, admin=#{is_admin}" }
       
       # Determine permissions based on role AND group membership:
       # - Agents WITH full access to ticket's group: ['full']
@@ -887,25 +896,23 @@ returns a hex color code
       # - Customers: ['read', 'comment']
       permissions = if is_agent
                       if user.group_access?(group_id, 'full')
-                        Rails.logger.info "[CC] ✅ Agent with full group access → Setting permissions to ['full']"
+                        Rails.logger.debug { "[CC] Agent with full group access → ['full']" }
                         ['full']
                       else
-                        Rails.logger.info "[CC] ✅ Agent WITHOUT full group access → Setting permissions to ['read', 'comment']"
+                        Rails.logger.debug { "[CC] Agent WITHOUT full group access → ['read', 'comment']" }
                         ['read', 'comment']
                       end
                     elsif is_customer
-                      Rails.logger.info "[CC] ✅ User is customer only → Setting permissions to ['read', 'comment']"
+                      Rails.logger.debug { "[CC] Customer → ['read', 'comment']" }
                       ['read', 'comment']
                     else
-                      Rails.logger.warn "[CC] ⚠️ User has neither agent nor customer permission → Defaulting to ['read', 'comment']"
+                      Rails.logger.warn "[CC] User has neither agent nor customer permission → Defaulting to ['read', 'comment']"
                       ['read', 'comment']
                     end
       
-      Rails.logger.info "[CC] Final permissions array: #{permissions.inspect}"
-      
       cc = ccs.build(
         user:           user,
-        permissions:    permissions,  # Explicitly set based on user type
+        permissions:    permissions,
         created_by_id:  current_user_id,
         updated_by_id:  current_user_id
       )
@@ -915,10 +922,7 @@ returns a hex color code
       
       cc.save!
       
-      Rails.logger.info "[CC] ===== CC RECORD SAVED ====="
-      Rails.logger.info "[CC] CC ##{cc.id} for user #{user.id} (#{user.fullname})"
-      Rails.logger.info "[CC] Permissions IN DATABASE: #{cc.reload.permissions.inspect}"
-      Rails.logger.info "[CC] ============================="
+      Rails.logger.debug { "[CC] CC ##{cc.id} created for user #{user.id} (#{user.fullname}), perms: #{cc.reload.permissions.inspect}" }
       
       # NOTE: Online notification is created by Transaction::CcNotification (HasTransactionDispatcher)
       # Don't create it here to avoid duplicates
@@ -928,7 +932,7 @@ returns a hex color code
       Rails.logger.error "[CC] Backtrace: #{e.backtrace.first(3).join('\n')}"
     end
     
-    Rails.logger.info "[CC] ===== CREATE_CC_RECORDS COMPLETE ====="
+    Rails.logger.debug { "[CC] ===== CREATE_CC_RECORDS COMPLETE =====" }
   end
 
   # Sync CC users: add new ones, remove deleted ones (diff-based)
@@ -946,17 +950,13 @@ returns a hex color code
     to_add = new_user_ids - current_cc_user_ids
     to_remove = current_cc_user_ids - new_user_ids
     
-    Rails.logger.info "[CC] ===== SYNC_CC_USERS START ====="
-    Rails.logger.info "[CC] Current CC users: #{current_cc_user_ids.inspect}"
-    Rails.logger.info "[CC] New CC users: #{new_user_ids.inspect}"
-    Rails.logger.info "[CC] To add: #{to_add.inspect}"
-    Rails.logger.info "[CC] To remove: #{to_remove.inspect}"
+    Rails.logger.debug { "[CC] SYNC: current=#{current_cc_user_ids.inspect}, new=#{new_user_ids.inspect}, add=#{to_add.inspect}, remove=#{to_remove.inspect}" }
     
     # Remove CCs that are no longer in the list
     to_remove.each do |user_id|
       cc_record = ccs.find_by(user_id: user_id)
       if cc_record
-        Rails.logger.info "[CC] Removing CC for user #{user_id}"
+        Rails.logger.debug { "[CC] Removing CC for user #{user_id}" }
         
         # CRITICAL: HasTransactionDispatcher doesn't have after_destroy callback
         # We must manually add destroy event to EventBuffer BEFORE destroying
@@ -1000,7 +1000,7 @@ returns a hex color code
       # Check if CC already exists (race condition protection)
       next if ccs.exists?(user_id: user_id)
       
-      Rails.logger.info "[CC] Adding CC for user #{user_id} (#{user.login})"
+      Rails.logger.debug { "[CC] Adding CC for user #{user_id} (#{user.login})" }
       
       # Determine permissions based on user role AND group membership:
       # - Agents WITH full access to ticket's group: ['full']
@@ -1021,11 +1021,11 @@ returns a hex color code
       )
       
       cc.save!
-      Rails.logger.info "[CC] CC record created for user #{user_id}"
+      Rails.logger.debug { "[CC] CC record created for user #{user_id}" }
       # Create will trigger HasTransactionDispatcher → Transaction::CcNotification (type: 'create')
     end
     
-    Rails.logger.info "[CC] ===== SYNC_CC_USERS COMPLETE ====="
+    Rails.logger.debug { "[CC] ===== SYNC_CC_USERS COMPLETE =====" }
   end
 
   public :sync_cc_users

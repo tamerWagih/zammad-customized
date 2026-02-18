@@ -74,7 +74,7 @@ class Ticket::AssetsAll
     begin
       if ticket.respond_to?(:share_permissions_for)
         perms = ticket.share_permissions_for(user)
-        Rails.logger.info "[ASSETS_ALL] Ticket ##{ticket.id}, User ##{user.id}: Sending share_permissions: #{perms.inspect}"
+        Rails.logger.debug { "[ASSETS_ALL] Ticket ##{ticket.id}, User ##{user.id}: Sending share_permissions: #{perms.inspect}" }
         perms
       else
         { read: false, comment: false, edit: false }

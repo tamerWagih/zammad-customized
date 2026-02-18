@@ -308,34 +308,7 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
     true
   end
 
-  def count_tickets_for_filter(filter)
-    condition = filter['condition'] || {}
-    
-    # Use Ticket selector to count tickets with custom filter context
-    query, bind_params, tables = Ticket.selector2sql(
-      condition, 
-      current_user: @user,
-      custom_filter_context: true  # Enable custom filter attributes
-    )
-    
-    return 0 if query.blank?
-    
-    # CRITICAL: Apply user permission scope first (like Zammad's overview system)
-    base_scope = if condition.key?('ticket.mention_user_ids')
-                   TicketPolicy::ReadScope.new(@user).resolve
-                 else
-                   TicketPolicy::OverviewScope.new(@user).resolve
-                 end
-    
-    # Apply the custom filter condition on top of permission scope
-    scoped_tickets = base_scope.where(query, *bind_params)
-    scoped_tickets = scoped_tickets.joins(tables) if tables.present?
-    
-    scoped_tickets.count
-  rescue => e
-    Rails.logger.error "Error counting tickets for custom filter: #{e.message}"
-    0
-  end
+
 
   def get_custom_filter_data(filter)
     # Similar to Ticket::Overviews.index but for custom filters
@@ -400,23 +373,20 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
         scoped_tickets = base_scope.where(query, *bind_params)
         scoped_tickets = scoped_tickets.joins(tables) if tables.present?
         
-        # Get total count for pagination
-        total_count = scoped_tickets.distinct.count
+        # Cache count with 30s TTL (matches standard overview pattern from overviews.rb:89)
+        filter_cache_key = "custom_filter_count/#{filter['id']}/#{@user.id}"
+        total_count = Rails.cache.fetch(filter_cache_key, expires_in: 30.seconds) do
+          scoped_tickets.distinct.count
+        end
         
-        # Apply pagination (limit)
-        ticket_list = scoped_tickets.order("#{order_by} #{order_direction}")
-                                     .limit(limit)
+        # Use .pluck instead of loading full AR objects (matches standard overview pattern from overviews.rb:130)
+        ticket_result = scoped_tickets
+          .reorder(Arel.sql("#{order_by} #{order_direction}"))
+          .limit(limit)
+          .pluck(:id, :updated_at)
         
-        ticket_list.each do |ticket|
-          ticket_meta = {
-            id:         ticket.id,
-            title:      ticket.title,
-            number:     ticket.number,
-            created_at: ticket.created_at,
-            updated_at: ticket.updated_at,
-          }
-          
-          tickets.push ticket_meta
+        tickets = ticket_result.map do |row|
+          { id: row[0], updated_at: row[1] }
         end
       end
     rescue => e

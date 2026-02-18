@@ -185,7 +185,7 @@ class TicketsController < ApplicationController
         cc_user_ids_raw = params[:ticket][:cc_user_ids] || params[:ticket]['cc_user_ids']
       end
 
-    Rails.logger.info("[CC][create] cc_user_ids_raw=#{cc_user_ids_raw.inspect} params[:ticket]=#{params[:ticket].inspect}")
+    Rails.logger.debug { "[CC][create] cc_user_ids_raw=#{cc_user_ids_raw.inspect}" }
 
       # Normalize cc_user_ids to array
       cc_user_ids = if cc_user_ids_raw.is_a?(Array)
@@ -305,7 +305,7 @@ class TicketsController < ApplicationController
       cc_user_ids_raw = params[:ticket][:cc_user_ids] || params[:ticket]['cc_user_ids']
     end
 
-    Rails.logger.info("[CC][update] cc_user_ids_raw=#{cc_user_ids_raw.inspect} params[:ticket]=#{params[:ticket].inspect}")
+    Rails.logger.debug { "[CC][update] cc_user_ids_raw=#{cc_user_ids_raw.inspect}" }
 
     clean_params = Ticket.param_cleanup(clean_params, true)
 
