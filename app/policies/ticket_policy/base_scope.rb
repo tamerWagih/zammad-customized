@@ -29,12 +29,10 @@ class TicketPolicy < ApplicationPolicy
           bind.push(group_ids)
         end
 
-        # Include shared tickets
-        shared_ids = shared_ticket_ids(self.class::ACCESS_TYPE)
-        if shared_ids.present?
-          sql.push('tickets.id IN (?)')
-          bind.push(shared_ids)
-        end
+        # Include shared tickets. A subquery, not an ID list: active shares number in the
+        # thousands, and a literal IN list was rebuilt and sent with every scoped query.
+        shared_ids_sql = shared_ticket_ids_sql
+        sql.push("tickets.id IN (#{shared_ids_sql})") if shared_ids_sql
 
         # Include approval tickets (approvers can see tickets they need to approve)
         approval_ids = approval_ticket_ids
@@ -91,25 +89,15 @@ class TicketPolicy < ApplicationPolicy
 
     private
 
-    # Cache shared ticket IDs per request using Zammad's native Auth::RequestCache pattern
-    # This prevents repeated DB queries when multiple scopes are resolved in one request
-    def shared_ticket_ids(access)
-      return [] unless user.permissions?('ticket.agent')
+    # SQL subquery selecting the ticket IDs shared with any group the user belongs to.
+    # Uses ALL of the user's groups (any access level) - if a user is in a group a ticket
+    # is shared with, they should see it. Matches approval behavior.
+    # Returns nil when the user has no groups (no shared tickets).
+    def shared_ticket_ids_sql
+      group_ids = user_group_ids_cached
+      return if group_ids.blank?
 
-      Auth::RequestCache.fetch_value("TicketPolicy/BaseScope/shared_ticket_ids/#{user.id}") do
-        # Get ALL groups the user belongs to (any access level)
-        # Don't filter by access - if user is in a group that's shared with, they should see the ticket
-        # This matches approval behavior where approvers see tickets regardless of group access
-        group_ids = user_group_ids_cached
-        if group_ids.blank?
-          []
-        else
-          Ticket::Share.active_current.where(group_id: group_ids).pluck(:ticket_id).uniq
-        end
-      end
-    rescue StandardError => e
-      Rails.logger.warn("Failed to resolve shared ticket ids for user #{user.id}: #{e.message}")
-      []
+      Ticket::Share.active_current.where(group_id: group_ids).select(:ticket_id).to_sql
     end
 
     # Cache approval ticket IDs per request

@@ -8,13 +8,6 @@ module Gql
         argument :group_id, GraphQL::Types::ID, required: true, description: 'ID of the group to share with'
         argument :message, String, required: false, description: 'Message for the share request'
       end
-
-      class ShareActionInputType < BaseInputObject
-        description 'Input for updating or revoking a ticket share'
-
-        argument :id, GraphQL::Types::ID, required: true, description: 'ID of the share request'
-        argument :message, String, required: false, description: 'Additional message for the share update'
-      end
     end
   end
 end

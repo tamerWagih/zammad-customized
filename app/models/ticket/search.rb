@@ -67,31 +67,11 @@ returns if user has no permissions to search
           query_or.push(access_condition)
         end
 
-        # Include shared tickets
-        shared_ticket_ids = get_shared_ticket_ids(params)
-        if shared_ticket_ids.present?
-          access_condition = {
-            'query_string' => { 'default_field' => 'id', 'query' => "\"#{shared_ticket_ids.join('" OR "')}\"" }
-          }
-          query_or.push(access_condition)
-        end
-
-        # Include approval tickets
-        approval_ticket_ids = get_approval_ticket_ids(params)
-        if approval_ticket_ids.present?
-          access_condition = {
-            'query_string' => { 'default_field' => 'id', 'query' => "\"#{approval_ticket_ids.join('" OR "')}\"" }
-          }
-          query_or.push(access_condition)
-        end
-
-        # Include CC tickets (for agents)
-        cc_ticket_ids = get_cc_ticket_ids(params)
-        if cc_ticket_ids.present?
-          access_condition = {
-            'query_string' => { 'default_field' => 'id', 'query' => "\"#{cc_ticket_ids.join('" OR "')}\"" }
-          }
-          query_or.push(access_condition)
+        # Include shared, approval and CC tickets. ID lists go in a `terms` filter:
+        # a query_string OR-list counts every ID against the 4096-clause limit, and
+        # the shared list alone reached ~4500 IDs, failing searches like "Ticket#123".
+        [get_shared_ticket_ids(params), get_approval_ticket_ids(params), get_cc_ticket_ids(params)].each do |ids|
+          query_or.push({ 'terms' => { 'id' => ids } }) if ids.present?
         end
 
         # Include tickets created by user (for creator_access? to work)
@@ -106,17 +86,12 @@ returns if user has no permissions to search
         
         customer_query_parts = ["customer_id:#{params[:current_user].id}"]
         customer_query_parts.concat(params[:current_user].all_organizations.where(shared: true).map { |row| "organization_id:#{row.id}" })
-        
-        # Add CC tickets to the query
-        if cc_ticket_ids.present?
-          cc_query_parts = cc_ticket_ids.map { |id| "id:#{id}" }
-          customer_query_parts.concat(cc_query_parts)
-        end
-        
+
         access_condition = {
           'query_string' => { 'query' => customer_query_parts.join(' OR ') }
         }
         query_or.push(access_condition)
+        query_or.push({ 'terms' => { 'id' => cc_ticket_ids } }) if cc_ticket_ids.present?
       end
 
       if query_or.blank?
