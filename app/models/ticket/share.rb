@@ -11,6 +11,9 @@ class Ticket::Share < ApplicationModel
   include Ticket::Share::TriggersNotifications
   include ApplicationModel::HasRequestCache  # Clear Auth::RequestCache on commit (performance)
 
+  # permissions (jsonb array) clashes with the index mapping and is never searched
+  search_index_attributes_ignored :permissions
+
   VALID_PERMISSIONS = %w[full comment].freeze
 
   before_validation :ensure_default_permission
@@ -94,15 +97,6 @@ class Ticket::Share < ApplicationModel
   def ensure_default_permission
     # Default to comment permission for new shares
     self.permissions = ['comment'] if permissions.blank?
-  end
-
-  def search_index_attribute_lookup(record)
-    attributes = super(record)
-    attributes.merge(
-      group:     group&.fullname || group&.name,
-      shared_by: shared_by&.fullname,
-      permissions: Array(permissions).join(', '),
-    )
   end
 
   def activity_message
