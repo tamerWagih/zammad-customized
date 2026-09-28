@@ -37,10 +37,12 @@ class App.TicketZoom extends App.Controller
       @load(cache)
 
     # check if ticket has been updated every 30 min
+    # Each tab gets its own 30-35 min period: tabs restored together at login would
+    # otherwise all reload at the same second, every 30 min (seen as DB bursts on prod).
     update = =>
       @fetch()
 
-    @interval(update, 1800000, 'pull_check')
+    @interval(update, 1800000 + Math.floor(Math.random() * 300000), 'pull_check')
 
     # fetch new data if triggered
     @controllerBind('Ticket:update Ticket:touch', (data) =>
@@ -56,7 +58,12 @@ class App.TicketZoom extends App.Controller
     # after a new websocket connection, check if ticket has changed
     @controllerBind('ws:login', =>
       if @initiallyFetched
-        @fetch()
+        # The visible tab reloads at once; background tabs spread over 20s so a reconnect
+        # does not fire one full ticket load per open tab in the same instant.
+        if @activeState
+          @fetch()
+        else
+          @delay(@fetch, Math.floor(Math.random() * 20000), "ws-login-fetch-#{@ticket_id}")
         return
       @initiallyFetched = true
     )
