@@ -32,7 +32,9 @@ returns
 
     data[ app_model ][ id ] = attributes_with_association_ids
     
-    if UserInfo.current_user && respond_to?(:share_permissions_for)
+    # respond_to? first: UserInfo.current_user runs a users query on every call, and this
+    # runs once per ticket in overview pushes and custom views (up to 2000 tickets).
+    if respond_to?(:share_permissions_for) && UserInfo.current_user
       begin
         perms = share_permissions_for(UserInfo.current_user)
         data[app_model][id]['share_permissions'] = perms

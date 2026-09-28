@@ -61,7 +61,13 @@ module Zammad
       require 'dalli' # Only load this gem when it is really used.
       # Pool size defaults to the Rails default (5). Raise MEMCACHE_POOL_SIZE when session jobs
       # queue for a memcached connection (seen as connection_pool wait time in profiles).
-      config.cache_store = [:mem_cache_store, ENV['MEMCACHE_SERVERS'], { expires_in: 7.days, pool: { size: Integer(ENV.fetch('MEMCACHE_POOL_SIZE', 5)) } }]
+      # Compress threshold defaults to the Rails default (1 KB). Ticket attribute entries are ~2 KB,
+      # so each read inflates them; MEMCACHE_COMPRESS_THRESHOLD trades memcached memory for CPU.
+      config.cache_store = [:mem_cache_store, ENV['MEMCACHE_SERVERS'], {
+        expires_in:         7.days,
+        pool:               { size: Integer(ENV.fetch('MEMCACHE_POOL_SIZE', 5)) },
+        compress_threshold: Integer(ENV.fetch('MEMCACHE_COMPRESS_THRESHOLD', 1024)),
+      }]
     else
       config.cache_store = [:zammad_file_store, Rails.root.join('tmp', "cache_file_store_#{Rails.env}"), { expires_in: 7.days }]
     end
