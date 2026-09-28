@@ -27,17 +27,19 @@ function zammad_backup {
   echo "backup finished :)"
 }
 
+# Wait for BACKUP_TIME before the first run: backing up on container start put a full
+# pg_dump + storage tar on top of every restart, exactly when all agents reconnect.
 while true; do
   NOW_TIMESTAMP=$(date +%s)
-  TOMORROW_DATE=$(date -d@"$((NOW_TIMESTAMP + 24*60*60))" +%Y-%m-%d)
-
-  zammad_backup
-
-  NEXT_TIMESTAMP=$(date -d "$TOMORROW_DATE $BACKUP_TIME" +%s)
-  NOW_TIMESTAMP=$(date +%s)
+  NEXT_TIMESTAMP=$(date -d "today $BACKUP_TIME" +%s)
+  if [ "$NEXT_TIMESTAMP" -le "$NOW_TIMESTAMP" ]; then
+    NEXT_TIMESTAMP=$(date -d "tomorrow $BACKUP_TIME" +%s)
+  fi
   SLEEP_SECONDS=$((NEXT_TIMESTAMP - NOW_TIMESTAMP))
 
   echo "sleeping $SLEEP_SECONDS seconds until the next backup run..."
 
   sleep $SLEEP_SECONDS
+
+  zammad_backup
 done

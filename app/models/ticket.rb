@@ -827,13 +827,19 @@ returns a hex color code
     perms[:read] || perms[:comment] || perms[:edit]
   end
 
-  # Override to add cc_user_ids to API response.
-  # Uses instance-level memoization to avoid re-querying DB on every call within the same request.
-  # Resets naturally each request cycle since ticket instances are ephemeral.
-  # Cache invalidation: CC changes trigger `touch: true` → new ticket instance in next cycle.
+  # Adds cc_user_ids to the API/asset attributes. Done in filter_attributes, which runs before
+  # attributes_with_association_ids writes its per-ticket cache (checked against updated_at), so
+  # the list is queried once per ticket version instead of once per asset build. CC changes
+  # touch the ticket (Ticket::Cc belongs_to :ticket, touch: true), which refreshes the cache.
+  def filter_attributes(attributes)
+    super
+    attributes['cc_user_ids'] = ccs.pluck(:user_id).compact.uniq
+    attributes
+  end
+
+  # Fallback for cache entries written before cc_user_ids was part of the cached attributes.
   def filter_unauthorized_attributes(attributes)
-    @_cc_user_ids_cache ||= ccs.pluck(:user_id).compact.uniq
-    attributes['cc_user_ids'] = @_cc_user_ids_cache
+    attributes['cc_user_ids'] = ccs.pluck(:user_id).compact.uniq if !attributes.key?('cc_user_ids')
     super(attributes)
   end
 
