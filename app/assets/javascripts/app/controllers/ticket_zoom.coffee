@@ -921,10 +921,27 @@ class App.TicketZoom extends App.Controller
       delete articleDiff.type
       delete articleDiff.internal
 
+    ticketDiff = @forRemoveMeta(App.Utils.formDiff(currentParams.ticket, currentStore.ticket))
+    @formDiffIgnoreUnselectableValues(ticketDiff, currentStore.ticket)
+
     {
-      ticket:  @forRemoveMeta(App.Utils.formDiff(currentParams.ticket, currentStore.ticket))
+      ticket:  ticketDiff
       article: articleDiff
     }
+
+  # A select whose stored value is not among its options renders blank (e.g. the ticket owner is not in
+  # this agent's owner list, common on shared tickets). That blank is not a user edit; counting it made
+  # every such tab look unsaved, so the 30-tab cleanup never closed it and closing it asked to discard.
+  formDiffIgnoreUnselectableValues: (ticketDiff, storeTicket) ->
+    for key, value of ticketDiff
+      continue if value isnt ''
+      stored = storeTicket?[key]
+      continue if !stored? || stored is ''
+      select = @el.find(".edit select[name=\"#{key}\"]")
+      continue if !select.get(0)
+      continue if select.find("option[value=\"#{stored}\"]").get(0)
+      delete ticketDiff[key]
+    ticketDiff
 
   formDiffSimplifyEmptyValues: (params) ->
     for key, value of params.ticket
