@@ -10,9 +10,29 @@ module CustomFilterQuery
   # Selector raise and the whole filter come back empty, on every overview push.
   def self.clean_condition(condition)
     return {} if !condition.is_a?(Hash)
+    return clean_expert(condition) if expert?(condition)
 
     condition.reject { |_name, cond| cond.is_a?(Hash) && unusable?(cond.with_indifferent_access) }
   end
+
+  # Expert mode: { operator: 'AND', conditions: [ { name:, operator:, value: } | nested group, ... ] }
+  def self.expert?(condition)
+    condition.with_indifferent_access[:conditions].is_a?(Array)
+  end
+
+  def self.clean_expert(group)
+    group = group.with_indifferent_access
+    kept  = group[:conditions].filter_map do |cond|
+      next if !cond.is_a?(Hash)
+      next clean_expert(cond).presence if expert?(cond)
+
+      cond if !unusable?(cond.with_indifferent_access)
+    end
+    return {} if kept.empty?
+
+    group.merge(conditions: kept)
+  end
+  private_class_method :expert?, :clean_expert
 
   # ORDER BY for a filter: only real ticket columns, always table-qualified (joins with articles
   # etc. made a bare "created_at" ambiguous), direction only ASC/DESC.

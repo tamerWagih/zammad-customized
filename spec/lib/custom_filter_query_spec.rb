@@ -55,6 +55,40 @@ RSpec.describe CustomFilterQuery do
       expect(selector_accepts?(described_class.clean_condition(condition))).to be(true)
     end
 
+    context 'with expert mode (nested) conditions' do
+      let(:open_state) { Ticket::State.find_by(name: 'open').id.to_s }
+      let(:condition) do
+        {
+          'operator'   => 'AND',
+          'conditions' => [
+            { 'name' => 'ticket.state_id', 'operator' => 'is', 'value' => [open_state] },
+            { 'name' => 'ticket.owner_id', 'operator' => 'is', 'pre_condition' => 'specific', 'value' => [] },
+            { 'operator' => 'OR', 'conditions' => [
+              { 'name' => 'ticket.title', 'operator' => 'contains', 'value' => '' },
+              { 'name' => 'ticket.title', 'operator' => 'contains', 'value' => 'printer' },
+            ] },
+          ],
+        }
+      end
+
+      it 'drops unusable leaves at every level and keeps the rest' do
+        cleaned = described_class.clean_condition(condition)
+        expect(cleaned['operator']).to eq('AND')
+        expect(cleaned['conditions'].pluck('name').compact).to eq(['ticket.state_id'])
+        expect(cleaned['conditions'].last['conditions']).to eq([{ 'name' => 'ticket.title', 'operator' => 'contains', 'value' => 'printer' }])
+      end
+
+      it 'turns the rejected expert filter into one Selector accepts' do
+        expect(selector_accepts?(condition)).to be(false)
+        expect(selector_accepts?(described_class.clean_condition(condition))).to be(true)
+      end
+
+      it 'drops a group that ends up empty' do
+        only_empty = { 'operator' => 'AND', 'conditions' => [{ 'name' => 'ticket.owner_id', 'operator' => 'is', 'pre_condition' => 'specific', 'value' => [] }] }
+        expect(described_class.clean_condition(only_empty)).to eq({})
+      end
+    end
+
     it 'returns an empty hash for a missing condition' do
       expect(described_class.clean_condition(nil)).to eq({})
     end
