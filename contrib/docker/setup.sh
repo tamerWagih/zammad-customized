@@ -12,7 +12,10 @@ elif [ "$1" = 'runner' ]; then
   apt-get install -y postgresql-common
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
 
-  PACKAGES="curl libimlib2 libpq5 nginx gnupg postgresql-client-17"
+  # libjemalloc2: optional allocator, enabled per deployment with
+  #   LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+  # Ruby with glibc malloc keeps its peak memory; jemalloc returns it, so RSS stops ratcheting up.
+  PACKAGES="curl libimlib2 libpq5 nginx gnupg postgresql-client-17 libjemalloc2"
 fi
 
 # shellcheck disable=SC2086

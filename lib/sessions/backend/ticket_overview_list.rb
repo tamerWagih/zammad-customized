@@ -314,17 +314,10 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
     # Similar to Ticket::Overviews.index but for custom filters
     # Returns data in the same format as standard overviews
     
-    condition = filter['condition'] || {}
+    condition = CustomFilterQuery.clean_condition(filter['condition'])
     order = filter['order'] || { 'by' => 'created_at', 'direction' => 'DESC' }
     view = filter['view'] || { 's' => ['number', 'title', 'customer', 'state', 'created_at'] }
-    
-    # Clean up empty values in condition
-    condition.each do |key, value_hash|
-      if value_hash.is_a?(Hash) && value_hash[:value].is_a?(Array) && value_hash[:value].empty?
-        condition.delete(key)
-      end
-    end
-    
+
     # Get pagination (same as default overviews)
     limit = Ticket::Overviews.limit_per_overview
     
@@ -358,10 +351,6 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
       )
       
       if query.present?
-        # Apply ordering
-        order_by = order['by'] || 'created_at'
-        order_direction = order['direction'] || 'DESC'
-        
         # CRITICAL: Apply user permission scope first (like Zammad's overview system)
         base_scope = if condition.key?('ticket.mention_user_ids')
                        TicketPolicy::ReadScope.new(@user).resolve
@@ -381,7 +370,7 @@ class Sessions::Backend::TicketOverviewList < Sessions::Backend::Base
         
         # Use .pluck instead of loading full AR objects (matches standard overview pattern from overviews.rb:130)
         ticket_result = scoped_tickets
-          .reorder(Arel.sql("#{order_by} #{order_direction}"))
+          .reorder(Arel.sql(CustomFilterQuery.order_sql(order)))
           .limit(limit)
           .pluck(:id, :updated_at)
         

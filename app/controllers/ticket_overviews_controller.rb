@@ -97,15 +97,8 @@ class TicketOverviewsController < ApplicationController
   end
 
   def count_tickets_for_filter(filter)
-    condition = filter['condition'] || {}
-    
-    # Clean up empty values in condition (fix value=[] issue)
-    condition.each do |key, value_hash|
-      if value_hash.is_a?(Hash) && value_hash[:value].is_a?(Array) && value_hash[:value].empty?
-        condition.delete(key)
-      end
-    end
-    
+    condition = CustomFilterQuery.clean_condition(filter['condition'])
+
     # Use Ticket.selectors (like preview) to count with proper scopes
     ticket_count, _tickets = Ticket.selectors(
       condition,
@@ -122,17 +115,10 @@ class TicketOverviewsController < ApplicationController
   end
 
   def render_custom_filter_tickets(filter)
-    condition = filter['condition'] || {}
+    condition = CustomFilterQuery.clean_condition(filter['condition'])
     order = filter['order'] || { 'by' => 'created_at', 'direction' => 'DESC' }
     view = filter['view'] || { 's' => ['number', 'title', 'customer', 'state', 'created_at'] }
-    
-    # Clean up empty values in condition (fix value=[] issue)
-    condition.each do |key, value_hash|
-      if value_hash.is_a?(Hash) && value_hash[:value].is_a?(Array) && value_hash[:value].empty?
-        condition.delete(key)
-      end
-    end
-    
+
     # Get pagination parameters (same as default overviews)
     limit = Ticket::Overviews.limit_per_overview
     offset = params[:offset]&.to_i || 0
@@ -168,10 +154,6 @@ class TicketOverviewsController < ApplicationController
       
 
       if query.present?
-        # Apply ordering
-        order_by = order['by'] || 'created_at'
-        order_direction = order['direction'] || 'DESC'
-        
         # CRITICAL: Apply user permission scope first (like Zammad's overview system)
         # Use OverviewScope for standard conditions, ReadScope for mentions
         base_scope = if condition.key?('ticket.mention_user_ids')
@@ -188,7 +170,7 @@ class TicketOverviewsController < ApplicationController
         total_count = scoped_tickets.distinct.count
         
         # Apply pagination (limit and offset)
-        ticket_list = scoped_tickets.order("#{order_by} #{order_direction}")
+        ticket_list = scoped_tickets.order(Arel.sql(CustomFilterQuery.order_sql(order)))
                                      .offset(offset)
                                      .limit(limit)
         
