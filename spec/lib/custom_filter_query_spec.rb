@@ -79,19 +79,26 @@ RSpec.describe CustomFilterQuery do
       expect(described_class.order_sql({ 'by' => 'number', 'direction' => 'DESC, (SELECT 1)' })).to eq('tickets.number DESC')
     end
 
-    it 'sorts a filter that joins articles without an ambiguous-column error' do
-      agent  = create(:agent, groups: [Group.first])
-      ticket = create(:ticket, group: Group.first)
-      create(:ticket_article, ticket: ticket, subject: 'printer jam')
-      query, bind_params, tables = Ticket.selector2sql(
-        { 'article.subject' => { 'operator' => 'contains', 'value' => 'printer' } },
-        current_user: agent,
-      )
-      scope = TicketPolicy::OverviewScope.new(agent).resolve.where(query, *bind_params)
-      scope = scope.joins(tables) if tables.present?
+    context 'with a filter that joins articles' do
+      let(:agent)  { create(:agent, groups: [Group.first]) }
+      let(:ticket) { create(:ticket, group: Group.first) }
+      let(:scope) do
+        create(:ticket_article, ticket: ticket, subject: 'printer jam')
+        query, bind_params, tables = Ticket.selector2sql(
+          { 'article.subject' => { 'operator' => 'contains', 'value' => 'printer' } },
+          current_user: agent,
+        )
+        TicketPolicy::OverviewScope.new(agent).resolve.where(query, *bind_params).joins(tables)
+      end
 
-      expect { scope.reorder(Arel.sql('created_at DESC')).pluck(:id) }.to raise_error(ActiveRecord::StatementInvalid, %r{ambiguous})
-      expect(scope.reorder(Arel.sql(described_class.order_sql({ 'by' => 'created_at' }))).pluck(:id)).to include(ticket.id)
+      # separate examples: a failed statement aborts the surrounding test transaction in PostgreSQL
+      it 'failed with the old bare column (ambiguous)' do
+        expect { scope.reorder(Arel.sql('created_at DESC')).pluck(:id) }.to raise_error(ActiveRecord::StatementInvalid, %r{ambiguous})
+      end
+
+      it 'works with the qualified column' do
+        expect(scope.reorder(Arel.sql(described_class.order_sql({ 'by' => 'created_at' }))).pluck(:id)).to include(ticket.id)
+      end
     end
   end
 end
